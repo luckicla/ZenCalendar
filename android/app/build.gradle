@@ -75,6 +75,9 @@ dependencies {
     implementation 'androidx.core:core:1.13.1'
     // inicio de sesión de Google para Drive (AuthorizationClient)
     implementation 'com.google.android.gms:play-services-auth:21.2.0'
+    // (androidx trae kotlin-stdlib 1.8 y Play Services los viejos -jdk7/-jdk8 1.6: el BOM
+    // los alinea a la misma versión y así no salen clases repetidas al compilar)
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
 }
 
 // la versión «oficial»: el archivo VERSION de la raíz del repo
