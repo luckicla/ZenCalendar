@@ -30,6 +30,7 @@
         <section><h3>${t('Hoy')}</h3>${today.length ? today.map(o => row(o, d0)).join('') : `<p class="w-empty">${t('Nada más por hoy')}</p>`}</section>
         <section><h3>${t('Mañana')}${hol.get(C.ymd(d1)) ? ` <small>${UI.esc(hol.get(C.ymd(d1)))}</small>` : ''}</h3>${tomorrow.length ? tomorrow.map(o => row(o, d1)).join('') : `<p class="w-empty">${t('Día libre')}</p>`}</section>
       </div>`;
+    if (UI.dot) UI.dot.widget($('#w'), { today, tomorrow, d0 });
   }
   async function boot() {
     C = UI.cal;

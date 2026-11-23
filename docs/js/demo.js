@@ -25,6 +25,9 @@
     return 'cada año';
   }
 
+  // Avisa de lo que enseña la demo (el diseño Dot lo pinta en su pantalla de puntos): día, hora y título.
+  const emit = (kind, date, extra = {}) => document.dispatchEvent(new CustomEvent('zc:demo', { detail: { kind, date, ...extra } }));
+
   const monthEl = $('#demo-month'), yearEl = $('#demo-year');
   function render(animate = false) {
     const name = M.MONTHS[view.getMonth()];
@@ -36,7 +39,7 @@
     grid.classList.remove('fade');
     if (animate && !reduce.matches) { void grid.offsetWidth; grid.classList.add('fade'); }
   }
-  const go = d => { view = new Date(view.getFullYear(), view.getMonth() + d, 1); render(true); };
+  const go = d => { view = new Date(view.getFullYear(), view.getMonth() + d, 1); render(true); emit('month', new Date(view)); };
   $('#demo-prev').addEventListener('click', () => go(-1));
   $('#demo-next').addEventListener('click', () => go(1));
   $('#demo-today').addEventListener('click', () => { selected = M.sod(now); view = new Date(now.getFullYear(), now.getMonth(), 1); render(true); showDay(selected); });
@@ -46,6 +49,7 @@
     const occ = M.occurrences(events, d, M.addDays(d, 1));
     const items = occ.map(o => `${M.esc(o.e.title)}${o.allDay ? '' : ' a las ' + M.hm(o.start)}`);
     status.innerHTML = `<b>${M.esc(M.cap(dayLabel(d)))}:</b> ` + (items.length ? list(items) + '.' : 'nada apuntado. Escribe algo en la línea.');
+    emit(M.sameDay(d, now) ? 'today' : 'select', d, { count: occ.length, title: occ[0] && occ[0].e.title, time: occ[0] && !occ[0].allDay ? M.hm(occ[0].start) : null });
   }
   grid.addEventListener('click', e => {
     const b = e.target.closest('.mo-day'); if (!b) return;
@@ -103,6 +107,7 @@
     else when = `el ${dayLabel(r.start)}, de ${M.hm(r.start)} a ${M.hm(r.end)}`;
     const extra = [r.location && `en ${r.location}`, r.reminders.length && `con aviso ${r.reminders[0]} minutos antes`].filter(Boolean).join(', ');
     const what = r.kind === 'task' ? 'Tarea apuntada' : 'Apuntado';
+    emit('add', r.start, { title: r.title, time: r.allDay ? null : M.hm(r.start), cal: r.calendar });
     status.innerHTML = `${what}: <b>${M.esc(r.title)}</b>, ${M.esc(when)}${extra ? ', ' + M.esc(extra) : ''}.${r.guessed ? ' No has dicho cuándo, así que va a hoy.' : ''} <button type="button" class="undo">Deshacer</button>`;
   }
 
@@ -110,6 +115,7 @@
     if (!e.target.closest('.undo') || !lastAdded) return;
     events = events.filter(x => x !== lastAdded); lastAdded = null;
     render(); status.textContent = 'Quitado. Prueba con otra cosa.';
+    emit('undo', now);
   });
 
   form.addEventListener('submit', e => {

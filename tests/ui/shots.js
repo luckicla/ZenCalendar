@@ -3,6 +3,7 @@
 //   node tests/ui/shots.js            (usa web/js/core de verdad)
 //   MOCK=1 node tests/ui/shots.js     (usa tests/ui/mock-core.js)
 //   ONLY=desk,dark node tests/ui/shots.js
+//   DESIGN=dot node tests/ui/shots.js   (solo el diseño Dot: capturas dot-*.png; DESIGN=zen, solo Zen; sin nada, los dos)
 // Salida: tests/ui/out/*.png  · Falla (código 1) si hay errores en la consola.
 const path = require('path');
 const fs = require('fs');
@@ -14,6 +15,10 @@ const WEB = path.join(ROOT, 'web');
 const OUT = path.join(__dirname, 'out');
 const MOCK = process.env.MOCK === '1' || !fs.existsSync(path.join(WEB, 'js/core/core.js'));
 const ONLY = (process.env.ONLY || '').split(',').filter(Boolean);
+const DESIGNS = process.env.DESIGN ? [process.env.DESIGN] : ['zen', 'dot'];
+// mientras app-back no haya hecho la letra ZenDot, su 404 no cuenta como error
+const NO_FONT = !fs.existsSync(path.join(WEB, 'fonts/ZenDot.woff'));
+const fontMiss = m => NO_FONT && /fonts\/ZenDot/.test((m.location() || {}).url || '');
 fs.mkdirSync(OUT, { recursive: true });
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon' };
@@ -79,27 +84,32 @@ async function run() {
     { name: 'desk', viewport: { width: 1366, height: 800 }, deviceScaleFactor: 1, plat: 'desktop' },
     { name: 'mob', viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, plat: 'android' },
   ];
-  for (const cfg of configs) {
+  for (const design of DESIGNS) for (const cfg of configs) {
     for (const scheme of ['light', 'dark']) {
-      const tag = cfg.name + '-' + scheme;
+      const dot = design === 'dot';
+      const tag = (dot ? 'dot-' : '') + cfg.name + '-' + scheme;
       if (ONLY.length && !ONLY.every(o => tag.includes(o))) continue;
       const ctx = await browser.newContext({ viewport: cfg.viewport, deviceScaleFactor: cfg.deviceScaleFactor, isMobile: !!cfg.isMobile, hasTouch: !!cfg.hasTouch, colorScheme: scheme, locale: 'es-ES', timezoneId: 'Europe/Madrid' });
       await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
       const page = await ctx.newPage();
-      page.on('console', m => { if (m.type() === 'error' && !/fonts\.googleapis|ERR_FAILED|ERR_BLOCKED|net::ERR/.test(m.text())) errors.push(`[${tag}] ${m.text()}`); });
+      page.on('console', m => { if (m.type() === 'error' && !fontMiss(m) && !/fonts\.googleapis|ERR_FAILED|ERR_BLOCKED|net::ERR/.test(m.text())) errors.push(`[${tag}] ${m.text()}`); });
       page.on('pageerror', e => errors.push(`[${tag}] pageerror: ${e.message}\n${e.stack || ''}`));
       const shot = async (n, opts = {}) => { await page.waitForTimeout(opts.wait ?? 750); await page.screenshot({ path: path.join(OUT, `${tag}-${n}.png`) }); };
       // bienvenida (primera vez)
       await page.goto(base + 'index.html?plat=' + cfg.plat, { waitUntil: 'load' });
       await page.waitForSelector('html.ready', { timeout: 15000 });
       await page.waitForTimeout(900);
+      if (dot) await page.evaluate(() => ZC.store.local('dotIconAsked', true));   // el aviso del icono se prueba en dot.js
+      if (dot && await page.$('.welcome')) { await page.click('.welcome [data-design="dot"]'); await page.waitForTimeout(500); }
       if (await page.$('.welcome')) await shot('00-welcome');
       await page.evaluate(() => { ZC.store.local('welcomed', true); ZC.ui.back && ZC.ui.layers.forEach(l => l.close()); });
       await seed(page);
-      await page.evaluate(s => ZC.ui.look.set({ scheme: s }), scheme);
+      await page.evaluate(([s, d]) => ZC.ui.look.set({ scheme: s, design: d }), [scheme, design]);
       const go = async v => { await page.evaluate(v => ZC.ui.app.go({ view: v, date: ZC.ui.cal.today(), sel: ZC.ui.cal.today() }), v); };
       for (const v of ['month', 'week', 'day', 'agenda', 'year']) { await go(v); await shot('1-' + v); if (process.env.DEBUG) console.log(v, await page.evaluate(() => [document.getElementById('side').scrollTop, document.getElementById('side').scrollHeight, document.getElementById('side').clientHeight])); }
       if (cfg.name === 'mob') { await go('tasks'); await shot('1-tasks'); }
+      // Dot: el fondo «glyph» (tiras de luz) y la rejilla
+      if (dot) { await go('month'); await page.evaluate(() => ZC.ui.look.set(ZC.ui.dot.bgPatch('glyph'))); await shot('1-month-glyph', { wait: 1200 }); await page.evaluate(() => ZC.ui.look.set(ZC.ui.dot.bgPatch('grid'))); await go('week'); await shot('1-week-grid'); await page.evaluate(() => ZC.ui.look.set({ dotBg: 'dots' })); }
       await go('month');
       // editor nuevo con lenguaje natural
       await page.evaluate(() => ZC.ui.editor.open({ date: ZC.ui.cal.today() }));
@@ -130,7 +140,7 @@ async function run() {
       await shot('5-search');
       await page.evaluate(() => ZC.ui.back());
       // ajustes
-      for (const s of ['look', 'bg', 'glass', 'type', 'cal', 'ai', 'drive']) {
+      for (const s of dot ? ['look', 'bg', 'glass', 'shape', 'type', 'anim', 'logo', 'cal', 'ai', 'drive'] : ['look', 'bg', 'glass', 'type', 'cal', 'ai', 'drive']) {
         await page.evaluate(s => ZC.ui.settings.open(s), s);
         await shot('6-settings-' + s, { wait: 700 });
       }
@@ -146,7 +156,7 @@ async function run() {
       if (cfg.name === 'desk') {
         const wp = await ctx.newPage();
         wp.on('pageerror', e => errors.push(`[${tag} widget] pageerror: ${e.message}`));
-        wp.on('console', m => { if (m.type() === 'error' && !/net::ERR/.test(m.text())) errors.push(`[${tag} widget] ${m.text()}`); });
+        wp.on('console', m => { if (m.type() === 'error' && !fontMiss(m) && !/net::ERR/.test(m.text())) errors.push(`[${tag} widget] ${m.text()}`); });
         await wp.setViewportSize({ width: 340, height: 420 });
         await wp.goto(base + 'widget.html', { waitUntil: 'load' });
         await wp.waitForSelector('html.ready', { timeout: 15000 });

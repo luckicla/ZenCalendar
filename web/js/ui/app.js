@@ -65,6 +65,7 @@
     $('#btnToday').classList.toggle('is-today', isShowingToday(today));
     document.documentElement.dataset.view = state.view;
     UI.side.render();
+    if (UI.dot) UI.dot.chrome(state);
   }
   function isShowingToday(td) {
     const d = state.date, v = state.view;

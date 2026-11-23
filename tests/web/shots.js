@@ -1,22 +1,26 @@
 // Capturas de la web de presentación (docs/) en móvil y escritorio, claro y oscuro.
-// Uso: node tests/web/shots.js [puerto]   → tests/web/out/*.png  (sirve docs/ él solo con python3)
+// Uso: node tests/web/shots.js [puerto]   → tests/web/out/*.png  (sirve docs/ él solo con python3; si el puerto ya
+// sirve algo, lo usa). Por defecto en el diseño Zen; con DESIGN=dot, el diseño Dot → tests/web/out/dot-*.png
 const path = require('path');
 const { spawn } = require('child_process');
 const { chromium } = require('/opt/npm-tools/node_modules/playwright');
-const PORT = +(process.argv[2] || 8791);
+const http = require('http');
+const PORT = +(process.argv[2] || 8832);
+const DESIGN = process.env.DESIGN === 'dot' ? 'dot' : 'zen';
 const DOCS = path.resolve(__dirname, '../../docs');
 const OUT = path.join(__dirname, 'out');
 
 (async () => {
-  const srv = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1'], { cwd: DOCS, stdio: 'ignore' });
-  await new Promise(r => setTimeout(r, 700));
+  const up = await new Promise(res => http.get(`http://127.0.0.1:${PORT}/`, r => { r.resume(); res(r.statusCode === 200); }).on('error', () => res(false)));
+  const srv = up ? null : spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1'], { cwd: DOCS, stdio: 'ignore' });
+  if (srv) await new Promise(r => setTimeout(r, 700));
   const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome' });
   const errors = [];
   const sizes = [['desktop', 1440, 900], ['mobile', 390, 844]];
   const only = process.env.ONLY;
   for (const scheme of ['light', 'dark']) {
     for (const [name, w, h] of sizes) {
-      const tag = `${name}-${scheme}`;
+      const tag = `${DESIGN === 'dot' ? 'dot-' : ''}${name}-${scheme}`;
       if (only && !tag.includes(only)) continue;
       const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, colorScheme: scheme,
         userAgent: name === 'mobile' ? 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36',
@@ -30,12 +34,18 @@ const OUT = path.join(__dirname, 'out');
         { tag_name: 'v1.0.1', name: 'ZenCalendar 1.0.1', published_at: '2026-11-30T10:00:00Z', draft: false, prerelease: false, body: '## Novedades\n\n- Los widgets cogen el color del tema.\n- Arreglado el aviso de los eventos de todo el día.' },
         { tag_name: 'v1.0.0', name: 'ZenCalendar 1.0.0', published_at: '2026-11-25T10:00:00Z', draft: false, prerelease: false, body: '## Primera versión\n\n- Mes, semana, día, agenda y año.\n- Sincronización con **Google Drive**.\n- Asistente de IA.\n\n### ¿Es seguro?\nNo sale.' } ]) }));
       await page.route(/fonts\.(googleapis|gstatic)\.com/, route => route.fulfill({ status: 200, contentType: 'text/css', body: '' }));
-      await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'networkidle' });
+      await page.goto(`http://127.0.0.1:${PORT}/${DESIGN === 'dot' ? '?design=dot' : ''}`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(600);
       await page.screenshot({ path: path.join(OUT, `${tag}-fold.png`) });
       // la demo: espera a que la frase automática entre en el calendario
       await page.waitForTimeout(4600);
-      await page.locator('#demo').screenshot({ path: path.join(OUT, `${tag}-demo.png`) });
+      // en Dot `.demo` es `display: contents` (sus hijos van a la rejilla de la portada): se recorta lo que ocupan sus hijos
+      const clip = await page.evaluate(() => {
+        const rs = [...document.querySelectorAll('#demo > *')].map(e => e.getBoundingClientRect()).filter(r => r.width && r.height);
+        const x = Math.min(...rs.map(r => r.left)), y = Math.min(...rs.map(r => r.top));
+        return { x, y: y + scrollY, width: Math.max(...rs.map(r => r.right)) - x, height: Math.max(...rs.map(r => r.bottom)) - y };
+      });
+      await page.screenshot({ path: path.join(OUT, `${tag}-demo.png`), clip, fullPage: true });
       // baja poco a poco para que aparezca todo
       const H = await page.evaluate(() => document.body.scrollHeight);
       for (let y = 0; y < H; y += Math.round(h * 0.6)) { await page.evaluate(v => scrollTo(0, v), y); await page.waitForTimeout(140); }
@@ -48,6 +58,6 @@ const OUT = path.join(__dirname, 'out');
       await ctx.close();
     }
   }
-  await browser.close(); srv.kill();
+  await browser.close(); if (srv) srv.kill();
   console.log(errors.length ? errors.join('\n') : 'Sin errores en consola.');
 })();

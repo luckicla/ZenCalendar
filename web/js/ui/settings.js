@@ -47,6 +47,7 @@
     if (scope === 'look') {
       if (key === 'preset') { UI.look.applyPreset(v); }
       else if (key === 'theme') { const L0 = LK(); UI.look.set({ theme: v, accent: null, a2: null, a3: null, bgImgColors: L0.bg === 'imagen' && L0.bgImgColors === 'all' ? 'accents' : L0.bgImgColors }); }
+      else if (key === 'dotBg' && UI.dot) UI.look.set(UI.dot.bgPatch(v));
       else if (key === 'appIcon') { UI.look.set({ appIcon: v }); try { ZC.platform.setAppIcon(v); } catch {} }
       else UI.look.set({ [key]: v });
     } else if (scope === 'cal') {
@@ -265,7 +266,8 @@
     box.innerHTML = opts.map(m => `<button type="button" class="chip ${cur.includes(m) ? 'on' : ''}" data-defrem="${m}">${esc(C.remText(m))}</button>`).join('');
   }
   const GROUPS = [['look', 'bg', 'glass', 'shape', 'type', 'anim', 'logo', 'icon'], ['cal', 'widgets', 'notif'], ['ai', 'drive'], ['data', 'about']];
-  const navHTML = () => GROUPS.map(g => `<div class="sn-grp">${g.map(id => SECS.find(s => s[0] === id)).map(([id, name, ic, sub]) => `<button type="button" data-sec="${id}" class="${id === cur ? 'on' : ''}"><span class="sn-ic">${UI.icon(ic, 19)}</span><span class="sn-tx"><b>${esc(t(name))}</b><small>${esc(t(sub))}</small></span>${UI.icon('chevR', 16, 'sn-go')}</button>`).join('')}</div>`).join('');
+  const navSub = (id, sub) => (UI.dot && UI.dot.on() && UI.dot.navSub[id]) || sub;   // en Dot algunas secciones son otras
+  const navHTML = () => GROUPS.map(g => `<div class="sn-grp">${g.map(id => SECS.find(s => s[0] === id)).map(([id, name, ic, sub0]) => [id, name, ic, navSub(id, sub0)]).map(([id, name, ic, sub]) => `<button type="button" data-sec="${id}" class="${id === cur ? 'on' : ''}"><span class="sn-ic">${UI.icon(ic, 19)}</span><span class="sn-tx"><b>${esc(t(name))}</b><small>${esc(t(sub))}</small></span>${UI.dot && UI.dot.on() ? `<span class="sn-val">${esc(UI.dot.navVal(id))}</span>` : ''}${UI.icon('chevR', 16, 'sn-go')}</button>`).join('')}</div>`).join('');
 
   // ---------- abrir ----------
   function open(sec) {
@@ -391,5 +393,6 @@
     const g = GROUPS.find(x => x.includes(after)) || GROUPS[GROUPS.length - 1];
     g.splice(after && g.includes(after) ? g.indexOf(after) + 1 : g.length, 0, id);
   }
-  UI.settings = { addSection, open, refresh: () => refresh(true), isOpen: () => !!(L && !L.closed), onDrive: () => { if (L && !L.closed && cur === 'drive') paintSection('drive'); } };
+  // dot.js cambia algunas secciones cuando el diseño es «Dot» (y pone el selector de diseño arriba de Aspecto)
+  UI.settings = { sections: S, parts: { row, seg, sw, rng, h3, card }, current: () => cur, addSection, open, refresh: () => refresh(true), isOpen: () => !!(L && !L.closed), onDrive: () => { if (L && !L.closed && cur === 'drive') paintSection('drive'); } };
 })();

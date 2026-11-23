@@ -35,7 +35,7 @@ jobs:
           mkdir -p _site
           # la presentación (sin los documentos internos)
           cp -r docs/. _site/
-          rm -f _site/CONTRATO.md _site/PENDIENTES.md _site/GOOGLE-SETUP.md
+          rm -f _site/CONTRATO.md _site/PENDIENTES.md _site/GOOGLE-SETUP.md _site/DISENO-DOT.md
           # la app
           mkdir -p _site/app
           cp -r web/. _site/app/

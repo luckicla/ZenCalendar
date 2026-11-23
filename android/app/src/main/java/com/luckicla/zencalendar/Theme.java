@@ -11,7 +11,11 @@ import java.util.Locale;
 /**
  * El aspecto que elige la página (ZC.platform.setTheme): se guarda para que
  * los widgets y la barra de estado lo usen aunque la app esté cerrada.
- * { bg, surface, fg, muted, a1, a2, a3, light, alpha (0-1), radius (px) }
+ * { bg, surface, fg, muted, a1, a2, a3, light, alpha (0-1), radius (px),
+ *   design ('zen' | 'dot'), accent (opcional: el acento de Dot, por defecto rojo #D71921) }
+ *
+ * Con design 'dot' los widgets son monocromos (negro o blanco según light) con
+ * un solo acento, la fecha y las horas en ZenDot: ver wBg()/wFg()/wMuted()/accent.
  */
 final class Theme {
     static final String PREFS = "zencalendar";
@@ -26,6 +30,13 @@ final class Theme {
     boolean light = true;
     float alpha = 0.88f;
     int radius = 24;
+    /** 'zen' (el de siempre) o 'dot' (monocromo, matriz de puntos). */
+    String design = "zen";
+    boolean dot = false;
+    /** El acento: en Dot, el que mande la página en «accent» (o el rojo); en Zen, a1. */
+    int accent = 0xFFC9B8FF;
+
+    static final int DOT_RED = 0xFFD71921;
 
     static SharedPreferences prefs(Context c) {
         return c.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
@@ -60,10 +71,25 @@ final class Theme {
             if (a > 1) a = a / 100.0; // (por si llega en %)
             t.alpha = (float) Math.max(0.0, Math.min(1.0, a));
             t.radius = (int) Math.round(o.optDouble("radius", t.radius));
+            t.design = "dot".equals(o.optString("design", "zen").trim().toLowerCase(Locale.ROOT)) ? "dot" : "zen";
+            t.dot = "dot".equals(t.design);
+            t.accent = parse(o.optString("accent"), t.dot ? DOT_RED : t.a1) | 0xFF000000;
         } catch (Exception ignored) {
         }
+        if (!t.dot) t.accent = t.a1 | 0xFF000000;
         return t;
     }
+
+    // ---------- colores de los widgets (en Dot, monocromos) ----------
+    int wBg() { return dot ? (light ? 0xFFFFFFFF : 0xFF000000) : bg | 0xFF000000; }
+    int wFg() { return dot ? (light ? 0xFF000000 : 0xFFFFFFFF) : fg; }
+    int wMuted() { return dot ? (light ? 0xFF6E6E6E : 0xFF8E8E8E) : muted; }
+
+    /** El color de detrás de la página y de las barras del sistema (en Dot, siempre opaco). */
+    int barColor() { return dot ? bg | 0xFF000000 : bg; }
+
+    /** Opacidad de la rejilla de puntos del fondo de los widgets Dot. */
+    int gridAlpha() { return Math.round(bgAlpha() * (light ? 0.10f : 0.17f)); }
 
     /** «#rgb», «#rrggbb», «#rrggbbaa», «rgb(…)» o «rgba(…)» → color; si no se entiende, def. */
     static int parse(String s, int def) {
@@ -105,7 +131,7 @@ final class Theme {
 
     /** El fondo de los widgets: la forma redondeada que más se parece al radio del tema. */
     int bgDrawable() {
-        int r = radius;
+        int r = dot ? Math.max(radius, 24) : radius;   // Dot: esquinas muy redondas
         if (r <= 11) return R.drawable.wbg_8;
         if (r <= 19) return R.drawable.wbg_16;
         if (r <= 27) return R.drawable.wbg_24;

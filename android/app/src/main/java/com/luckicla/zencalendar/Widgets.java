@@ -24,6 +24,8 @@ import java.util.Locale;
  * Los widgets «Agenda» y «Hoy». La página les pasa lo de los próximos días
  * (ZC.reminders.widgetData → ZCAndroid.setWidgetData) y aquí se pintan con
  * los colores del tema. Se refrescan al cambiar algo, a medianoche y cada 30 min.
+ * Con el diseño Dot (Theme.dot) usan sus propios layouts (*_dot.xml): monocromos,
+ * con la fecha y las horas en ZenDot (DotText).
  */
 final class Widgets {
     static final String ACTION_TICK = "com.luckicla.zencalendar.WIDGET_TICK";
@@ -121,6 +123,18 @@ final class Widgets {
 
     // ---------- pintar ----------
     static void paintBackground(RemoteViews v, Theme t) {
+        if (t.dot) {
+            // Dot: negro o blanco (con la transparencia del tema), la rejilla de puntos
+            // y el «+» en un círculo de línea fina
+            v.setImageViewResource(R.id.bg, t.bgDrawable());
+            v.setInt(R.id.bg, "setColorFilter", t.wBg());
+            v.setInt(R.id.bg, "setImageAlpha", t.bgAlpha());
+            v.setInt(R.id.grid, "setColorFilter", t.wFg());
+            v.setInt(R.id.grid, "setImageAlpha", t.gridAlpha());
+            v.setInt(R.id.add_bg, "setColorFilter", t.wFg());
+            v.setTextColor(R.id.add_txt, t.wFg());
+            return;
+        }
         v.setImageViewResource(R.id.bg, t.bgDrawable());
         v.setInt(R.id.bg, "setColorFilter", t.bg | 0xFF000000);
         v.setInt(R.id.bg, "setImageAlpha", t.bgAlpha());

@@ -17,9 +17,10 @@
 <link rel="stylesheet" href="css/panels.css">
 <link rel="stylesheet" href="css/gestures.css">
 <link rel="stylesheet" href="css/updates.css">
+<link rel="stylesheet" href="css/dot.css">
 <script>
   // primer pintado con el último tema usado (antes de que cargue nada), para que no destelle
-  (function () { try { var c = JSON.parse(localStorage.getItem('zc.lookCache') || 'null'); if (!c) return; var r = document.documentElement; r.dataset.scheme = c.s; r.style.setProperty('--bg', c.bg); r.style.background = c.bg; } catch (e) {} })();
+  (function () { try { var c = JSON.parse(localStorage.getItem('zc.lookCache') || 'null'); if (!c) return; var r = document.documentElement; r.dataset.scheme = c.s; if (c.d === 'dot') r.dataset.design = 'dot'; r.style.setProperty('--bg', c.bg); r.style.background = c.bg; } catch (e) {} })();
 </script>
 </head>
 <body>
@@ -72,6 +73,7 @@
 <script src="js/ui/data.js"></script>
 <script src="js/ui/settings.js"></script>
 <script src="js/ui/welcome.js"></script>
+<script src="js/ui/dot.js"></script>
 <script src="js/ui/gestures.js"></script>
 <script src="js/ui/updates.js"></script>
 <script src="js/ui/app.js"></script>

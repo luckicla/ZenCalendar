@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-design="zen">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -28,11 +28,20 @@
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bitter:wght@300;400;500;600&family=Fira+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=Bitter:wght@300;400;500;600&family=Fira+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="css/site.css">
 <link rel="stylesheet" href="css/mock.css">
-<script>document.documentElement.classList.add('js');</script>
+<link rel="stylesheet" href="css/dot.css">
+<script>
+  // Antes de pintar: «js» y el diseño elegido (?design=dot o el guardado), para que no parpadee. site.js hace el resto.
+  (function (h) {
+    h.classList.add('js');
+    var d = 'zen';
+    try { d = new URLSearchParams(location.search).get('design'); if (d !== 'dot' && d !== 'zen') d = localStorage.getItem('zc.site.design'); } catch (e) {}
+    h.setAttribute('data-design', d === 'dot' ? 'dot' : 'zen');
+  })(document.documentElement);
+</script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -56,12 +65,14 @@
   <div class="wrap top-in">
     <a class="brand" href="#inicio" aria-label="ZenCalendar, inicio">
       <img src="img/logo.svg" width="28" height="28" alt="">
+      <svg class="brand-dot" viewBox="0 0 50 50" width="22" height="22" aria-hidden="true"><g fill="currentColor"><circle cx="5" cy="5" r="4"/><circle cx="15" cy="5" r="4"/><circle cx="25" cy="5" r="4"/><circle cx="35" cy="5" r="4"/><circle cx="35" cy="15" r="4"/><circle cx="25" cy="25" r="4"/><circle cx="15" cy="35" r="4"/><circle cx="5" cy="45" r="4"/><circle cx="15" cy="45" r="4"/><circle cx="25" cy="45" r="4"/><circle cx="35" cy="45" r="4"/><circle cx="45" cy="45" r="4"/></g><circle class="brand-dot-red" cx="45" cy="5" r="4"/></svg>
       <span>ZenCalendar</span>
     </a>
     <nav class="top-links" aria-label="Principal">
       <a href="#funciones">Qué hace</a>
       <a href="#aspecto">Aspecto</a>
       <a href="#seguro">¿Es seguro?</a>
+      <button type="button" class="design-toggle" id="designToggle" aria-pressed="false" title="Cambiar entre el diseño Zen y el Dot"><span class="visually-hidden">Diseño </span><span class="dt-opt dt-zen">Zen</span><span class="dt-opt dt-dot">Dot</span></button>
       <a href="#descargar" class="top-dl">Descargar</a>
     </nav>
   </div>
@@ -72,6 +83,7 @@
   <section class="hero" id="inicio" aria-labelledby="hero-title">
     <div class="wrap">
       <div class="hero-head">
+        <div class="dot-screen" id="dot-screen" aria-hidden="true"></div>
         <div class="month" id="demo-head">
           <p class="month-name" id="demo-month" aria-hidden="true">noviembre</p>
           <div class="month-meta">
@@ -307,7 +319,7 @@
   <!-- Funciones -->
   <section class="page" id="funciones" aria-labelledby="features-title">
     <div class="wrap page-grid">
-      <div class="page-head">
+      <div class="page-head" data-dot="10 funciones">
         <h2 id="features-title">Lo que hace.</h2>
       </div>
       <div class="page-body">
@@ -455,5 +467,6 @@
 <script src="js/demo.js" defer></script>
 <script src="js/custom.js" defer></script>
 <script src="js/site.js" defer></script>
+<script src="js/dot.js" defer></script>
 </body>
 </html>

@@ -123,6 +123,20 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- el del diseño Dot: squircle negro con la «Z» y las pestañas de puntos -->
+        <activity-alias
+            android:name=".Icon_dot"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_zc_dot"
+            android:roundIcon="@mipmap/ic_zc_dot">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- los avisos: suenan aunque la app esté cerrada, y vuelven tras reiniciar -->
         <receiver android:name=".AlarmReceiver" android:exported="false" />
         <receiver android:name=".BootReceiver" android:exported="true">

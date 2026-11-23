@@ -149,6 +149,24 @@ window.ZCW.mock = (() => {
     return html;
   }
 
+  // Mes en Dot (como la app): cada día es un punto que se enciende según lo que tiene, y debajo el día elegido
+  function dotMonthHTML(list, month, { today = new Date() } = {}) {
+    const first = new Date(month.getFullYear(), month.getMonth(), 1), last = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+    const start = sow(first), weeks = Math.ceil((Math.round((sod(last) - start) / 864e5) + 1) / 7), end = addDays(start, weeks * 7);
+    const occ = occurrences(list, start, end);
+    let grid = DOW.map(d => `<span class="dmo-dow">${d}</span>`).join('');
+    for (let i = 0; i < weeks * 7; i++) {
+      const d = addDays(start, i), n = occ.filter(o => sameDay(o.start, d)).length;
+      const out = d.getMonth() !== month.getMonth();
+      const cls = ['dmo-d', 'l' + Math.min(4, n), out && 'is-out', sameDay(d, today) && 'is-today', !out && sod(d) < sod(today) && 'is-past'].filter(Boolean).join(' ');
+      grid += `<span class="${cls}"><b>${out ? '' : d.getDate()}</b></span>`;
+    }
+    const items = occ.filter(o => sameDay(o.start, today));
+    const panel = `<div class="dmo-head"><span class="dmo-big">${pad(today.getDate())}</span><span><b>${cap(DOW_LONG[today.getDay()])}</b><small>${MONTHS[today.getMonth()]} ${today.getFullYear()}</small></span></div>`
+      + (items.length ? items.slice(0, 4).map(o => `<p class="dmo-ev ev--${o.e.cal}"><small>${o.allDay ? 'Todo el día' : hm(o.start)}</small><i></i><span>${esc(o.e.title)}</span></p>`).join('') : '<p class="dmo-free">Día libre</p>');
+    return `<div class="dmo" style="--weeks:${weeks}">${grid}</div><div class="dmo-panel">${panel}</div>`;
+  }
+
   function miniMonthHTML(now = new Date()) {
     const first = new Date(now.getFullYear(), now.getMonth(), 1), start = sow(first);
     let h = DOW.map(d => `<i>${d}</i>`).join('');
@@ -166,6 +184,31 @@ window.ZCW.mock = (() => {
     return `<svg class="${cls}" viewBox="0 0 1024 1024" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="1024" height="1024" rx="232" fill="url(#${id})"/><rect x="248" y="290" width="528" height="500" rx="104" fill="#fff"/><rect x="368" y="222" width="60" height="124" rx="30" fill="#fff"/><rect x="596" y="222" width="60" height="124" rx="30" fill="#fff"/><path d="M400 452H624L400 652H624" fill="none" stroke="url(#${id})" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   }
 
+  // El icono de Dot, igual que el de la app (web/js/ui/dot.js): squircle negro con las dos pestañas del calendario y
+  // la «Z» hechas de puntos (rejilla de 5×5, como la fuente ZenDot); el último punto de la «Z» es el rojo.
+  function dotLogoSVG(bg = '#000', fg = '#fff', acc = '#D71921', cls = '') {
+    const Z = ['11111', '00010', '00100', '01000', '11112'];
+    let d = '', red = '';
+    Z.forEach((row, y) => [...row].forEach((v, x) => {
+      const c = `<circle cx="${(6.8 + x * 2.6).toFixed(1)}" cy="${(9.2 + y * 2.6).toFixed(1)}" r="0.98"`;
+      if (v === '1') d += c + '/>'; else if (v === '2') red = c + ` fill="${acc}"/>`;
+    }));
+    const edge = bg === '#000' ? 'rgb(255 255 255 / 0.22)' : 'rgb(0 0 0 / 0.12)';
+    return `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true"><rect x=".5" y=".5" width="23" height="23" rx="7" fill="${bg}" stroke="${edge}" stroke-width="1"/><g fill="${fg}"><circle cx="9.4" cy="5" r="1.1"/><circle cx="14.6" cy="5" r="1.1"/>${d}</g>${red}</svg>`;
+  }
+
+  // Fondo «glyph» de Dot: un anillo y una tira de puntos que se encienden por turnos (como las luces de la trasera)
+  function glyphHTML() {
+    let h = '';
+    const n = 28;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+      h += `<i class="gl" style="left:calc(78% + ${(Math.cos(a) * 15).toFixed(2)}cqw);top:calc(70% + ${(Math.sin(a) * 15).toFixed(2)}cqw);animation-delay:${(i * 0.09).toFixed(2)}s"></i>`;
+    }
+    for (let i = 0; i < 12; i++) h += `<i class="gl gl--strip" style="left:calc(12% + ${i * 3.4}cqw);top:calc(18% + ${i * 1.1}cqw);animation-delay:${(1.3 + i * 0.07).toFixed(2)}s"></i>`;
+    return h;
+  }
+
   return { DOW, DOW_LONG, MONTHS, CALS, esc, pad, ymd, hm, sod, sow, addDays, sameDay, cap, monthTitle, dayTitle,
-    sample, tasks, occurrences, monthHTML, weekHTML, agendaHTML, miniMonthHTML, logoSVG };
+    sample, tasks, occurrences, monthHTML, dotMonthHTML, weekHTML, agendaHTML, miniMonthHTML, logoSVG, dotLogoSVG, glyphHTML };
 })();

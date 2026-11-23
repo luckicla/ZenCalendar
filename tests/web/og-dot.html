@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- La imagen para compartir del diseño Dot (1200×630). La genera tests/web/og.js → docs/img/og-dot.png -->
+<style>
+  @font-face { font-family: "ZenDot"; src: url("../../docs/fonts/ZenDot.woff") format("woff"); }
+  :root { --ink: #fff; --pencil: #9A9A9A; --off: #1A1A1A; --line: #3A3A3A; --red: #D71921;
+    --dot: "ZenDot", ui-monospace, monospace; --text: "Barlow", "Bahnschrift", "DIN Alternate", "Roboto", system-ui, sans-serif; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body { background: #000 radial-gradient(circle, rgb(255 255 255 / 0.085) 1.2px, transparent 1.8px) 10px 10px / 20px 20px; color: var(--ink); font-family: var(--text); }
+  .og { position: relative; height: 100%; padding: 52px 64px 0; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto 1fr; column-gap: 48px; }
+  .brand { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; font: 400 26px/1 var(--dot); letter-spacing: 0.04em; }
+  .brand svg { width: 44px; height: 44px; }
+  .screen { margin-top: 44px; }
+  .screen svg { display: block; width: 364px; height: 252px; }
+  .screen circle { fill: var(--off); }
+  .screen circle.on { fill: var(--ink); }
+  .side { margin-top: 52px; display: grid; align-content: start; gap: 14px; }
+  .dow { font: 400 44px/1 var(--dot); letter-spacing: 0.04em; }
+  .month { font: 400 22px/1 var(--dot); letter-spacing: 0.06em; color: var(--pencil); }
+  .live { display: flex; align-items: center; gap: 12px; margin-top: 6px; font: 400 22px/1 var(--dot); letter-spacing: 0.06em; }
+  .live i { width: 12px; height: 12px; border-radius: 50%; background: var(--red); }
+  h1 { margin-top: 30px; font: 400 52px/1.08 var(--dot); letter-spacing: 0.01em; max-width: 13ch; }
+  /* la semana de hoy, abajo, con sus eventos (la forma del punto dice el calendario) */
+  .week { position: absolute; left: 64px; right: 64px; bottom: 0; height: 142px; display: grid; grid-template-columns: repeat(7, 1fr); }
+  .week::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: radial-gradient(circle, var(--line) 1.2px, transparent 1.8px) 0 50% / 9px 4px repeat-x; }
+  .day { padding: 20px 12px 0; display: grid; align-content: start; gap: 9px; }
+  .dh { display: flex; align-items: center; gap: 10px; margin-bottom: 3px; }
+  .day + .day { background: radial-gradient(circle, var(--line) 1px, transparent 1.5px) 0 0 / 4px 8px repeat-y; }
+  .num { display: grid; place-items: center; min-width: 36px; height: 36px; margin-left: -8px; font: 400 22px/1 var(--dot); color: var(--ink); }
+  .is-today .num { border-radius: 50%; background: var(--red); color: #fff; }
+  .dw { font: 400 13px/1 var(--dot); letter-spacing: 0.08em; color: var(--pencil); text-transform: uppercase; }
+  .ev { display: flex; align-items: center; gap: 8px; min-width: 0; font: 500 15px/1.2 var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ev i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--ink); }
+  .ev--work i { background: transparent; box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .ev--birthdays i { background: linear-gradient(90deg, var(--ink) 50%, transparent 50%); box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .ev span { overflow: hidden; text-overflow: ellipsis; }
+</style></head>
+<body>
+<div class="og">
+  <div class="brand" id="brand">ZenCalendar</div>
+  <div class="screen" id="screen"></div>
+  <div class="side">
+    <p class="dow" id="dow"></p>
+    <p class="month" id="month"></p>
+    <p class="live"><i></i>ahora</p>
+    <h1>Apúntalo como lo dirías.</h1>
+  </div>
+  <div class="week" id="week"></div>
+</div>
+<script src="../../docs/js/mock.js"></script>
+<script>
+  const M = ZCW.mock, now = new Date();
+  document.getElementById('brand').insertAdjacentHTML('afterbegin', M.dotLogoSVG('#fff', '#000'));
+  document.getElementById('dow').textContent = M.DOW_LONG[now.getDay()];
+  document.getElementById('month').textContent = `${M.MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+  // la pantalla de puntos con el día, como la portada de la web en Dot (cifras de 5×7 con los puntos apagados a la vista)
+  const D = { 0: ['01110','10001','10001','10001','10001','10001','01110'], 1: ['00100','01100','00100','00100','00100','00100','01110'],
+    2: ['01110','10001','00001','00010','00100','01000','11111'], 3: ['11111','00010','00100','00010','00001','10001','01110'],
+    4: ['00010','00110','01010','10010','11111','00010','00010'], 5: ['11111','10000','11110','00001','00001','10001','01110'],
+    6: ['00110','01000','10000','11110','10001','10001','01110'], 7: ['11111','00001','00010','00100','01000','01000','01000'],
+    8: ['01110','10001','10001','01110','10001','10001','01110'], 9: ['01110','10001','10001','01111','00001','00010','01100'] };
+  const on = new Set(), s = String(now.getDate()).padStart(2, '0');
+  [...s].forEach((ch, k) => D[ch].forEach((row, y) => [...row].forEach((b, x) => { if (b === '1') on.add(`${1 + k * 6 + x},${1 + y}`); })));
+  let dots = '';
+  for (let x = 0; x < 13; x++) for (let y = 0; y < 9; y++) dots += `<circle cx="${x * 10 + 5}" cy="${y * 10 + 5}" r="3.6"${on.has(x + ',' + y) ? ' class="on"' : ''}/>`;
+  document.getElementById('screen').innerHTML = `<svg viewBox="0 0 130 90">${dots}</svg>`;
+  // la semana
+  const ev = M.sample(now), ws = M.sow(now);
+  const occ = M.occurrences(ev, ws, M.addDays(ws, 7));
+  const DW = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
+  let h = '';
+  for (let i = 0; i < 7; i++) {
+    const d = M.addDays(ws, i), items = occ.filter(o => M.sameDay(o.start, d)).slice(0, 2);
+    h += `<div class="day${M.sameDay(d, now) ? ' is-today' : ''}"><span class="dh"><span class="num">${d.getDate()}</span><span class="dw">${DW[i]}</span></span>${items.map(o => `<span class="ev ev--${o.e.cal}"><i></i><span>${M.esc(o.e.title)}</span></span>`).join('')}</div>`;
+  }
+  document.getElementById('week').innerHTML = h;
+</script>
+</body></html>

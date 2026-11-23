@@ -98,6 +98,7 @@
     anim: 'normal', todayGlow: false, eventStyle: 'soft',
     logoMode: 'both', logoText: '', logoColor: 'theme',
     appIcon: 'pastel', widgetAlpha: 72,
+    design: 'zen',   // 'zen' | 'dot' (el diseño «Dot» vive en dot.js + dot.css)
   };
   const PRESETS = [
     { id: 'zen', name: 'Zen', sub: 'Lavanda, aurora y vidrio suave', set: { theme: 'nube', scheme: 'system', accent: null, a2: null, a3: null, bg: 'theme', tSide: 38, tMain: 46, tBar: 30, tCard: 18, blur: 22, radius: 22, shadows: 'soft', fontUI: 'system', fontTitle: 'nunito', eventStyle: 'soft' } },
@@ -148,7 +149,9 @@
   const listeners = [];
 
   const scheme = () => L.scheme === 'system' ? (mqDark.matches ? 'dark' : 'light') : L.scheme;
+  const isDot = () => L.design === 'dot' && !!UI.dot;
   function palette() {
+    if (isDot()) return UI.dot.palette(L, scheme());
     const th = THEMES[L.theme] || THEMES.nube, sc = scheme();
     let p = { ...th[sc], b: [...th[sc].b] };
     if (L.bg === 'imagen' && imgPal && L.bgImgColors !== 'none') {
@@ -196,13 +199,16 @@
     set('--gb', (+L.blur || 0) + 'px');
     set('--rad', (+L.radius) + 'px');
     set('--bg-blur', (+L.bgBlur || 0) + 'px'); set('--bg-dim', (+L.bgDim || 0));
-    const fu = FONTS_UI[L.fontUI] || FONTS_UI.system, ft = FONTS_TITLE[L.fontTitle] || FONTS_TITLE.nunito;
-    ensureFont(fu[1]); ensureFont(ft[1]);
-    set('--font-ui', fu[2] + ',' + FONTS_UI.system[2]); set('--font-title', ft[2] + ',' + FONTS_TITLE.system[2]);
+    if (!isDot()) {
+      const fu = FONTS_UI[L.fontUI] || FONTS_UI.system, ft = FONTS_TITLE[L.fontTitle] || FONTS_TITLE.nunito;
+      ensureFont(fu[1]); ensureFont(ft[1]);
+      set('--font-ui', fu[2] + ',' + FONTS_UI.system[2]); set('--font-title', ft[2] + ',' + FONTS_TITLE.system[2]);
+    }
     set('--zoom', (+L.zoom || 100) / 100);
     set('--wa', Math.max(15, Math.min(100, +L.widgetAlpha || 72)) + '%');
     root.dataset.scheme = sc; root.style.colorScheme = sc;
-    try { localStorage.setItem('zc.lookCache', JSON.stringify({ s: sc, bg: p.bg })); } catch {}
+    root.dataset.design = isDot() ? 'dot' : 'zen';
+    try { localStorage.setItem('zc.lookCache', JSON.stringify({ s: sc, bg: p.bg, d: root.dataset.design })); } catch {}
     document.documentElement.style.background = '';
     root.dataset.anim = effAnim();
     root.dataset.density = L.density; root.dataset.shadows = L.shadows; root.dataset.evstyle = L.eventStyle;
@@ -218,10 +224,13 @@
       img.hidden = !showImg;
       if (showImg) img.style.backgroundImage = `url("${imgEl.src}")`;
     }
-    if (UI.bg) UI.bg.set(kind === 'imagen' ? 'liso' : kind, { speed: +L.bgSpeed || 1, amount: +L.bgAmount || 1, animate: effAnim() !== 'none', hidden: kind === 'imagen' && !!imgEl });
+    if (isDot()) { if (img) img.hidden = true; if (UI.bg) UI.bg.set('liso', { animate: false, hidden: true }); }
+    else if (UI.bg) UI.bg.set(kind === 'imagen' ? 'liso' : kind, { speed: +L.bgSpeed || 1, amount: +L.bgAmount || 1, animate: effAnim() !== 'none', hidden: kind === 'imagen' && !!imgEl });
+    // Dot pone encima lo suyo (variables, letras, fondo de puntos o «glyph»); con Zen solo apaga lo que tuviera encendido
+    if (UI.dot) try { UI.dot.apply(L, p, { set, light, anim: effAnim() }); } catch (e) { console.error(e); }
     paintLogo(p);
     try {
-      if (!(ZC.platform && ZC.platform.isWidget)) ZC.platform && ZC.platform.setTheme && ZC.platform.setTheme({ bg: p.bg, surface: p.s1, fg: p.fg, muted: p.mut, a1: p.a1, a2: p.a2, a3: p.a3, light, alpha: (+L.widgetAlpha || 72) / 100, radius: +L.radius });
+      if (!(ZC.platform && ZC.platform.isWidget)) ZC.platform && ZC.platform.setTheme && ZC.platform.setTheme({ bg: p.bg, surface: p.s1, fg: p.fg, muted: p.mut, a1: p.a1, a2: p.a2, a3: p.a3, light, alpha: (+L.widgetAlpha || 72) / 100, radius: isDot() ? 28 : +L.radius, design: root.dataset.design, ...(isDot() ? { accent: p.a1 } : {}) });
     } catch (e) { console.warn(e); }
     listeners.forEach(fn => { try { fn(L, p); } catch (e) { console.error(e); } });
   }
@@ -286,7 +295,7 @@
 
   UI.look = {
     THEMES, ACCENTS, BGS, FONTS_UI, FONTS_TITLE, PRESETS, LOOK0,
-    get: () => L, palette, scheme, bgKind, effAnim, apply, set, preview, endPreview, previewing: () => !!held, load, applyPreset,
+    get: () => L, palette, scheme, bgKind, effAnim, isDot, apply, set, preview, endPreview, previewing: () => !!held, load, applyPreset,
     onChange: fn => listeners.push(fn),
     themeIn: (id, sc) => (THEMES[id] || THEMES.nube)[sc],
     color: { mix, readable, textOn, lum, contrast, hex2rgb, rgb2hsl, hsl },

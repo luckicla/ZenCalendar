@@ -110,7 +110,10 @@
     try { theme = ZC.store.local('theme'); } catch (e) {}
     let firstDay = 1;
     try { firstDay = ZC.store.getPrefs().cal.firstDay; } catch (e) {}
-    return { generated: Date.now(), today: u.ymd(from), items, theme, strings: T(), firstDay };
+    // (en el diseño Dot, sin la florecita del «Nada a la vista ✿»)
+    const strings = Object.assign({}, T());
+    if (theme && theme.design === 'dot' && strings.empty) strings.empty = strings.empty.replace(/\s*✿\s*$/, '');
+    return { generated: Date.now(), today: u.ymd(from), items, theme, strings, firstDay };
   }
 
   // ---------- entregar a la plataforma ----------

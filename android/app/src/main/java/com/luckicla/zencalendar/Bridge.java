@@ -139,7 +139,7 @@ final class Bridge {
         try { return app.getPackageManager().getPackageInfo(app.getPackageName(), 0).versionName; } catch (Exception e) { return ""; }
     }
 
-    // 'tap' | 'select' | 'success' | 'warning' (el ajuste «haptics» lo mira la página)
+    // 'tap' | 'select' | 'success' | 'warning' | 'glyph' (el ajuste «haptics» lo mira la página)
     @JavascriptInterface public void haptic(String kind) {
         a.runOnUiThread(() -> Haptics.play(app, a.webView(), kind));
     }

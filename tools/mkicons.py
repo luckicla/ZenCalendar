@@ -17,6 +17,14 @@ y además (del pastel):
   android/app/src/main/res/drawable-*/ic_stat_zc.png    icono pequeño blanco de las notificaciones
   desktop/build/icon.ico                                 16…256 px
   desktop/build/icons/<variante>.ico                     (el icono de la ventana/bandeja en Windows)
+
+y la variante «dot» (diseño Dot), que no sale del logo sino de puntos dibujados
+aquí: squircle negro con una hoja de calendario de puntos blancos (contorno,
+dos pestañas y cabecera), una «Z» de puntos dentro y un punto rojo #D71921 al
+final de la cabecera. Mismos archivos que las demás variantes, y además
+android/app/src/main/res/drawable-*/wgrid_tile.png (la rejilla de los widgets Dot).
+
+    python3 tools/mkicons.py --dot     solo lo del diseño Dot
 """
 import io
 import os
@@ -155,7 +163,105 @@ ADAPTIVE = '''<?xml version="1.0" encoding="utf-8"?>
 '''
 
 
+# ---------------------------------------------------------------------------
+# Variante «dot»
+# ---------------------------------------------------------------------------
+DOT_RED = '#D71921'
+DOT_PITCH = 64          # paso de la rejilla (en el lienzo de 1024)
+DOT_R = 24              # radio de cada punto
+# encendidos: (columna, fila) con el (0, 0) en el centro del icono.
+# Una hoja de calendario de puntos (sin las cuatro esquinas, para que se vea redondeada),
+# con sus dos pestañas arriba, la fila de cabecera y una «Z» de 5×5 dentro, separada
+# una fila de la cabecera y otra del borde de abajo.
+DOT_PAGE = ([(k, -3) for k in range(-3, 4)] + [(k, 5) for k in range(-3, 4)]
+            + [(-4, m) for m in range(-2, 5)] + [(4, m) for m in range(-2, 5)])
+DOT_TABS = [(-2, -5), (-2, -4), (2, -5), (2, -4)]
+DOT_Z = [(k, -1) for k in range(-2, 3)] + [(1, 0), (0, 1), (-1, 2)] + [(k, 3) for k in range(-2, 3)]
+DOT_RED_AT = (3, -3)    # el punto rojo («hoy»): el final de la cabecera, arriba a la derecha
+DOT_ON = [p for p in DOT_PAGE + DOT_TABS + DOT_Z if p != DOT_RED_AT]
+
+
+def dot_svg(layer='full', scale=1.0):
+    """layer: 'full' (el icono entero, con su squircle negro), 'small' (igual con los puntos
+    más gordos, casi tocándose, para 16…24 px, donde los puntos sueltos se emborronan),
+    'bg' (fondo a sangre del adaptativo: negro liso), 'fg' (solo los puntos encendidos),
+    'mono' (silueta blanca de los encendidos, para los iconos con tema de Android 13).
+    scale: el dibujo crece o encoge alrededor del centro."""
+    p = DOT_PITCH * scale
+    r = (DOT_R if layer != 'small' else 30) * scale
+    c = 512
+    out = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">']
+
+    def circ(k, m, fill):
+        out.append('<circle cx="%.2f" cy="%.2f" r="%.2f" fill="%s"/>' % (c + k * p, c + m * p, r, fill))
+
+    if layer in ('full', 'small'):
+        out.append('<defs><radialGradient id="g" cx="0.25" cy="0.08" r="0.9"><stop offset="0" stop-color="#ffffff" stop-opacity="0.09"/>'
+                   '<stop offset="0.6" stop-color="#ffffff" stop-opacity="0"/></radialGradient></defs>')
+        out.append('<rect width="1024" height="1024" rx="232" fill="#000000"/>')
+        # un brillo muy suave arriba a la izquierda, como el vidrio de la trasera del teléfono
+        out.append('<rect width="1024" height="1024" rx="232" fill="url(#g)"/>')
+    if layer == 'bg':
+        out.append('<rect width="1024" height="1024" fill="#000000"/>')
+    if layer in ('full', 'small', 'fg', 'mono'):
+        for k, m in DOT_ON:
+            circ(k, m, '#FFFFFF')
+        circ(DOT_RED_AT[0], DOT_RED_AT[1], '#FFFFFF' if layer == 'mono' else DOT_RED)
+    out.append('</svg>')
+    return '\n'.join(out)
+
+
+DOT_FULL = 1.0      # escala del icono entero
+DOT_ADAPTIVE = 0.74  # en el adaptativo: todo dentro de la zona segura (círculo de 66 dp de 108)
+
+
+def dot_ico(path):
+    """.ico de Windows: de 16 a 32 px con los puntos más gordos (si no, se emborronan)."""
+    sizes = [16, 24, 32, 48, 64, 128, 256]
+    imgs = [render(dot_svg('small' if s <= 32 else 'full', DOT_FULL), s) for s in sizes]
+    imgs[-1].save(path, sizes=[(s, s) for s in sizes], append_images=imgs[:-1])
+
+
+def make_dot():
+    v = 'dot'
+    big = render(dot_svg('full', DOT_FULL), 1024)
+    save(big, os.path.join(ROOT, 'web', 'img', 'icons', v + '.png'), 512)
+    ico = os.path.join(ROOT, 'desktop', 'build', 'icons', v + '.ico')
+    os.makedirs(os.path.dirname(ico), exist_ok=True)
+    dot_ico(ico)
+    # adaptativo: 108 dp con los 66 del centro seguros (la hoja es más alta que ancha: un poco más pequeña que las demás variantes)
+    k = DOT_ADAPTIVE
+    bg_i, fg_i, mono_i = render(dot_svg('bg', k), 432), render(dot_svg('fg', k), 432), render(dot_svg('mono', k), 432)
+    for d, f in DENS.items():
+        folder = os.path.join(RES, 'mipmap-' + d)
+        save(big, os.path.join(folder, 'ic_zc_%s.png' % v), int(48 * f))
+        save(fg_i, os.path.join(folder, 'ic_zc_%s_fg.png' % v), int(108 * f))
+        save(bg_i, os.path.join(folder, 'ic_zc_%s_bg.png' % v), int(108 * f))
+        save(mono_i, os.path.join(folder, 'ic_zc_%s_mono.png' % v), int(108 * f))
+    os.makedirs(os.path.join(RES, 'mipmap-anydpi-v26'), exist_ok=True)
+    with open(os.path.join(RES, 'mipmap-anydpi-v26', 'ic_zc_%s.xml' % v), 'w', encoding='utf-8') as f:
+        f.write(ADAPTIVE.format(v=v))
+    print('  ✓', v)
+
+
+def make_grid_tile():
+    """El punto de la rejilla del fondo de los widgets Dot (drawable/wgrid.xml lo repite):
+    paso de 8 dp y punto de 2 dp, blanco (el color y la opacidad los pone Widgets.java)."""
+    from PIL import ImageDraw
+    for d, k in DENS.items():
+        n = int(round(8 * k))
+        big = 8
+        img = Image.new('RGBA', (n * big, n * big), (255, 255, 255, 0))
+        ImageDraw.Draw(img).ellipse([(n * big) / 2 - k * big, (n * big) / 2 - k * big, (n * big) / 2 + k * big, (n * big) / 2 + k * big], fill=(255, 255, 255, 255))
+        save(img.resize((n, n), Image.LANCZOS), os.path.join(RES, 'drawable-' + d, 'wgrid_tile.png'))
+    print('  ✓ rejilla de los widgets Dot')
+
+
 def main():
+    if '--dot' in sys.argv:          # solo lo del diseño Dot (más rápido)
+        make_dot()
+        make_grid_tile()
+        return
     base = open(SVG, encoding='utf-8').read()
     for v in VARIANTS:
         svg = recolor(base, v)
@@ -179,6 +285,8 @@ def main():
         with open(os.path.join(RES, 'mipmap-anydpi-v26', 'ic_zc_%s.xml' % v), 'w', encoding='utf-8') as f:
             f.write(ADAPTIVE.format(v=v))
         print('  ✓', v)
+    make_dot()
+    make_grid_tile()
 
     # web (del pastel)
     pastel = render(base, 1024)

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- la rejilla de puntos del fondo de los widgets Dot: un punto (wgrid_tile, 8 dp) repetido.
+     El color y la opacidad se ponen desde el código (Widgets.paintBackground) -->
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:src="@drawable/wgrid_tile"
+    android:tileMode="repeat"
+    android:antialias="true"
+    android:dither="false" />

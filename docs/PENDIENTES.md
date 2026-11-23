@@ -199,3 +199,166 @@ Bienvenida, crear/editar/mover/estirar (PC y móvil), todo el día y varios día
 - **Gestos** (`web/js/ui/gestures.js` + `web/css/gestures.css`; pruebas `node tests/ui/gestures.js`): deslizar a los lados con el periodo de al lado asomando y muelle; pellizcar = alto de las horas en Semana/Día y Mes ⇄ Año (Ctrl+rueda en el PC); arrastrar la cabecera de Semana hacia abajo = Mes y el mes hacia arriba = Semana; filas de Agenda/Tareas: derecha completa, izquierda «Mañana»/«Borrar» (del todo, borra) con deshacer; tirar hacia abajo en Agenda/Tareas = sincronizar con Drive; doble toque en un día o hueco = crear, en la cabecera = hoy; borde izquierdo = panel lateral; arrastrar la hoja hacia arriba = expandir; visor de fotos con pellizco, doble toque y deslizar para cambiar o cerrar; Mayús+rueda/trackpad = cambiar de periodo; clic derecho = menú (ver, editar, completar, duplicar, pasar a mañana, Maps, color, borrar) y clic central = editar. Interruptores por grupos en Ajustes → Gestos (`prefs.cal.gestures`), el alto de las horas se guarda en `ZC.store.local('hourZoom')` y la vibración usa `ZC.platform.haptic` si existe. Enganches mínimos: `index.html` (css y script), `app.js` (no arranca su deslizar si hay `UI.gestures`) y `settings.js` (`UI.settings.addSection`).
 - **Actualizaciones** (`web/js/ui/updates.js` + `web/css/updates.css`; pruebas con una API de mentira `node tests/ui/updates.js`): aviso discreto con «Actualizar» / «Ver novedades» y barra de progreso, Ajustes → Actualizaciones (versión, buscar, estado, novedades en markdown, «Actualizar sola» en `prefs.look.autoUpdate`, por defecto encendido) y el aviso «Actualizado a la versión X» una sola vez (`ZC.platform.justUpdated` / evento `updated`). El botón dice «Instalar» en Android, «Reiniciar y actualizar» en Windows y «Recargar» en la web.
 
+
+## Dot → para web-sistema (de web-diseño)
+
+- **Selector**: en `index.html` hay un único `<button id="designToggle" aria-pressed="false">` dentro de `.top-links`, con dos
+  segmentos visuales (`.dt-zen`, `.dt-dot`) y un «Diseño » oculto delante. Un clic = cambiar al otro diseño. Pon
+  `aria-pressed="true"` cuando el diseño sea Dot. Cuál se ve encendido lo decide el CSS con `html[data-design]`, así que no
+  hace falta tocar clases.
+- **Sin parpadeo al cargar**: en el `<head>` de `index.html` hay un script en línea que pone `html[data-design]` antes de pintar
+  (lee `?design=` y `localStorage['zc.site.design']`; si no hay nada, `zen`). No guarda nada: la persistencia sigue siendo tuya
+  en `site.js`.
+
+## Dot: ZenDot lista (de app-back)
+
+- **Archivos**: `assets/fonts/ZenDot.ttf` y `assets/fonts/ZenDot.woff` (+ `assets/fonts/OFL.txt`, licencia SIL OFL 1.1, © 2026 luckicla). Copias: **`web/fonts/ZenDot.woff`** (app), **`docs/fonts/ZenDot.woff`** (web) y `android/app/src/main/res/font/zendot.ttf` (widgets). Se regenera con `python3 tools/mkfont.py` (sale idéntica si no cambia el diseño).
+- **Qué trae**: 5×7 puntos redondos de verdad, minúsculas de verdad (altura x de 5 puntos, con descendentes), A–Z a–z 0–9, á é í ó ú à è ì ò ù ä ë ï ö ü ñ ç y sus mayúsculas, `·` (para el «l·l»), `. , : ; ! ? ¡ ¿ ' " ‘ ’ “ ” « » - – — / \ | ( ) [ ] { } + ± × ÷ % & @ # * = < > _ ~ ^ ° º ª • … $ € £ → ← ↑ ↓ ✓`. Interletrado automático (`kern`, p. ej. «LT», «To»).
+- **Cifras tabulares** (todas igual de anchas: un reloj no baila) y los `:` centrados en la altura de las cifras, para las horas.
+- **Métricas**: 1000 por em; mayúsculas y cifras de 680 de alto (0,68 em), altura x 0,48 em; ascendente 1,0 y descendente 0,25 (iguales en Mac/Windows/Android), así que la altura de línea «normal» es 1,25. Para números grandes va bien `line-height: 1` (los acentos de las mayúsculas suben hasta 0,98 em). Entre letra y letra ya hay una columna vacía: no hace falta `letter-spacing` (si se pone, mejor en múltiplos de 0,1 em, el paso de la rejilla).
+- **Tamaños**: queda nítida desde ~12 px, pero brilla de 20 px para arriba; en múltiplos de 10 px los puntos caen en píxeles enteros.
+
+```css
+@font-face {
+  font-family: "ZenDot";
+  src: url("../fonts/ZenDot.woff") format("woff");   /* desde web/css/ o docs/css/ */
+  font-display: swap;
+}
+.dot-num { font-family: "ZenDot", ui-monospace, monospace; font-variant-numeric: tabular-nums; line-height: 1; }
+```
+- **Transición**: no dejo `ZCDot.transition`; la vuestra con View Transitions ya es un barrido de puntos y queda bien.
+  `window.ZCDot.paint()` vuelve a pintar la pantalla de la portada si hiciera falta.
+- **Demo → pantalla**: `demo.js` emite `zc:demo` en `document` (`detail: { kind: 'add'|'select'|'today'|'month'|'undo', date, time, title, count, cal }`).
+  `dot.js` lo usa para que la pantalla de puntos enseñe el día y la hora de lo que se apunta.
+- **Tokens de Dot** (en `css/dot.css`, sobre `html[data-design="dot"]`): `--dot-red`, `--dot-on`, `--dot-off`, `--dot-line`,
+  `--font-dot` («ZenDot»), `--font-text` (Barlow → Bahnschrift → DIN Alternate → Roboto). Los de Zen (`--paper`, `--ink`,
+  `--pencil`, `--rule`…) también se redefinen en Dot, así que lo que ya los use cambia solo.
+- Barlow va en la misma petición de Google Fonts que Bitter y Fira Sans (los archivos solo se bajan si se usan).
+- Capturas: `node tests/web/shots-dot.js` (puerto 8831) → `tests/web/out/dot-*.png` y `zen-*.png`.
+
+Dot: hecho por web-diseño (`docs/css/dot.css`, `docs/js/dot.js`, ganchos en `index.html`, evento en `demo.js`,
+selector en `site.css`; plan en `tests/web/PLAN-DOT.md`).
+
+## Dot → para app-front (de app-back)
+
+- **`ZC.platform.setTheme({ ..., design, accent })`**: pasa siempre `design: 'zen' | 'dot'` (ya lo decía el contrato) y, en Dot, **`accent`** con el acento elegido (`'#D71921'`, `'#FFFFFF'`…; `#rgb`/`#rrggbb`). Si no mandas `accent`, los widgets de Android usan el rojo. En Dot pasa también `light` bien puesto: los widgets de Android salen **negros o blancos según `light`** (no usan `bg`/`fg`), y la barra de estado y la de navegación se pintan con tu `bg` (opaco) y los iconos según `light`. `alpha` sigue mandando en la transparencia del fondo de los widgets y `radius` en sus esquinas (en Dot, como poco 24).
+- **Windows**: en Dot la ventana es opaca con tu `bg` (o `#000`/`#FFF` según `light` si `bg` no es `#rgb`/`#rrggbb`) y **sin Mica ni acrílico**: aunque llames a `setWindowMaterial('mica')` devuelve `false` y no la pone (se guarda para cuando se vuelva a Zen, y entonces vuelve sola). Así que en Dot el `body` tiene que llevar su fondo, no transparente. El widget de escritorio sigue siendo una ventana transparente sin material: el panel negro/blanco lo pinta `widget.html`.
+- **Iconos**: `ZC.platform.appIcons` trae el nuevo **`dot`** (`img/icons/dot.png`) y cada icono lleva `design: 'zen' | 'dot'`, para sugerir el `dot` al elegir el diseño Dot (no se pone solo: `setAppIcon('dot')` cuando el usuario diga que sí). En Windows, si el usuario nunca ha elegido icono, la ventana y la bandeja ya usan el de Dot mientras el diseño sea Dot.
+- **`ZC.platform.haptic('glyph')`**: vibración de Dot, dos golpecitos secos (Android con `VibrationEffect`, web con `navigator.vibrate`).
+- **`ZC.platform.design`** → `'zen' | 'dot'` del último `setTheme` (por si `widget.html` o alguien lo quiere saber sin mirar las preferencias).
+- En Dot, el texto «Nada a la vista ✿» de los widgets de Android se manda sin la florecita.
+
+## Dot: hecho por app-back
+
+- **Fuente ZenDot** (ver «Dot: ZenDot lista» arriba): `tools/mkfont.py` → `assets/fonts/ZenDot.ttf|.woff` + `OFL.txt`, copias en `web/fonts/`, `docs/fonts/` y `android/app/src/main/res/font/zendot.ttf`. 159 glifos, 1078 parejas de interletrado, puntos circulares de 8 arcos cuadráticos en sentido horario (sin solaparse), `name`/`OS/2`/`hhea`/`post`/`gasp`/`kern` completos; se genera igual byte a byte. Probada en Chrome a 14–150 px, claro y oscuro.
+- **Icono `dot`** (`tools/mkicons.py`, `python3 tools/mkicons.py --dot` para solo esto; rehecho tras la revisión del coordinador): squircle negro con una hoja de calendario de puntos blancos (contorno con las esquinas redondeadas, dos pestañas y cabecera), una «Z» de 5×5 puntos dentro, separada de la cabecera y del borde, y el punto rojo `#D71921` («hoy») al final de la cabecera. Sin rejilla de fondo. `web/img/icons/dot.png`, mipmaps (legacy + adaptativo `fg`/`bg`/`mono`, todo dentro de la zona segura), `desktop/build/icons/dot.ico` (de 16 a 32 px con los puntos más gordos, que se juntan en líneas limpias), `activity-alias .Icon_dot` y `MainActivity.ICONS`. El monocromo de Android 13 es la silueta de los puntos (rojo incluido). Se lee como «calendario + Z» también a 48 px.
+- **Android**: `Theme.java` lee `design`/`accent`; `DotText.java` pinta texto en ZenDot en un `Bitmap` (fuente de `res/font` con `ResourcesCompat.getFont`, en sp para que escale con la letra del sistema; si fallara, monoespaciada) que va con `setImageViewBitmap` (+ `setContentDescription` para TalkBack). Layouts nuevos `widget_today_dot`, `widget_agenda_dot`, `widget_agenda_item_dot`, `widget_agenda_day_dot`: «Hoy» con el día de la semana en rojo, la fecha enorme con un punto rojo («23.»), el mes, y los eventos con un punto de color, la hora en ZenDot y el título en sans; «Agenda» con «LUN 23 NOV» (día de la semana en rojo), cabeceras de día y horas en ZenDot. Fondo negro/blanco con la transparencia del tema, rejilla de puntos (`drawable/wgrid.xml` + `wgrid_tile.png` de 8 dp) y el «+» en un círculo de línea fina. La lista de la agenda declara 4 tipos de fila (Zen + Dot) para poder cambiar de diseño con el widget puesto. Barras del sistema opacas en Dot y sin la rayita de la barra de navegación (Android 9+). `Haptics` con `'glyph'`. Todo compilado con `javac` contra los *stubs* (+ `Bitmap`, `Canvas`, `Paint`, `Rect`, `Typeface`, `TypedValue`, `ResourcesCompat`, `setImageViewBitmap`, `setNavigationBarDividerColor`) y un `R.java` sacado de `res/`; XML bien formados y todas las referencias `@…` existen.
+- **Windows** (`desktop/main.js`): `zc:theme` guarda el diseño; en Dot, sin Mica/acrílico (vuelve la que hubiera al volver a Zen), fondo opaco (`#rgb` también vale ahora) y el icono de la ventana/bandeja/widget sigue al diseño si el usuario no eligió uno (los accesos directos solo cambian cuando lo elige él). El aviso «sigue aquí» va sin «✿» en Dot.
+- **Core** (`platform.js`, `reminders.js`): `setTheme` normaliza y reenvía `design` (y `accent` si es un color), `theme-color` por defecto según el diseño, `appIcons` con `dot` y `design`, `haptic('glyph')`, `ZC.platform.design`. Pruebas nuevas: `tests/core/dot.test.js` (12). Pasan `node tests/core/run.js` y `node tests/ui/{interact,regress,gestures,updates}.js`. `CONTRATO.md`: añadido lo de Dot en `ZC.platform` y la carpeta `assets/fonts/`.
+- **Solo se puede comprobar en un aparato / en Actions**: el `gradle assembleRelease` de verdad (los *stubs* no ven un método mal escrito en los dos sitios); los widgets Dot en un lanzador real (tamaño de los bitmaps, que la rejilla quede dentro de las esquinas, cambio Zen ⇄ Dot con el widget puesto); `ResourcesCompat.getFont` en Android 7; el icono `dot` en el lanzador (máscaras, iconos con tema de Android 13); la vibración `'glyph'`; en Windows quitar/poner la Mica al cambiar de diseño y el icono de la bandeja.
+
+## Dot → para web-diseño (de web-sistema)
+
+- **`index.html`, una línea**: en el script en línea del `<head>`, un `?design=` que no sea `zen` ni `dot` ya no tapa lo
+  guardado (antes `?design=xyz` daba Zen aunque el visitante hubiera elegido Dot). Es el único cambio que he hecho en tu archivo.
+- **Textos del personalizador en Dot**: el `.lead` («Prueba aquí el tema, el fondo, el vidrio, las esquinas…») y la `.note`
+  («colores sacados de tu foto de fondo…») hablan de Zen. En Dot no hay temas ni esquinas: si quieres, pon otro texto para Dot.
+  Los controles que añado desde `custom.js` (sin tocar el HTML): `.ctl--design` (`name="design"`), `#accents`
+  (Rojo/Tinta/Ámbar/Cian/Verde/Otro, como la app) con `.ctl-color` (`#accent-color`), `#dbgs` (Puntos/Rejilla/Liso/Glyph),
+  `#dotcolors` (Un punto/Contorno/Sin color) y `#dfonts` (Archivo/Sistema/Muy legible). Los de solo un diseño llevan
+  `data-only="zen|dot"` y se esconden con `hidden`; la fila de «Esquinas» también (en Dot son fijas, como en la app).
+  Usan tus `.ctl`/`.seg`, así que ya salen con tu estilo de Dot.
+- **Pies de foto de las capturas**: en Dot los cambio desde `custom.js` («La semana en Windows, en Dot oscuro.»…). Si
+  prefieres decidirlos tú, pon `data-dot="…"` en el `figcaption` y manda ese.
+- **Transición**: mientras dura, `html` lleva `.zc-switching` y `data-switching="zen-dot"` (o `dot-zen`), por si quieres
+  esconder algo. API: `ZCSite.design` y `ZCSite.setDesign('dot', { animate, persist })`; el evento `zc:design` lleva
+  `{ design, previous, source, initial }` (sale también una vez al cargar, con `initial: true`).
+- Una vez vi en el móvil (390 px, Dot oscuro) que `.top-links`/`.top-dl` se salían por la derecha; en las pasadas
+  siguientes ya cabía. `tests/web/design.js` lo vigila.
+
+## Dot: hecho por web-sistema
+
+Dot: hecho por web-sistema.
+- **Selector y persistencia** (`docs/js/site.js`): `?design=zen|dot` → `localStorage['zc.site.design']` → `zen`.
+  Hace funcionar `#designToggle` (`aria-pressed`; también vale un grupo con hijos `[data-design-option]`, y si no hay
+  selector crea uno de repuesto). Cuando el visitante cambia: guarda, `history.replaceState` (`?design=dot`; en Zen quita el
+  parámetro y respeta el ancla), cambia los dos `theme-color` y `og:image`/`twitter:image`/`og:image:alt`, emite `zc:design`
+  y mantiene en su sitio la sección que estabas leyendo. Un `?design=` que viene en un enlace no cambia lo guardado.
+- **Transición**: con View Transitions, la página nueva aparece dentro de un círculo que se abre desde el selector, con
+  delante un halo de puntos que se apaga hacia fuera. Hacia Dot va a pasos (`steps(22)`), hacia Zen va suave. Con «reducir
+  movimiento», con la pestaña oculta o en un navegador sin View Transitions, el cambio es instantáneo.
+- **QR en Dot**: módulos redondos, nivel Q y los cuadros de las esquinas cuadrados con el centro rojo. Lo leen los dos
+  lectores de OpenCV a 4 tamaños.
+- **Maquetas en Dot** (`docs/js/mock.js`, `docs/css/mock.css`, `docs/js/custom.js`): personalizador, PC, móvil (mes y agenda)
+  y widgets, siguiendo `web/css/dot.css` y `web/js/ui/dot.js` de la app. Paleta, acentos, el punto de color de cada
+  calendario (o el contorno, o sin color), hoy con un aro del acento, la hora actual en el acento, rótulos y horas en ZenDot,
+  fondo de puntos/rejilla/liso/glyph, esquinas fijas y el logo de puntos de la app. Las maquetas siguen al diseño de la
+  página; el personalizador tiene además su propio «Diseño: Zen / Dot» (solo cambia la maqueta y, en Dot, sugiere el
+  icono de Dot). `capturas/capturas.json` acepta capturas reales de Dot (`pc-semana-dot`…); si no hay, sale la maqueta en Dot.
+- **Imagen OG**: `docs/img/og-dot.png` (1200×630), desde `tests/web/og-dot.html`. `node tests/web/og.js [zen|dot]` genera
+  una o las dos (`og.png` no la he regenerado).
+- **Pruebas**: `node tests/web/design.js` (puerto 8832; 72 comprobaciones). Cubre el selector, la URL, localStorage, que se
+  recuerde al recargar, que no parpadee (el primer pintado ya sale en Dot con los scripts retrasados 1,5 s), la
+  transición y su limpieza, teclado y foco, «reducir movimiento», y la demo, el personalizador, el QR (lo lee de verdad), la
+  descarga y los desbordes en los dos diseños. Sin errores en consola. Capturas en `tests/web/out/design-*.png`.
+  `node tests/web/shots.js` sigue igual para Zen (ahora en el puerto 8832 por defecto, y con `DESIGN=dot` saca `dot-*.png`).
+- **Para app-front**: si cambias algo visible de Dot (cómo se ven hoy, los eventos, la hora actual, los rótulos, la letra
+  o el logo), avísame aquí y actualizo las maquetas de la web (`docs/css/mock.css`, la sección «Dot»).
+
+## Dot: hecho por app-front
+
+- **Qué es**: segundo diseño completo de la app, «Dot», con `prefs.look.design: 'zen' | 'dot'` (Zen sigue por defecto y no cambia: lo comprueba `tests/ui/dot.js` con una captura idéntica antes y después de pasar por Dot). En el HTML: `html[data-design]` (el script del `<head>` ya lo pone desde `zc.lookCache` para que no destelle).
+- **Archivos**: `web/css/dot.css` (todo bajo `html[data-design="dot"]`, salvo las clases `dz-*` del selector de diseño) y `web/js/ui/dot.js`. Ganchos mínimos en Zen: `look.js` (paleta, letras y fondo de Dot, `design` en `setTheme` y en `lookCache`), `app.js` (`UI.dot.chrome` al pintar la cabecera), `settings.js` (expone `sections`/`parts` y el valor de cada sección en la lista), `welcome.js` (selector en el paso 1), `widget.js` (`UI.dot.widget`), `index.html` y `widget.html` (cargan `dot.css` y `dot.js`), `i18n-dict.js` (inglés y catalán).
+- **Cómo se ve**: cabecera con el periodo en matriz de puntos 5×7 (SVG que se enciende columna a columna) y una ficha con la fecha de hoy en puntos rojos; Mes = rejilla de puntos que se encienden según la carga del día, con el día elegido al lado (debajo en el móvil) y arrastrar una tarjeta a otro punto para moverla; Semana y Día con líneas de puntos, la hora como línea roja y pastillas de contorno; Agenda con fechas grandes en ZenDot; Año = cada día un punto; editor como hoja de contorno fino, botones de círculo, interruptores «de hardware», deslizadores como faders, el «+» rojo redondo, Ajustes como lista técnica (con el valor de cada sección a la derecha), avisos en píldora negra, iconos de línea propios para las vistas; fondos de puntos, rejilla, liso o «glyph» (tiras de luz por pasos que también se encienden al guardar algo). Movimiento por pasos (`steps()`), un solo momento al arrancar (persiana + barrido de puntos) y nada de eso con movimiento reducido o «Animaciones: Ninguna».
+- **Ajustes de Dot** (en `prefs.look`, se sincronizan): `dotAccent` (`red` por defecto, `ink`, `amber`, `cyan`, `green` o un `#rrggbb`), `dotBg` (`dots`, `grid`, `liso`, `glyph`), `dotGap`, `dotGlass`, `dotBlur`, `dotColors` (`dot`, `full`, `mono`), `dotFont` (`archivo`, `system`, `atkinson`), `dotSpeed`. Claro/oscuro, densidad, tamaño, animaciones y gestos son los de siempre. Los temas pastel, estilos, esquinas, sombras y fondos de manchas se esconden en Dot.
+- **Plataforma**: `setTheme` lleva siempre `design` (y en Dot `a1` es el acento, rojo `#D71921` por defecto, `bg` `#000`/`#F2F2F2`, `radius` 28). Al elegir Dot por primera vez sale un aviso «¿Pones también el icono de Dot?» (solo si `ZC.platform.appIcons` trae `dot` y existe `setAppIcon`; se recuerda en `ZC.store.local('dotIconAsked')`). En Dot, confirmar vibra con `ZC.platform.haptic('glyph')` (fuera de la web).
+- **Pruebas**: `node tests/ui/dot.js` (puerto 8821: cambiar y volver, recargar, setTheme, icono una vez, Mes de puntos con clic/doble clic/arrastre, gestos en el móvil, ajustes de Dot, bienvenida, widget, movimiento reducido, Zen idéntico, sin errores) y `node tests/ui/shots.js` hace ahora también las capturas `dot-*.png` (`DESIGN=dot` o `DESIGN=zen` para solo uno).
+- **Queda / ideas**: el titular en puntos usa una fuente 5×7 propia en `dot.js` (A–Z, cifras y tildes); si se quiere el mismo dibujo que ZenDot, se podría sacar de `tools/mkfont.py`. La vista Tareas y la de Día no tienen estructura propia (solo estilo). El fondo «glyph» se ve sobre todo con más transparencia en los paneles.
+
+## Dot: verificación
+
+Revisión final de todo lo de Dot antes de la 1.1.0 (app, web, Android, Windows y documentos).
+
+**Encontrado y arreglado**
+- *Titular en puntos pegado* («NOVIEMBRE2026»): el espacio pintaba puntos apagados y no se notaba. Ahora el espacio no lleva
+  rejilla y deja 5 columnas vacías, como ZenDot (`web/js/ui/dot.js`, prueba nueva en `tests/ui/dot.js`).
+- *Dos dibujos de la letra de puntos*: el titular, la fecha y la pantalla de la portada usaban una 5×7 propia distinta de
+  ZenDot. Ahora `tools/mkfont.py` escribe los mismos dibujos entre las marcas `<zendot>` de `web/js/ui/dot.js` (todo menos
+  las minúsculas, con las tildes de las mayúsculas en su sitio y la cola de la «Ç») y de `docs/js/dot.js` (las cifras). Lo
+  único que no copian es el interletrado. De paso, el `.woff` ya sale idéntico cada vez (`recalcTimestamp=False`).
+- *Fondo «glyph» casi invisible*: al elegirlo en Ajustes, si la transparencia sigue en 22 % sube a 40 % (y vuelve al
+  dejarlo; si el usuario la había movido, no se toca: `UI.dot.bgPatch`). El anillo baja por debajo de la cabecera (encima
+  de los botones de la cabecera tapaba «Agenda» y «Año»), no se sale por la derecha en el móvil, la tira de arriba a la
+  izquierda (parecía una barra de desplazamiento) pasa abajo, el trazo apagado se ve un poco más y el encendido un poco
+  menos (para no tapar el texto de los paneles). La vista previa de Ajustes sigue el mismo dibujo. Ya no se leen los
+  estilos en cada paso (cada 120 ms) y el `visibilitychange` ya no se duplica al quitarlo y ponerlo.
+- *Contraste (AA)*: los días pasados del Mes de puntos, las cabeceras de sábado y domingo, los días pasados de Semana y
+  los rótulos del Año pasan de 2,6–3,9 a ≥ 4,5 en claro y en oscuro; el número de hoy va en rojo solo si el punto está
+  vacío (rojo sobre gris era 1,8–3,3; el aro rojo ya marca hoy); los eventos pasados se apagan como en Zen (0,7) y no a 0,5.
+- *Movimiento reducido*: la persiana del arranque de Dot pasa a un fundido.
+- *Acento en los widgets de Android*: la página no mandaba `accent` en `setTheme` y los widgets salían siempre en rojo.
+  Ahora `look.js` lo manda en Dot.
+- *Windows*: al cambiar de diseño el fondo opaco de la ventana se pone siempre (antes solo si cambiaba la Mica).
+- *Web*: la prueba `tests/web/shots.js` con `DESIGN=dot` se colgaba (en Dot `.demo` es `display: contents` y no se puede
+  capturar: ahora se recorta lo que ocupan sus hijos). La maqueta «El mes en el móvil» en Dot era el mes de Zen en negro:
+  ahora es la rejilla de puntos de la app con el día debajo (`docs/js/mock.js` `dotMonthHTML`, `docs/css/mock.css`). Los
+  textos del personalizador (tema, esquinas, foto de fondo) y el de los widgets cambian cuando la maqueta o la página
+  están en Dot, y «Vidrio» pasa a «Transparencia».
+- *Varios*: «Noche» (nombre de un icono) sin traducir; `DISENO-DOT.md` ya no se publica en Pages; README (Dot y ZenDot
+  con su OFL), `CONTRATO.md` y `DISENO-DOT.md` puestos al día; `tests/web/PLAN-DOT.md` sin «tipo Nothing».
+
+**Comprobado y bien**: todas las pruebas sin errores de consola; Zen no cambia en la app (captura idéntica en
+`tests/ui/dot.js`) ni en la web (comparada píxel a píxel con la 1.0.0: solo el selector de la barra y el «Diseño» del
+personalizador); cambiar Zen ⇄ Dot cinco veces no deja listeners ni lienzos de más; ES/EN/CA sin textos sin traducir
+(salvo nombres propios); nada se sale a 390 px; los focos se ven; el Java compila contra los *stubs* con el `R.java` sacado
+de `res/`, todas las referencias `@…` existen, los RemoteViews de Dot solo usan FrameLayout, LinearLayout, ImageView,
+TextView y ListView, `res/font/zendot.ttf` es un nombre válido y `ResourcesCompat.getFont` está en `androidx.core:1.13.1`;
+`activity-alias .Icon_dot` y sus mipmaps (5 densidades + adaptativo con monocromo); `node --check` de `desktop/`.
+
+**Queda por probar en un aparato**
+- El `gradle assembleRelease` de verdad en Actions (los *stubs* no ven todo).
+- Widgets Dot en un lanzador real: tamaño de los bitmaps de ZenDot con letra grande del sistema, la rejilla dentro de las
+  esquinas, el acento elegido, cambiar Zen ⇄ Dot con el widget puesto (4 tipos de fila) y la fuente en Android 7.
+- Icono `dot` en el lanzador (máscaras y iconos con tema de Android 13) y en la bandeja/accesos de Windows.
+- Windows: quitar y volver a poner la Mica al cambiar de diseño; ventana opaca negra/blanca sin parpadeo.
+- La vibración `'glyph'` y el rendimiento del fondo «glyph» en un móvil modesto (se para con la pestaña oculta).

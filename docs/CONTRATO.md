@@ -14,6 +14,7 @@ Sin WiFi ni servidor propio: la **sincronización entre dispositivos va solo por
 
 ```
 assets/logo.svg                 logo maestro (ya hecho, no cambiar el diseño)
+assets/fonts/ZenDot.*           BACKEND (fuente de puntos del diseño Dot, licencia OFL en OFL.txt; la genera tools/mkfont.py, que deja copias en web/fonts/, docs/fonts/ y android res/font/ y escribe los mismos dibujos en las matrices SVG de web/js/ui/dot.js y docs/js/dot.js)
 web/                            la interfaz compartida (Android la lleva dentro, Windows también, y se publica en Pages)
   index.html                    FRONTEND
   widget.html                   FRONTEND  (widget de escritorio de Windows: agenda mini, transparente)
@@ -21,10 +22,12 @@ web/                            la interfaz compartida (Android la lleva dentro,
   js/ui/*.js                    FRONTEND
   js/core/*.js                  BACKEND
   img/                          BACKEND (iconos generados por tools/mkicons.py; el FRONTEND puede añadir web/img/ui/)
+  fonts/ZenDot.woff             BACKEND (copia de assets/fonts/; la usa el diseño Dot: css/dot.css + js/ui/dot.js)
   manifest.webmanifest, sw.js   BACKEND (PWA para la versión web)
 android/                        BACKEND (app Java con WebView, widgets, alarmas, login Google)
 desktop/                        BACKEND (Electron: ventana sin marco, bandeja, OAuth, widget de escritorio)
 tools/mkicons.py                BACKEND (PNG/ICO/mipmaps a partir de assets/logo.svg + variantes de color)
+tools/mkfont.py                 BACKEND (la fuente ZenDot del diseño Dot, con fontTools)
 .github/workflows/              BACKEND (APK + instalador/portable de Windows como MixUp, y Pages)
 README.md, docs/GOOGLE-SETUP.md BACKEND
 tests/                          cada uno los suyos (node para core, playwright para la UI)
@@ -97,6 +100,7 @@ Por defecto: `personal` (Personal), `work` (Trabajo), `birthdays` (Cumpleaños).
 ```js
 {
   look: { ... },   // FRONTEND: tema, transparencias, fondo, fuentes, animaciones… (MixUp-style)
+                   // design: 'zen' | 'dot' (Zen por defecto); con Dot, dotAccent, dotBg, dotGap, dotGlass, dotBlur, dotColors, dotFont, dotSpeed
   cal:  { firstDay: 1, weekNumbers: false, timeFormat: '24', defaultView: 'month',
           defaultDuration: 60, defaultReminders: [10], holidays: 'ES' | 'none', lang: 'auto' },  // FRONTEND decide valores, BACKEND lee holidays/defaultReminders
   ai:   { provider: 'rules', model: '', baseUrl: '', autoApply: false },  // BACKEND (ZC.ai)
@@ -159,6 +163,13 @@ Entiende español e inglés: «mañana a las 5 dentista», «cena con Marta el v
 - `onOpen(fn({ action: 'new' | 'open' | 'day' | 'ai', id, date }))` → al tocar un widget o una notificación
 - `notifyPermission()` → pide permiso de notificaciones si hace falta
 - `canPinWidget()` / `pinWidget(kind)` (Android 8+: añadir widget a la pantalla de inicio desde la app)
+- (diseño Dot) `setTheme({ ..., design: 'zen' | 'dot', accent })`: `design` se reenvía siempre a Android y a Windows
+  (si falta o no se entiende, `'zen'`); `accent` (opcional, `#rgb`/`#rrggbb`) es el acento de Dot (en los widgets de
+  Android, si falta, el rojo `#D71921`). Con `'dot'`: widgets de Android monocromos (negro/blanco según `light`) con la
+  fecha y las horas en ZenDot, barras del sistema opacas con `bg`, y en Windows ventana opaca sin Mica ni acrílico.
+  `ZC.platform.design` → el `design` del último `setTheme`.
+- (diseño Dot) `appIcons` lleva también `design` (`'zen'` | `'dot'`); hay un icono `dot` (`img/icons/dot.png`).
+- (diseño Dot) `haptic('glyph')`: dos golpecitos secos y cortos.
 
 ### `ZC.reminders`
 Lo maneja el backend solo: cuando cambia algo calcula los próximos avisos y se los da a la plataforma

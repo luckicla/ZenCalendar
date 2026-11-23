@@ -169,3 +169,179 @@
 .app--phone .ph-tabs i.on { color: var(--fg); font-weight: 600; }
 .app--phone .ph-tabs i.on::before { background: linear-gradient(90deg, var(--a1), var(--a2)); width: 24px; }
 
+
+/* Si hay captura real en el hueco, la maqueta se esconde (site.js pone .has-shot) */
+.shot-frame.has-shot > .shot-mock { display: none; }
+
+/* ═════════════════════════════════════════════════════════════════════════════════════════════
+ * Dot: las mismas maquetas con el diseño Dot de la app (web/css/dot.css), inspirado en el estilo de Nothing OS.
+ * Monocromo y un acento (rojo #D71921 por defecto) solo para hoy, la hora actual y el «+»; números, horas y rótulos
+ * en ZenDot; fondos de puntos, rejilla, liso o glyph; contornos finos y pastillas de contorno; esquinas fijas.
+ * Los calendarios, como en la app: un punto de su color (data-dotcolor="dot"), el contorno de su color ("full")
+ * o sin color ("mono"). Va por atributo en cada maqueta (data-design="dot"): así el personalizador puede enseñar Dot
+ * aunque la página esté en Zen, y al revés.
+ * ═════════════════════════════════════════════════════════════════════════════════════════════ */
+@font-face { font-family: "ZenDot"; src: url("../fonts/ZenDot.woff") format("woff"); font-display: swap; }
+.app[data-design="dot"], .widget[data-design="dot"] {
+  --num: "ZenDot", ui-monospace, "SF Mono", "Cascadia Mono", "DejaVu Sans Mono", Menlo, monospace;
+  --hair: color-mix(in srgb, var(--fg) 12%, transparent);
+  --hair2: color-mix(in srgb, var(--fg) 24%, transparent);
+  --grain: color-mix(in srgb, var(--fg) 20%, transparent);
+  /* los colores de los calendarios de la app (en claro, un poco más hondos para que se vean sobre blanco) */
+  --c-personal: #C9B8FF; --c-work: #BFF0E4; --c-birthdays: #FFC8E3;
+}
+.app[data-design="dot"][data-mode="light"] { --c-personal: #8D78F0; --c-work: #2FA383; --c-birthdays: #E2659F; }
+.app[data-design="dot"][data-dotcolor="mono"] { --c-personal: var(--fg); --c-work: var(--fg); --c-birthdays: var(--fg); }
+.app[data-design="dot"] {
+  --acc: #D71921; --on-acc: #fff; --r: 18px;
+  --font: var(--dot-font, "Archivo", "Barlow", "Bahnschrift", "Roboto", system-ui, -apple-system, sans-serif);
+  box-shadow: 0 0 0 1px var(--hair), 0 30px 60px -36px rgb(0 0 0 / 0.55);
+}
+/* rótulos técnicos en ZenDot, como en la app: mayúsculas espaciadas y en gris */
+.app[data-design="dot"] :is(.app-label, .wk-head small, .wk-corner--ad, .wk-gutter span, .mini i, .mo-dow, .ph-title small, .ph-tabs i, .ag-date, .ag-item small, .blk small, .ev-more),
+.widget[data-design="dot"] :is(.ag-date, .ag-item small, .wt-month, .wt-next small) {
+  font-family: var(--num); font-weight: 400; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mu); opacity: 1;
+}
+/* movimiento seco: los cambios van a pasos, no fundidos */
+.app[data-design="dot"], .app[data-design="dot"] * { transition-duration: 240ms; transition-timing-function: steps(3, end); }
+
+/* Fondos: puntos, rejilla, liso y glyph */
+.app[data-design="dot"] .app-bg { background: var(--bg); }
+.app[data-design="dot"][data-bg="dots"] .app-bg,
+.app[data-design="dot"][data-bg="glyph"] .app-bg { background: radial-gradient(circle, var(--grain) 1.1px, transparent 1.6px) 7px 7px / 14px 14px, var(--bg); }
+.app[data-design="dot"][data-bg="grid"] .app-bg {
+  background: linear-gradient(var(--hair) 1px, transparent 1px) 0 0 / 28px 28px, linear-gradient(90deg, var(--hair) 1px, transparent 1px) 0 0 / 28px 28px, var(--bg);
+}
+.app-bg .gl { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: var(--fg); opacity: 0.14; animation: glyph 2.6s steps(1, end) infinite; }
+.app-bg .gl--strip { background: var(--acc); }
+@keyframes glyph { 0% { opacity: 1; } 6% { opacity: 0.6; } 12%, 100% { opacity: 0.14; } }
+
+/* Superficies: planas o translúcidas, con contorno fino y sin sombra */
+.app[data-design="dot"] .pane { border: 1px solid var(--hair); box-shadow: none; -webkit-backdrop-filter: blur(var(--gb)); backdrop-filter: blur(var(--gb)); }
+
+/* Barra */
+.app[data-design="dot"] .app-name { font: 400 12px/1 var(--num); letter-spacing: 0.1em; text-transform: uppercase; }
+.app[data-design="dot"] .app-tabs { background: transparent; box-shadow: inset 0 0 0 1px var(--hair2); border-radius: 999px; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.app[data-design="dot"] .app-tabs i { border-radius: 999px; font-weight: 600; }
+.app[data-design="dot"] .app-tabs i.on { background: var(--fg); color: var(--bg); }
+.app[data-design="dot"] .app-search { background: transparent; box-shadow: inset 0 0 0 1px var(--hair2); }
+.app[data-design="dot"] .app-search::before { border-color: var(--fg); }
+.app[data-design="dot"] .app-search::after { background: var(--fg); }
+.app[data-design="dot"] .app-add { background: var(--acc); color: var(--on-acc); font-weight: 300; }
+
+/* Lateral */
+.app[data-design="dot"] .app-month { font: 400 13px/1 var(--num); letter-spacing: 0.1em; text-transform: uppercase; }
+.app[data-design="dot"] .mini { font-size: 9px; font-weight: 500; }
+.app[data-design="dot"] .mini i { font-size: 7px; letter-spacing: 0; }
+.app[data-design="dot"] .mini span.is-today { background: var(--acc); color: var(--on-acc); font-weight: 700; }
+.app[data-design="dot"] .app-label { font-size: 9px; }
+.app[data-design="dot"] .dot, .widget[data-design="dot"] .dot { border-radius: 50%; }
+.app[data-design="dot"] .app-cals .dot { width: 10px; height: 10px; }
+.app[data-design="dot"] .app-cals li { font-weight: 500; }
+.app[data-design="dot"] .app-tasks li::before { border-radius: 50%; border: 1.5px solid var(--hair2); }
+.app[data-design="dot"] .app-tasks li.done::before { background: var(--fg); border-color: var(--fg); box-shadow: inset 0 0 0 2.5px var(--s1); }
+
+/* Semana: números en puntos, hoy con un aro del acento, líneas de horas de puntos y la hora actual en el acento */
+.app[data-design="dot"] .wk-head small { font-size: 8.5px; }
+.app[data-design="dot"] .wk-head b { width: 30px; height: 30px; font: 400 15px/1 var(--num); }
+.app[data-design="dot"] .wk-head.is-today small { color: var(--acc); }
+.app[data-design="dot"] .wk-head.is-today b { background: transparent; color: var(--acc); box-shadow: inset 0 0 0 1.5px var(--acc); }
+.app[data-design="dot"] .wk-corner--ad { font-size: 7px; }
+.app[data-design="dot"] .wk-gutter span { font-size: 8.5px; letter-spacing: 0.02em; }
+.app[data-design="dot"] .wk-adrow { border-bottom: 1px solid var(--hair); }
+.app[data-design="dot"] .wk-body { background-image: radial-gradient(circle at 3px 1px, color-mix(in srgb, var(--fg) 30%, transparent) 0.8px, transparent 1.15px); background-size: 7px calc(100% / var(--hours)); }
+.app[data-design="dot"] .wk-col { border-left: 1px solid color-mix(in srgb, var(--fg) 7%, transparent); }
+/* eventos: tarjeta de la superficie con contorno fino y el punto del calendario; los cortos, en pastilla */
+.app[data-design="dot"] .ev { position: relative; color: var(--fg); background: color-mix(in srgb, var(--s1) 90%, transparent); box-shadow: inset 0 0 0 1px var(--hair2); border-radius: 999px; padding-inline: 6px 7px; font-weight: 600; }
+.app[data-design="dot"] .ev::before { content: ""; display: inline-block; width: 0.6em; height: 0.6em; margin-right: 0.4em; border-radius: 50%; background: var(--c); vertical-align: 0; }
+.app[data-design="dot"] .blk { border-radius: 9px; padding-left: 15px; background: color-mix(in srgb, var(--s1) 90%, transparent); color: var(--fg); box-shadow: inset 0 0 0 1px var(--hair2); }
+.app[data-design="dot"] .blk::before { content: ""; position: absolute; left: 6px; top: 6px; width: 5px; height: 5px; border-radius: 50%; background: var(--c); }
+.app[data-design="dot"] .blk--short::before { top: 50%; margin-top: -2.5px; }
+.app[data-design="dot"] .blk small { font-size: 8.5px; letter-spacing: 0.02em; }
+.app[data-design="dot"][data-dotcolor="full"] .blk, .app[data-design="dot"][data-dotcolor="full"] .ev { box-shadow: inset 0 0 0 1.5px var(--c); }
+.app[data-design="dot"] .wk-now { height: 1.5px; border-radius: 0; filter: none; background: var(--acc); }
+.app[data-design="dot"] .wk-now::before { width: 8px; height: 8px; left: -4px; top: -3.25px; background: var(--acc); }
+
+/* Móvil */
+.app--phone[data-design="dot"] .ph-title { font: 400 21px/1 var(--num); letter-spacing: 0.04em; }
+.app--phone[data-design="dot"] .ph-title small { font-size: 8px; margin-bottom: 7px; }
+.app--phone[data-design="dot"] .mo-dow { font-size: 7px; }
+.app--phone[data-design="dot"] .mo-num { width: 20px; height: 20px; font: 400 10px/1 var(--num); }
+.app--phone[data-design="dot"] .mo-day.is-today .mo-num { background: transparent; color: var(--acc); box-shadow: inset 0 0 0 1.5px var(--acc); }
+.app--phone[data-design="dot"] .ev { padding: 0 3px; font-size: 6.5px; line-height: 1.6; font-weight: 500; }
+.app--phone[data-design="dot"] .ev-more { font-size: 6.5px; }
+.app--phone[data-design="dot"] .ph-quick { border-radius: 999px; }
+.app--phone[data-design="dot"] .ph-quick svg { color: var(--acc); }
+.app--phone[data-design="dot"] .ph-quick i { background: var(--acc); color: var(--on-acc); font-weight: 300; }
+.app--phone[data-design="dot"] .ph-tabs { border-radius: 999px; }
+.app--phone[data-design="dot"] .ph-tabs i { font-size: 7px; }
+.app--phone[data-design="dot"] .ph-tabs i::before { width: 5px; height: 5px; border-radius: 50%; background: var(--hair2); }
+.app--phone[data-design="dot"] .ph-tabs i.on { color: var(--fg); }
+.app--phone[data-design="dot"] .ph-tabs i.on::before { width: 5px; background: var(--acc); }
+.app--phone[data-design="dot"] .ag-day { background: color-mix(in srgb, var(--s1) 55%, transparent); border: 1px solid var(--hair); }
+
+/* Mes del móvil en Dot (como la app): una rejilla de puntos que se encienden según la carga del día y el día de hoy debajo */
+.app--phone[data-design="dot"] .ph-title { text-transform: uppercase; }
+.dmo { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: auto repeat(var(--weeks), 38px); place-items: center; gap: 2px 0; padding-bottom: 10px; border-bottom: 1px solid var(--hair); }
+.dmo-dow { font: 400 7px/1 var(--num); letter-spacing: 0.1em; color: var(--mu); padding-bottom: 6px; }
+.dmo-d { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--fg) 6.5%, transparent); color: color-mix(in srgb, var(--fg) 78%, transparent); }
+.dmo-d b { font: 400 10px/1 var(--num); }
+.dmo-d.l1 { background: color-mix(in srgb, var(--fg) 20%, transparent); color: var(--fg); }
+.dmo-d.l2 { background: color-mix(in srgb, var(--fg) 38%, transparent); color: var(--fg); }
+.dmo-d.l3 { background: color-mix(in srgb, var(--fg) 70%, transparent); color: var(--bg); }
+.dmo-d.l4 { background: var(--fg); color: var(--bg); }
+.dmo-d.is-past.l0, .dmo-d.is-past.l1 { color: color-mix(in srgb, var(--fg) 60%, transparent); }
+.dmo-d.is-out { width: 5px; height: 5px; background: color-mix(in srgb, var(--fg) 20%, transparent); }
+.dmo-d.is-today { outline: 1.5px solid var(--acc); outline-offset: 2px; }
+.dmo-d.is-today.l0 { color: var(--acc); }
+.dmo-panel { padding: 12px 4px 0; display: grid; gap: 8px; align-content: start; }
+.dmo-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.dmo-big { font: 400 30px/0.9 var(--num); color: var(--acc); }
+.dmo-head b { display: block; font-size: 13px; font-weight: 600; }
+.dmo-head small { font: 400 7.5px/1.6 var(--num); letter-spacing: 0.1em; text-transform: uppercase; color: var(--mu); }
+.dmo-ev { --c: var(--c-personal); display: grid; grid-template-columns: 38px 8px 1fr; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; padding-bottom: 7px; border-bottom: 1px dotted var(--hair2); }
+.dmo-ev small { font: 400 8px/1 var(--num); color: var(--mu); }
+.dmo-ev i { width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
+.app[data-design="dot"][data-dotcolor="full"] .dmo-ev i { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); }
+.dmo-free { font-size: 10.5px; color: var(--mu); }
+
+/* Agenda (móvil y widgets): la fecha en ZenDot y un punto del calendario por evento */
+.app[data-design="dot"] .ag-date, .widget[data-design="dot"] .ag-date { font-size: 8.5px; }
+.app[data-design="dot"] .ag-date b, .widget[data-design="dot"] .ag-date b { color: var(--fg); font-weight: 400; }
+.app[data-design="dot"] .ag-item span, .widget[data-design="dot"] .ag-item span { font-weight: 600; }
+.app[data-design="dot"] .ag-item i, .widget[data-design="dot"] .ag-item i { width: 8px; height: 8px; min-height: 0; align-self: center; border-radius: 50%; background: var(--c); }
+.app[data-design="dot"][data-dotcolor="full"] .ag-item i { background: transparent; box-shadow: inset 0 0 0 2px var(--c); }
+.app[data-design="dot"] .ag-item small, .widget[data-design="dot"] .ag-item small { font-size: 9px; letter-spacing: 0.04em; color: color-mix(in srgb, var(--fg) 72%, transparent); }
+
+/* Widgets en Dot: lisos, negros o blancos según el sistema (el fondo de puntos ya lo pone la pared) */
+.widget[data-design="dot"] {
+  --fg: #000; --bg: #fff; --mu: #6A6A6A; --acc: #D71921;
+  --c-personal: #8D78F0; --c-work: #2FA383; --c-birthdays: #E2659F;
+  color: var(--fg); border: 1px solid var(--hair); border-radius: 28px; box-shadow: none; background: var(--bg);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  font-family: "Archivo", "Barlow", "Bahnschrift", "Roboto", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) { .widget[data-design="dot"] { --fg: #fff; --bg: #000; --mu: #8F8F8F; --c-personal: #C9B8FF; --c-work: #BFF0E4; --c-birthdays: #FFC8E3; } }
+.w-today[data-design="dot"] .wt-day { font: 400 68px/0.8 var(--num); letter-spacing: 0.02em; color: var(--fg); }
+.w-today[data-design="dot"] .wt-dow { display: flex; align-items: center; gap: 7px; font-weight: 600; }
+.w-today[data-design="dot"] .wt-dow::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--acc); }
+.w-today[data-design="dot"] .wt-month { font-size: 10px; }
+.w-today[data-design="dot"] .wt-next { background: transparent; border: 1px solid var(--hair2); border-radius: 999px; padding: 8px 14px; font-weight: 600; }
+.w-today[data-design="dot"] .wt-next .dot { width: 8px; height: 8px; }
+.w-today[data-design="dot"] .wt-next small { font-size: 9px; letter-spacing: 0.04em; }
+.widget[data-design="dot"] h4 { font: 400 12px/1 var(--num); letter-spacing: 0.1em; text-transform: uppercase; }
+.widget[data-design="dot"] h4 svg { border-radius: 6px; }
+.widget[data-design="dot"] h4 span { background: var(--acc); font: 300 16px/1 system-ui, sans-serif; }
+
+/* Selector de diseño de repuesto (solo si la barra no trae #designToggle) */
+.design-toggle--fallback { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border: 1px solid currentColor; border-radius: 999px; background: none; color: inherit; font: inherit; font-size: 0.875rem; cursor: pointer; }
+.design-toggle-dots { display: inline-grid; grid-template-columns: repeat(3, 4px); gap: 2px; }
+.design-toggle-dots i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+.design-toggle--fallback[aria-pressed="true"] .design-toggle-dots i:last-child { background: #D71921; }
+
+/* Personalizador: el color propio del acento de Dot */
+.ctl-color { display: inline-flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 0.875rem; cursor: pointer; }
+.ctl-color input { width: 40px; height: 32px; padding: 0; border: 1px solid currentColor; border-radius: 999px; background: none; cursor: pointer; }
+.ctl-color input::-webkit-color-swatch-wrapper { padding: 3px; }
+.ctl-color input::-webkit-color-swatch { border: 0; border-radius: 999px; }
+.ctl-color input::-moz-color-swatch { border: 0; border-radius: 999px; }

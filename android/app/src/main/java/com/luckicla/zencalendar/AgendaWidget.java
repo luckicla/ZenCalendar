@@ -27,12 +27,25 @@ public class AgendaWidget extends AppWidgetProvider {
 
     static void update(Context c, AppWidgetManager m, int id) {
         Theme t = Theme.load(c);
-        RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_agenda);
+        RemoteViews v = new RemoteViews(c.getPackageName(), t.dot ? R.layout.widget_agenda_dot : R.layout.widget_agenda);
         Widgets.paintBackground(v, t);
-        String title = new SimpleDateFormat("EEEE d MMMM", Locale.getDefault()).format(new Date());
-        v.setTextViewText(R.id.title, title.substring(0, 1).toUpperCase(Locale.getDefault()) + title.substring(1));
-        v.setTextColor(R.id.title, t.fg);
-        v.setTextColor(R.id.empty, t.muted);
+        Date now = new Date();
+        String title = new SimpleDateFormat("EEEE d MMMM", Locale.getDefault()).format(now);
+        title = title.substring(0, 1).toUpperCase(Locale.getDefault()) + title.substring(1);
+        if (t.dot) {
+            // Dot: «LUN 23 NOV» en ZenDot, con el día de la semana en rojo
+            Locale loc = Locale.getDefault();
+            String wd = DotText.label(new SimpleDateFormat("EEE", loc).format(now));
+            String rest = DotText.label(new SimpleDateFormat("d LLL", loc).format(now));
+            try {
+                v.setImageViewBitmap(R.id.title_img, DotText.draw(c, 15, DotText.span(wd + " ", t.accent), DotText.span(rest, t.wFg())));
+            } catch (Throwable ignored) {}
+            v.setContentDescription(R.id.title_img, title);
+        } else {
+            v.setTextViewText(R.id.title, title);
+            v.setTextColor(R.id.title, t.fg);
+        }
+        v.setTextColor(R.id.empty, t.wMuted());
         v.setTextViewText(R.id.empty, Widgets.str(c, "empty", c.getString(R.string.empty)));
 
         // la lista: la rellena AgendaWidgetService

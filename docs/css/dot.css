@@ -1,0 +1,470 @@
+/* ZenCalendar · web de presentación, diseño «Dot» (inspirado en el estilo de Nothing OS)
+ * Monocromo y un rojo que significa «ahora». La portada es una pantalla de matriz de puntos; las rayas son líneas de
+ * puntos redondos; los calendarios se distinguen por la forma del punto, no por el color.
+ * Todo vive bajo html[data-design="dot"]; este archivo se carga siempre y en Zen no hace nada. */
+
+@font-face {
+  font-family: "ZenDot";
+  src: url("../fonts/ZenDot.woff") format("woff");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+
+/* ───── Tokens ───── */
+html[data-design="dot"] {
+  color-scheme: light;
+  /* color: blanco, negro, grises y el rojo */
+  --paper: #FFFFFF;
+  --paper-2: #F2F2F2;          /* Niebla: superficies y lo seleccionado */
+  --ink: #000000;
+  --pencil: #5C5C5C;           /* Plomo: texto secundario (6,7:1) */
+  --rule: #D6D6D6;             /* contornos de 1 px */
+  --rule-strong: #000000;
+  --lavender: #D71921;         /* (nombre heredado de Zen) el foco y hoy, en rojo */
+  --lavender-ink: #000000;     /* enlaces */
+  --tint-lav: #F2F2F2; --tint-mint: #F2F2F2;
+  --btn-bg: #000000; --btn-fg: #FFFFFF;
+  --dot-red: #D71921;          /* Rojo señal: hoy, lo nuevo, la hora en directo, el foco */
+  --dot-on: var(--ink);
+  --dot-off: rgb(0 0 0 / 0.09); /* los puntos apagados de la pantalla */
+  --dot-line: #BDBDBD;         /* las líneas de puntos */
+
+  /* tipografía: ZenDot para la pantalla, los titulares y los rótulos; Barlow (o Bahnschrift, su DIN en Windows) para el texto */
+  --font-dot: "ZenDot", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-date: var(--font-dot);
+  --font-text: "Barlow", "Bahnschrift", "DIN Alternate", "Roboto", system-ui, -apple-system, sans-serif;
+  --d-11: 0.75rem; --d-14: 0.875rem; --d-16: 1rem; --d-20: 1.25rem; --d-28: 1.75rem;
+  --d-40: clamp(1.75rem, 1rem + 2.4vw, 3rem);
+  --d-60: clamp(2rem, 0.9rem + 3.8vw, 3.75rem);
+
+  --radius: 20px;
+  --pill: 999px;
+  --dur-short: 120ms;
+  --step: steps(4, end);
+  --page-gap: clamp(72px, 7vw, 128px);
+}
+@media (prefers-color-scheme: dark) {
+  html[data-design="dot"] {
+    color-scheme: dark;
+    --paper: #000000;
+    --paper-2: #141414;        /* Grafito */
+    --ink: #FFFFFF;
+    --pencil: #9A9A9A;         /* Ceniza (7,5:1) */
+    --rule: #2E2E2E;
+    --rule-strong: #FFFFFF;
+    --lavender-ink: #FFFFFF;
+    --tint-lav: #141414; --tint-mint: #141414;
+    --btn-bg: #FFFFFF; --btn-fg: #000000;
+    --dot-off: rgb(255 255 255 / 0.11);
+    --dot-line: #4A4A4A;
+  }
+}
+
+/* una línea de puntos redondos (fondo): se usa como raya en todo Dot */
+html[data-design="dot"] { --dots-x: radial-gradient(circle, var(--dot-line) 1px, transparent 1.6px) 0 50% / 8px 4px repeat-x; }
+
+/* ───── Base ───── */
+html[data-design="dot"] body {
+  font-size: var(--d-16); line-height: 1.55; letter-spacing: 0.005em;
+  --sunday: var(--pencil);
+  --c-personal: var(--ink); --c-work: var(--ink); --c-birthdays: var(--ink);
+}
+html[data-design="dot"] h1, html[data-design="dot"] h2 { font-family: var(--font-dot); font-weight: 400; letter-spacing: 0; line-height: 1.12; }
+html[data-design="dot"] h3, html[data-design="dot"] h4 { font-family: var(--font-text); font-weight: 600; letter-spacing: 0; }
+html[data-design="dot"] a { text-underline-offset: 4px; }
+html[data-design="dot"] :focus-visible { outline: 2px solid var(--dot-red); outline-offset: 3px; }
+html[data-design="dot"] ::selection { background: var(--dot-red); color: #fff; }
+html[data-design="dot"] .skip { border-radius: var(--pill); }
+
+/* Botones: píldoras blancas (o negras en claro) y con contorno. El rojo no va en botones. */
+html[data-design="dot"] .btn {
+  border-radius: var(--pill); border-color: color-mix(in srgb, var(--ink) 34%, transparent);
+  font: 500 var(--d-16)/1 var(--font-text); letter-spacing: 0.01em; padding: 0 22px;
+}
+html[data-design="dot"] .btn:hover { border-color: var(--ink); background: var(--paper-2); }
+html[data-design="dot"] .btn:active { transform: none; background: var(--rule); }
+html[data-design="dot"] .btn--primary { background: var(--btn-bg); border-color: var(--btn-bg); color: var(--btn-fg); }
+html[data-design="dot"] .btn--primary:hover,
+html[data-design="dot"] .file.is-mine .file-btn:hover { background: color-mix(in srgb, var(--btn-bg) 82%, var(--paper)); border-color: transparent; color: var(--btn-fg); }
+html[data-design="dot"] .btn--small { min-height: 40px; padding: 0 18px; font-size: var(--d-14); }
+
+/* ───── Barra ───── */
+html[data-design="dot"] .top {
+  background: color-mix(in srgb, var(--paper) 84%, transparent);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  border-bottom-color: var(--rule);
+}
+html[data-design="dot"] .brand { gap: 12px; font: 400 var(--d-16)/1 var(--font-dot); letter-spacing: 0.02em; }
+html[data-design="dot"] .brand img { display: none; }
+html[data-design="dot"] .brand-dot { display: block; flex: none; width: 22px; height: 22px; color: var(--ink); }
+html[data-design="dot"] .brand-dot-red { fill: var(--dot-red); }
+html[data-design="dot"] .top-links { gap: var(--s-5); font: 500 var(--d-14)/1 var(--font-text); letter-spacing: 0.02em; }
+html[data-design="dot"] .top-links a:hover { color: var(--ink); text-decoration: underline; text-decoration-style: dotted; text-decoration-thickness: 2px; text-underline-offset: 6px; }
+html[data-design="dot"] .top-links .top-dl { padding: 10px 16px; border-radius: var(--pill); }
+html[data-design="dot"] .top-links .top-dl:hover { background: color-mix(in srgb, var(--btn-bg) 82%, var(--paper)); color: var(--btn-fg); text-decoration: none; }
+
+/* Selector Zen / Dot */
+html[data-design="dot"] .design-toggle {
+  border-radius: var(--pill); border-color: color-mix(in srgb, var(--ink) 30%, transparent);
+  font: 400 var(--d-11)/1 var(--font-dot); letter-spacing: 0.08em; text-transform: uppercase;
+}
+html[data-design="dot"] .design-toggle .dt-opt { border-radius: var(--pill); min-width: 40px; }
+html[data-design="dot"] .design-toggle .dt-dot { gap: 6px; grid-auto-flow: column; background: var(--ink); color: var(--paper); }
+html[data-design="dot"] .design-toggle .dt-dot::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--dot-red); }
+html[data-design="dot"] .design-toggle:hover { border-color: var(--ink); }
+
+/* ───── Portada: la pantalla ───── */
+html[data-design="dot"] .hero { padding-top: clamp(32px, 5vw, 72px); padding-bottom: var(--page-gap); }
+html[data-design="dot"] .hero > .wrap {
+  display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: 24px;
+  grid-template-areas:
+    "screen screen screen screen screen screen screen text text text text text"
+    "quick  quick  quick  quick  quick  quick  quick  quick quick quick quick quick"
+    "tries  tries  tries  tries  tries  tries  tries  tries tries tries tries tries"
+    "status status status status status status status status status status status status"
+    "month  month  month  month  month  month  month  month month month month month"
+    "cal    cal    cal    cal    cal    cal    cal    cal  cal  cal  cal  cal";
+}
+html[data-design="dot"] .hero-head, html[data-design="dot"] .demo { display: contents; }
+
+html[data-design="dot"] .dot-screen { grid-area: screen; display: flex; align-items: center; gap: clamp(20px, 2.6vw, 40px); min-width: 0; }
+html[data-design="dot"] .ds-matrix { flex: none; width: clamp(196px, 29vw, 420px); height: auto; overflow: visible; }
+html[data-design="dot"] .ds-matrix circle { fill: var(--dot-off); transition: fill 0s linear var(--d, 0ms); }
+html[data-design="dot"] .ds-matrix circle.on { fill: var(--dot-on); }
+html[data-design="dot"] .ds-side { display: grid; gap: 12px; min-width: 0; font-family: var(--font-dot); text-transform: uppercase; letter-spacing: 0.06em; }
+html[data-design="dot"] .ds-dow { font-size: var(--d-28); line-height: 1; }
+html[data-design="dot"] .ds-month { font-size: var(--d-14); color: var(--pencil); }
+html[data-design="dot"] .ds-live { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: var(--d-14); }
+html[data-design="dot"] .ds-live i { width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ink); flex: none; }
+html[data-design="dot"] .ds-live.is-live i { background: var(--dot-red); box-shadow: none; }
+html[data-design="dot"] .ds-title { font-size: var(--d-14); color: var(--pencil); min-height: 1.3em; max-width: 18ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+html[data-design="dot"] .hero-text { grid-area: text; align-self: center; padding: 0; gap: 20px; }
+html[data-design="dot"] .hero-text h1 { font-size: var(--d-40); line-height: 1.15; max-width: 14ch; }
+html[data-design="dot"] .hero-text p { font-size: var(--d-16); max-width: 42ch; }
+html[data-design="dot"] .actions { margin-top: 4px; }
+html[data-design="dot"] .try { color: var(--ink); text-decoration-style: dotted; text-decoration-thickness: 2px; }
+
+/* La línea donde se escribe: un campo en píldora, con el cursor rojo */
+html[data-design="dot"] .quick {
+  grid-area: quick; display: flex; align-items: center; gap: 16px; margin-top: clamp(40px, 5vw, 64px); padding: 6px 6px 6px 24px;
+  border: 1px solid var(--rule); border-radius: var(--pill); background: var(--paper-2);
+  transition: border-color var(--dur-short) linear;
+}
+html[data-design="dot"] .quick:focus-within { border-color: var(--ink); }
+html[data-design="dot"] .quick-label { flex: none; padding: 0; font: 400 var(--d-11)/1 var(--font-dot); letter-spacing: 0.08em; text-transform: uppercase; color: var(--pencil); }
+html[data-design="dot"] .quick input {
+  flex: 1; height: 48px; padding: 0; border: 0; background: transparent; caret-color: var(--dot-red);
+  font: 400 var(--d-20)/1 var(--font-text); color: var(--ink);
+}
+html[data-design="dot"] .quick input:focus { border: 0; background: transparent; outline: 0; }
+html[data-design="dot"] .quick .btn { margin: 0; min-height: 48px; padding: 0 24px; }
+html[data-design="dot"] .tries { grid-area: tries; padding: 16px 0 0 24px; gap: 8px; align-items: center; }
+html[data-design="dot"] .tries span { margin-right: 4px; }
+html[data-design="dot"] .try-chip {
+  padding: 7px 14px; border: 1px solid var(--rule); border-radius: var(--pill); color: var(--ink); text-decoration: none; font-size: var(--d-14);
+}
+html[data-design="dot"] .try-chip:hover { border-color: var(--ink); }
+html[data-design="dot"] .demo-status { grid-area: status; padding: 12px 0 0 24px; font-size: var(--d-14); }
+html[data-design="dot"] .demo-status .undo { color: var(--ink); text-decoration-style: dotted; text-decoration-thickness: 2px; }
+
+/* El mes: cabecera en puntos y casillas separadas por líneas de puntos */
+html[data-design="dot"] .month { grid-area: month; display: flex; align-items: center; gap: 16px; margin-top: clamp(32px, 4vw, 48px); padding-bottom: 16px; }
+html[data-design="dot"] .month-name, html[data-design="dot"] .month-name.is-long {
+  margin: 0; font: 400 var(--d-20)/1 var(--font-dot); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink);
+}
+html[data-design="dot"] .month-meta { flex: 1; margin: 0; gap: 16px; }
+html[data-design="dot"] .month-year { font: 400 var(--d-20)/1 var(--font-dot); letter-spacing: 0.06em; color: var(--pencil); }
+html[data-design="dot"] .month-nav { margin-left: auto; gap: 8px; }
+html[data-design="dot"] .nav-btn { min-width: 40px; height: 40px; border: 1px solid var(--rule); border-radius: var(--pill); }
+html[data-design="dot"] .nav-btn--text { padding: 0 16px; font: 400 var(--d-11)/1 var(--font-dot); letter-spacing: 0.08em; text-transform: uppercase; }
+html[data-design="dot"] .nav-btn:hover { background: transparent; border-color: var(--ink); }
+
+html[data-design="dot"] .demo-cal { grid-area: cal; }
+html[data-design="dot"] .demo-cal::before { height: 4px; top: -2px; background: var(--dots-x); }
+html[data-design="dot"] .demo .mo { padding-top: 4px; }
+html[data-design="dot"] .demo .mo-dow {
+  position: relative; padding: 12px 10px 10px; border: 0; font: 400 var(--d-11)/1 var(--font-dot); letter-spacing: 0.08em; text-transform: uppercase; color: var(--pencil);
+}
+html[data-design="dot"] .demo .mo-day { border: 0; padding: 10px 10px 8px; gap: 6px; }
+/* las rayas de la casilla son puntos: abajo y a la izquierda (en una capa propia, para no chocar con los fondos) */
+html[data-design="dot"] .demo .mo-day::after, html[data-design="dot"] .demo .mo-dow::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(circle, var(--dot-line) 1px, transparent 1.6px) 0 100% / 8px 4px repeat-x;
+}
+html[data-design="dot"] .demo .mo-day::after {
+  background:
+    radial-gradient(circle, var(--dot-line) 1px, transparent 1.6px) 0 100% / 8px 4px repeat-x,
+    radial-gradient(circle, var(--dot-line) 1px, transparent 1.6px) 0 0 / 4px 8px repeat-y;
+}
+html[data-design="dot"] .demo .mo-day:nth-child(7n+1)::after { background: radial-gradient(circle, var(--dot-line) 1px, transparent 1.6px) 0 100% / 8px 4px repeat-x; }
+html[data-design="dot"] .demo .mo-day:hover { background: var(--paper-2); }
+html[data-design="dot"] .demo .mo-day.is-sel { background: var(--paper-2); box-shadow: inset 0 0 0 1px var(--ink); }
+html[data-design="dot"] .demo .mo-num, html[data-design="dot"] .demo .mo-day:nth-child(7n) .mo-num {
+  display: grid; place-items: center; min-width: 1.9em; height: 1.9em; margin: -4px 0 0 -6px;
+  font: 400 var(--d-20)/1 var(--font-dot); color: var(--ink);
+}
+html[data-design="dot"] .demo .mo-day.is-out .mo-num { color: var(--pencil); opacity: 0.5; }
+/* hoy: el número dentro de un círculo rojo */
+html[data-design="dot"] .demo .mo-day.is-today .mo-num { border-radius: 50%; background: var(--dot-red); color: #fff; }
+html[data-design="dot"] .demo .mo-day.is-today .mo-num::before { content: none; }
+
+/* Los eventos: la forma del punto dice el calendario. Personal ● · Trabajo ○ · Cumpleaños ◐ · Tarea □ */
+html[data-design="dot"] .demo .ev { font: 500 13px/1.4 var(--font-text); letter-spacing: 0.01em; }
+html[data-design="dot"] .demo .ev::before, html[data-design="dot"] .demo .dot, html[data-design="dot"] .sq, html[data-design="dot"] .ds-shape {
+  border-radius: 50%; background: var(--ink); box-shadow: none;
+}
+html[data-design="dot"] .demo .ev::before { width: 7px; height: 7px; margin-right: 7px; vertical-align: 0.5px; }
+html[data-design="dot"] .demo .ev--work::before, html[data-design="dot"] .demo .dot--work, html[data-design="dot"] .sq--work { background: transparent; box-shadow: inset 0 0 0 1.5px var(--ink); }
+html[data-design="dot"] .demo .ev--birthdays::before, html[data-design="dot"] .demo .dot--birthdays, html[data-design="dot"] .sq--birthdays {
+  background: linear-gradient(90deg, var(--ink) 50%, transparent 50%); box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+html[data-design="dot"] .demo .ev--task::before { border-radius: 1.5px; background: transparent; box-shadow: inset 0 0 0 1.5px var(--ink); }
+/* los de todo el día: una píldora gris con su punto */
+html[data-design="dot"] .demo .ev--day { padding: 1px 8px; margin-inline: -4px; border-radius: var(--pill); background: var(--paper-2); box-shadow: inset 0 0 0 1px var(--rule); }
+html[data-design="dot"] .demo .ev--day::before { display: inline-block; }
+html[data-design="dot"] .demo .ev-more { font: 400 var(--d-11)/1.3 var(--font-dot); letter-spacing: 0.06em; }
+html[data-design="dot"] .demo .dot { width: 6px; height: 6px; }
+/* lo recién apuntado: su punto se queda rojo un momento y la casilla parpadea a pasos */
+html[data-design="dot"] .demo .ev.pop { animation: dotPop 240ms steps(3, end) both; }
+html[data-design="dot"] .demo .ev.pop::before { animation: dotNew 2.4s steps(1, end) both; }
+html[data-design="dot"] .demo .mo-day.flash { animation: dotFlash 840ms steps(1, end); }
+@keyframes dotPop { from { opacity: 0; } }
+@keyframes dotNew { from { background: var(--dot-red); box-shadow: none; } }
+@keyframes dotFlash { 0%, 50% { box-shadow: inset 0 0 0 1.5px var(--dot-red); } 25%, 75% { box-shadow: none; } }
+
+/* el evento que cae: una píldora con su punto rojo */
+html[data-design="dot"] .fly {
+  border-radius: var(--pill); padding: 6px 14px; border: 1px solid var(--ink); background: var(--paper); color: var(--ink);
+  font: 500 14px/1.3 var(--font-text); box-shadow: none;
+}
+html[data-design="dot"] .fly::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--dot-red); vertical-align: 1px; }
+
+/* La carga: la pantalla se enciende columna a columna (dot.js) y después el mes, casilla a casilla y a pasos */
+html[data-design="dot"].js .hero.intro .month-name { animation: none; }
+html[data-design="dot"].js .hero.intro .demo-cal::before { animation: drawRule 560ms steps(14, end) 700ms both; }
+html[data-design="dot"].js .hero.intro .demo .mo-dow,
+html[data-design="dot"].js .hero.intro .demo .mo-day { animation: dotPop 1ms steps(1, end) both; animation-delay: calc(820ms + var(--i, 0) * 13ms); }
+
+@media (max-width: 1000px) {
+  html[data-design="dot"] .hero > .wrap {
+    grid-template-areas:
+      "screen screen screen screen screen screen screen screen screen screen screen screen"
+      "text   text   text   text   text   text   text   text   text   text   text   text"
+      "quick  quick  quick  quick  quick  quick  quick  quick  quick  quick  quick  quick"
+      "tries  tries  tries  tries  tries  tries  tries  tries  tries  tries  tries  tries"
+      "status status status status status status status status status status status status"
+      "month  month  month  month  month  month  month  month  month  month  month  month"
+      "cal    cal    cal    cal    cal    cal    cal    cal    cal    cal    cal    cal";
+  }
+  html[data-design="dot"] .hero-text { margin-top: clamp(32px, 6vw, 48px); }
+}
+@media (max-width: 600px) {
+  html[data-design="dot"] .hero > .wrap { column-gap: 0; }
+  html[data-design="dot"] .dot-screen { gap: 18px; }
+  html[data-design="dot"] .ds-matrix { width: 52%; }
+  html[data-design="dot"] .ds-side { gap: 8px; }
+  html[data-design="dot"] .ds-dow { font-size: var(--d-20); }
+  html[data-design="dot"] .ds-month, html[data-design="dot"] .ds-live, html[data-design="dot"] .ds-title { font-size: var(--d-11); }
+  html[data-design="dot"] .ds-live { margin-top: 4px; }
+  html[data-design="dot"] .hero-text h1 { font-size: var(--d-28); }
+  html[data-design="dot"] .quick { margin-top: 36px; padding-left: 20px; gap: 8px; }
+  html[data-design="dot"] .quick-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  html[data-design="dot"] .quick input { font-size: var(--d-16); min-width: 0; }
+  html[data-design="dot"] .quick .btn { padding: 0 18px; }
+  html[data-design="dot"] .tries, html[data-design="dot"] .demo-status { padding-left: 0; }
+  html[data-design="dot"] .tries span { flex-basis: 100%; }
+  html[data-design="dot"] .month-name, html[data-design="dot"] .month-name.is-long, html[data-design="dot"] .month-year { font-size: var(--d-16); }
+  html[data-design="dot"] .month-meta { gap: 10px; }
+  html[data-design="dot"] .month-nav { gap: 4px; }
+}
+@container demo (max-width: 560px) {
+  html[data-design="dot"] .demo .mo-dow { padding: 10px 0 8px; text-align: center; }
+  html[data-design="dot"] .demo .mo-day { min-height: 54px; padding: 8px 0 6px; align-items: center; gap: 6px; }
+  html[data-design="dot"] .demo .mo-num, html[data-design="dot"] .demo .mo-day:nth-child(7n) .mo-num { margin: 0; font-size: var(--d-14); }
+  html[data-design="dot"] .demo .mo-dots { justify-content: center; }
+}
+
+/* ───── Secciones: titular en puntos en su propia fila, y debajo 12 columnas ───── */
+html[data-design="dot"] .page { padding-bottom: var(--page-gap); }
+html[data-design="dot"] .page-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: 24px; padding-top: clamp(40px, 5vw, 64px); }
+html[data-design="dot"] .page-grid::before { height: 4px; top: -2px; background: var(--dots-x); }
+html[data-design="dot"] .page-head {
+  grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 32px;
+  padding: 0 0 clamp(28px, 3.4vw, 48px);
+}
+html[data-design="dot"] .page-head h2 { font-size: var(--d-60); line-height: 1.08; max-width: 18ch; }
+/* rótulo con un dato (solo donde lo hay): cuántas funciones, la versión */
+html[data-design="dot"] .page-head[data-dot]::after { content: attr(data-dot); }
+html[data-design="dot"] .page-head[data-dot]::after,
+html[data-design="dot"] .head-note {
+  display: inline-flex; align-items: center; gap: 8px; padding-bottom: 8px;
+  font: 400 var(--d-11)/1 var(--font-dot); letter-spacing: 0.08em; text-transform: uppercase; color: var(--pencil);
+}
+html[data-design="dot"] .head-note::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--dot-red); }
+html[data-design="dot"] .page-body { grid-column: 1 / -1; padding: 0; }
+html[data-design="dot"] .lead { font-size: clamp(1.125rem, 1rem + 0.5vw, 1.375rem); line-height: 1.45; max-width: 46ch; }
+html[data-design="dot"] .note { font-size: var(--d-14); }
+@media (max-width: 860px) {
+  html[data-design="dot"] .page-grid { grid-template-columns: minmax(0, 1fr); row-gap: 0; }
+  html[data-design="dot"] .page-head, html[data-design="dot"] .page-body { grid-column: 1; }
+}
+
+/* Filas: contorno de 1 px arriba, el título a 4 columnas de 12 */
+html[data-design="dot"] .rows { border-bottom: 0; }
+html[data-design="dot"] .rows li { grid-template-columns: 4fr 8fr; padding: 20px 0 22px; border-top: 1px solid var(--rule); }
+html[data-design="dot"] .rows h3 { font-size: var(--d-16); line-height: 1.45; }
+html[data-design="dot"] .rows p { max-width: 58ch; }
+/* Funciones: una ficha técnica a dos columnas */
+html[data-design="dot"] #funciones .rows { display: grid; grid-template-columns: 1fr 1fr; column-gap: 48px; }
+html[data-design="dot"] #funciones .rows li { grid-template-columns: minmax(0, 1fr); gap: 6px; align-content: start; }
+/* Privacidad: cuatro columnas, como cuatro garantías */
+html[data-design="dot"] #privacidad .rows { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 32px; }
+html[data-design="dot"] #privacidad .rows li { grid-template-columns: minmax(0, 1fr); gap: 8px; align-content: start; border-top-color: var(--ink); }
+@media (max-width: 1000px) { html[data-design="dot"] #privacidad .rows { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 760px) { html[data-design="dot"] #funciones .rows { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) {
+  html[data-design="dot"] .rows li { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  html[data-design="dot"] #privacidad .rows { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ───── IA ───── */
+html[data-design="dot"] .ia { grid-template-columns: minmax(0, 540px) minmax(0, 1fr); gap: clamp(40px, 9vw, 160px); margin-top: clamp(32px, 4vw, 48px); }
+html[data-design="dot"] .msg p { font-size: var(--d-14); padding: 12px 18px; }
+html[data-design="dot"] .msg--me p { border-radius: 22px 22px 6px 22px; }
+html[data-design="dot"] .msg--ai > p { background: transparent; border: 1px solid var(--rule); border-radius: 22px 22px 22px 6px; }
+/* el cartel, en negro con un sol rojo y letras de puntos */
+html[data-design="dot"] .poster {
+  width: 188px; border-radius: 18px; background: #000; color: #fff; box-shadow: inset 0 0 0 1px #2E2E2E;
+}
+html[data-design="dot"] .poster::before {
+  content: ""; position: absolute; right: 16px; top: 16px; width: 58px; height: 58px; border-radius: 50%; background: var(--dot-red);
+}
+html[data-design="dot"] .poster::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.12) 1px, transparent 1.6px) 0 0 / 8px 8px;
+}
+html[data-design="dot"] .poster-k { font: 400 9px/1.2 var(--font-dot); letter-spacing: 0.1em; opacity: 0.8; }
+html[data-design="dot"] .poster-t { font: 400 25px/1.05 var(--font-dot); margin-top: 52px; }
+html[data-design="dot"] .poster-d { font: 600 12px/1.3 var(--font-text); }
+html[data-design="dot"] .poster-h { font: 400 11px/1.3 var(--font-text); }
+html[data-design="dot"] .proposal { border-bottom: 0; }
+html[data-design="dot"] .proposal li { padding: 12px 0; }
+html[data-design="dot"] .sq { width: 9px; height: 9px; }
+html[data-design="dot"] .chat:not(.applied) .proposal .sq { background: transparent; box-shadow: inset 0 0 0 1.5px var(--ink); }
+html[data-design="dot"] .chat.applied .proposal .sq { background: var(--dot-red); box-shadow: none; }
+html[data-design="dot"] .options { border-bottom: 0; }
+html[data-design="dot"] .options div { padding: 16px 0 18px; }
+html[data-design="dot"] .options dt { font: 400 var(--d-14)/1.3 var(--font-dot); letter-spacing: 0.06em; text-transform: uppercase; }
+html[data-design="dot"] .options dd { margin-top: 6px; }
+@media (max-width: 1000px) { html[data-design="dot"] .ia { grid-template-columns: minmax(0, 1fr); } }
+
+/* ───── Drive: el camino de los datos a todo lo ancho, y debajo cuatro datos ───── */
+html[data-design="dot"] .drive { grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 32px 24px; margin-top: clamp(32px, 4vw, 48px); }
+html[data-design="dot"] .sync { grid-column: 1 / -1; grid-row: 1; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: center; gap: 16px 48px; }
+html[data-design="dot"] .sync .note { grid-column: 1 / -1; margin: 0; }
+html[data-design="dot"] .sync-line { padding: 0; gap: 16px; }
+html[data-design="dot"] .sync-node { font: 400 var(--d-14)/1 var(--font-dot); letter-spacing: 0.06em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 10px; }
+html[data-design="dot"] .sync-node::before { content: ""; width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ink); }
+html[data-design="dot"] .sync-node--drive { padding: 10px 16px; border: 1px solid var(--ink); border-radius: var(--pill); }
+html[data-design="dot"] .sync-node--drive::before { background: var(--ink); }
+html[data-design="dot"] .sync-wire { height: 4px; background: var(--dots-x); }
+html[data-design="dot"] .sync-wire i { top: -2px; width: 8px; height: 8px; border-radius: 50%; background: var(--dot-red); }
+html[data-design="dot"] .sync-wire--back i { background: var(--ink); }
+html[data-design="dot"] .sync.on .sync-wire i { animation-timing-function: steps(10, end); }
+html[data-design="dot"] .gconnect { padding: 10px 10px 10px 12px; border: 1px solid var(--rule); border-radius: var(--pill); }
+html[data-design="dot"] .g-logo { border-radius: 50%; filter: grayscale(1); }
+html[data-design="dot"] .gconnect-text b { font-weight: 600; }
+html[data-design="dot"] .gconnect-text small.ok::before { border-radius: 50%; background: var(--dot-red); }
+html[data-design="dot"] .facts-list { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 24px; border-bottom: 0; }
+html[data-design="dot"] .facts-list li { padding: 18px 0 0; }
+html[data-design="dot"] .facts-list b { display: block; margin-bottom: 4px; }
+@media (max-width: 1000px) {
+  html[data-design="dot"] .sync { grid-template-columns: minmax(0, 1fr); }
+  html[data-design="dot"] .facts-list { grid-template-columns: 1fr 1fr; row-gap: 8px; }
+}
+@media (max-width: 600px) {
+  html[data-design="dot"] .facts-list { grid-template-columns: minmax(0, 1fr); }
+  html[data-design="dot"] .sync-line { gap: 10px; }
+  html[data-design="dot"] .sync-node { font-size: var(--d-11); gap: 6px; }
+  html[data-design="dot"] .sync-node--drive { padding: 8px 10px; }
+  html[data-design="dot"] .gconnect { border-radius: 24px; padding: 12px; }
+}
+
+/* ───── Aspecto: controles en píldora y deslizadores de puntos ───── */
+html[data-design="dot"] #app { margin-top: clamp(32px, 4vw, 48px); }
+html[data-design="dot"] .controls { border-top: 0; padding-top: 0; margin-top: 32px; }
+html[data-design="dot"] .ctl legend { font: 400 var(--d-11)/1 var(--font-dot); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; }
+html[data-design="dot"] .seg { border-color: var(--rule); border-radius: var(--pill); padding: 3px; gap: 2px; }
+html[data-design="dot"] .seg span { border-radius: var(--pill); min-height: 34px; padding: 0 12px; }
+html[data-design="dot"] .seg--wrap { border-radius: 22px; }
+html[data-design="dot"] .seg input:checked + span { background: var(--ink); color: var(--paper); }
+html[data-design="dot"] .seg input:focus-visible + span { outline-color: var(--dot-red); }
+html[data-design="dot"] .sw-chip { border-radius: 12px; }
+html[data-design="dot"] .sw[aria-checked="true"] .sw-chip, html[data-design="dot"] .ic[aria-checked="true"] { outline-color: var(--ink); }
+html[data-design="dot"] .ic, html[data-design="dot"] .ic svg { border-radius: 12px; }
+html[data-design="dot"] .slider output { font: 400 var(--d-11)/1 var(--font-dot); letter-spacing: 0.06em; }
+html[data-design="dot"] input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px; background: linear-gradient(var(--ink), var(--ink)) 0 50% / var(--level) 2px no-repeat, radial-gradient(circle, var(--dot-line) 1px, transparent 1.6px) 0 50% / 6px 4px repeat-x;
+}
+html[data-design="dot"] input[type="range"]::-moz-range-track { height: 4px; background: radial-gradient(circle, var(--dot-line) 1px, transparent 1.6px) 0 50% / 6px 4px repeat-x; }
+html[data-design="dot"] input[type="range"]::-moz-range-progress { height: 2px; background: var(--ink); }
+html[data-design="dot"] input[type="range"]::-webkit-slider-thumb { width: 18px; height: 18px; margin-top: -7px; border: 0; background: var(--ink); }
+html[data-design="dot"] input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: 0; background: var(--ink); }
+html[data-design="dot"] input[type="range"]:focus-visible { outline-offset: 2px; border-radius: var(--pill); }
+
+/* ───── Widgets: sobre una trasera transparente con rejilla de puntos ───── */
+html[data-design="dot"] .widgets { margin-top: clamp(32px, 4vw, 48px); gap: 24px; }
+html[data-design="dot"] .wall-stage, html[data-design="dot"] .wall--windows .wall-stage {
+  border: 1px solid var(--rule); border-radius: 28px;
+  background: radial-gradient(circle, var(--dot-off) 1.2px, transparent 1.8px) 0 0 / 16px 16px, var(--paper);
+}
+html[data-design="dot"] .wall figcaption { font-size: var(--d-14); }
+
+/* ───── Capturas ───── */
+html[data-design="dot"] .shots { margin-top: clamp(32px, 4vw, 48px); gap: 24px; }
+html[data-design="dot"] .shot-frame { border-radius: 20px; border-color: var(--rule); background: var(--paper-2); }
+html[data-design="dot"] .shot--phone .shot-frame { padding: 6px; border-radius: 36px; background: #000; box-shadow: inset 0 0 0 1px #333; }
+html[data-design="dot"] .shot--phone .shot-frame > img, html[data-design="dot"] .shot--phone .shot-mock { border-radius: 30px; }
+html[data-design="dot"] .shot figcaption { font-size: var(--d-14); }
+
+/* ───── Descarga ───── */
+html[data-design="dot"] .files { border-bottom: 0; }
+html[data-design="dot"] .file { padding: 20px 0; border-top-color: var(--rule); gap: 24px; }
+html[data-design="dot"] .file-text h3 { font: 400 var(--d-28)/1.1 var(--font-dot); letter-spacing: 0.02em; }
+html[data-design="dot"] .file-text p { margin-top: 4px; }
+html[data-design="dot"] .file-mine { font: 400 var(--d-11)/1 var(--font-dot); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); gap: 8px; }
+html[data-design="dot"] .file-mine::before { width: 7px; height: 7px; border-radius: 50%; background: var(--dot-red); }
+html[data-design="dot"] .dl-more { grid-template-columns: 5fr 7fr; gap: 48px; margin-top: 40px; }
+html[data-design="dot"] .qr-row { gap: 24px; }
+html[data-design="dot"] .qr { width: 132px; height: 132px; padding: 10px; border-radius: 22px; border-color: var(--rule); }
+html[data-design="dot"] .steps { gap: 12px; }
+html[data-design="dot"] .news { margin-top: clamp(48px, 6vw, 80px); }
+html[data-design="dot"] .news h3 { font: 400 var(--d-28)/1.1 var(--font-dot); margin-bottom: 20px; }
+html[data-design="dot"] .releases { border-bottom: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 48px; }
+html[data-design="dot"] .rel { padding: 18px 0 20px; }
+html[data-design="dot"] .rel h4 { font: 600 var(--d-16)/1.3 var(--font-text); }
+html[data-design="dot"] .rel time { font: 400 var(--d-11)/1 var(--font-dot); letter-spacing: 0.08em; text-transform: uppercase; }
+html[data-design="dot"] .releases .empty { grid-column: 1 / -1; }
+@media (max-width: 600px) {
+  html[data-design="dot"] .file-mine { order: -1; flex-basis: 100%; }
+}
+@media (max-width: 760px) {
+  html[data-design="dot"] .dl-more, html[data-design="dot"] .releases { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ───── Pie ───── */
+html[data-design="dot"] .foot { border-top: 0; }
+html[data-design="dot"] .foot-in { position: relative; }
+html[data-design="dot"] .foot-in::before { content: ""; position: absolute; top: -2px; left: var(--gutter); right: var(--gutter); height: 4px; background: var(--dots-x); }
+html[data-design="dot"] .foot-by img { display: none; }
+html[data-design="dot"] .foot-links a, html[data-design="dot"] .foot-by a { color: var(--ink); }
+
+/* La barra en el móvil: la marca, el selector y «Descargar» caben en 390 px */
+@media (max-width: 600px) {
+  html[data-design="dot"] .top-in { gap: 12px; }
+  html[data-design="dot"] .brand { gap: 8px; font-size: var(--d-14); }
+  html[data-design="dot"] .brand-dot { width: 18px; height: 18px; }
+  html[data-design="dot"] .top-links { gap: 8px; }
+  html[data-design="dot"] .top-links .top-dl { padding: 10px 14px; }
+  html[data-design="dot"] .design-toggle .dt-opt { min-width: 34px; padding: 0 7px; }
+}

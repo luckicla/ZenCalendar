@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- botón «+» de los widgets Dot: un círculo de línea fina (el color se pone desde el código) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="#00000000" />
+    <stroke android:width="1.5dp" android:color="#FFFFFFFF" />
+    <size android:width="32dp" android:height="32dp" />
+</shape>

@@ -49,7 +49,8 @@ Las versiones van así: 1.0.0, 1.0.1, 1.0.2… (el número está en el archivo [
 - Si cambias cosas en dos sitios a la vez, se juntan sin perder nada. Sin conexión funciona igual y se sincroniza cuando vuelve.
 
 **A tu gusto**
-- Temas claros y oscuros (Nube, Sakura, Menta, Lavanda, Noche pastel…), fondos animados suaves, imagen de fondo, transparencias, esquinas, letras y el icono de la app (6 colores).
+- Temas claros y oscuros (Nube, Sakura, Menta, Lavanda, Noche pastel…), fondos animados suaves, imagen de fondo, transparencias, esquinas, letras y el icono de la app (6 colores, y el de Dot).
+- Dos diseños: **Zen** (el pastel de siempre) y **Dot**, monocromo, con un solo color de acento y los números en puntos (inspirado en el estilo de Nothing OS). También los widgets se cambian.
 - Está en español, inglés y catalán.
 
 ## ¿Es seguro?
@@ -93,6 +94,7 @@ web/                  la interfaz (la misma en Android, Windows y la web)
 android/              la app de Android (Java): WebView, avisos, widgets, inicio de sesión de Google
 desktop/              la app de Windows (Electron): ventana, bandeja, avisos, widget, Google, actualizaciones
 tools/mkicons.py      todos los iconos a partir de assets/logo.svg
+tools/mkfont.py       ZenDot, la letra de puntos del diseño Dot (assets/fonts/)
 tests/core/           pruebas de lo de dentro (node tests/core/run.js)
 docs/                 la web de presentación, y GOOGLE-SETUP.md
 ```
@@ -126,5 +128,7 @@ ZenCalendar es de código abierto para uso **no comercial**, con la licencia [Po
 
 - **Puedes** ver el código, usarlo, aprender de él, cambiarlo y compartirlo, siempre que no sea para ganar dinero y mantengas el aviso de copyright y la licencia.
 - **No puedes** venderlo, cobrar por él ni usarlo para fines comerciales. Eso solo lo puedo hacer yo. Si quieres usarlo de forma comercial, pídeme permiso.
+
+La letra de puntos **ZenDot** (`assets/fonts/`) también es mía y va con la [SIL Open Font License 1.1](assets/fonts/OFL.txt): esa sí la puedes usar donde quieras.
 
 El nombre «ZenCalendar» y sus logos son míos: si publicas una versión cambiada, ponle otro nombre y otro logo.

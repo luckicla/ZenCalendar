@@ -466,13 +466,21 @@ public class MainActivity extends Activity {
                 + "window.dispatchEvent(new Event('zc-insets'))})(document.documentElement.style)");
     }
 
-    /** Barra de estado y de navegación según el tema: iconos oscuros si el fondo es claro. */
+    /**
+     * Barra de estado y de navegación según el tema: iconos oscuros si el fondo es claro.
+     * En Dot detrás va el negro o el blanco del tema, siempre opaco (nada de transparencias
+     * del fondo animado de Zen), y en Android 9+ sin la rayita de separación de la barra de navegación.
+     */
     @SuppressWarnings("deprecation")
     void applyTheme() {
         Theme t = Theme.load(this);
-        if (web != null) web.setBackgroundColor(t.bg);
-        if (box != null) box.setBackgroundColor(t.bg);
-        getWindow().getDecorView().setBackgroundColor(t.bg);
+        int back = t.barColor();
+        if (web != null) web.setBackgroundColor(back);
+        if (box != null) box.setBackgroundColor(back);
+        getWindow().getDecorView().setBackgroundColor(back);
+        if (Build.VERSION.SDK_INT >= 28) {
+            try { getWindow().setNavigationBarDividerColor(Color.TRANSPARENT); } catch (Exception ignored) {}
+        }
         if (Build.VERSION.SDK_INT >= 30) {
             WindowInsetsController c = getWindow().getInsetsController();
             if (c != null) {
@@ -488,7 +496,7 @@ public class MainActivity extends Activity {
     }
 
     // ---------- iconos de la app: un activity-alias por variante ----------
-    static final String[] ICONS = {"pastel", "sakura", "menta", "noche", "cielo", "melocoton"};
+    static final String[] ICONS = {"pastel", "sakura", "menta", "noche", "cielo", "melocoton", "dot"};
 
     private static boolean iconOn(Context c, PackageManager pm, String n) {
         int st = pm.getComponentEnabledSetting(new ComponentName(c, c.getPackageName() + ".Icon_" + n));

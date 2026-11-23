@@ -14,13 +14,15 @@
   const role = (D() && D().role) || (root.location && /widget\.html$/i.test(root.location.pathname || '') ? 'widget' : 'main');
 
   // ---------- iconos de la app (los genera tools/mkicons.py) ----------
+  // design: el diseño con el que va (al elegir Dot, la interfaz puede sugerir el icono 'dot')
   const appIcons = [
-    { id: 'pastel', name: 'Pastel' },
-    { id: 'sakura', name: 'Sakura' },
-    { id: 'menta', name: 'Menta' },
-    { id: 'noche', name: 'Noche' },
-    { id: 'cielo', name: 'Cielo' },
-    { id: 'melocoton', name: 'Melocotón' },
+    { id: 'pastel', name: 'Pastel', design: 'zen' },
+    { id: 'sakura', name: 'Sakura', design: 'zen' },
+    { id: 'menta', name: 'Menta', design: 'zen' },
+    { id: 'noche', name: 'Noche', design: 'zen' },
+    { id: 'cielo', name: 'Cielo', design: 'zen' },
+    { id: 'melocoton', name: 'Melocotón', design: 'zen' },
+    { id: 'dot', name: 'Dot', design: 'dot' },
   ].map(x => Object.assign(x, { src: 'img/icons/' + x.id + '.png' }));
 
   // ---------- avisos de «abrir» (widget, notificación, compartir, atajos) ----------
@@ -71,8 +73,14 @@
   };
 
   // ---------- tema (barra de estado, widgets) ----------
+  // { bg, surface, fg, muted, a1, a2, a3, light, alpha, radius, design: 'zen' | 'dot', accent? }
+  // design se reenvía siempre a Android y a Windows (si no viene o no se entiende: 'zen').
+  // En Dot, accent es el color de acento (si no viene, el rojo #D71921 en los widgets de Android).
+  const normDesign = d => (String(d || '').trim().toLowerCase() === 'dot' ? 'dot' : 'zen');
   function setTheme(t) {
-    if (!t) return;
+    if (!t || typeof t !== 'object') return;
+    t = Object.assign({}, t, { design: normDesign(t.design) });
+    if (t.accent != null && !/^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(String(t.accent))) delete t.accent;
     try { ZC.store.local('theme', t); } catch (e) {}
     try {
       if (A() && A().setTheme) A().setTheme(JSON.stringify(t));
@@ -83,7 +91,7 @@
       if (root.document) {
         let m = document.querySelector('meta[name="theme-color"]');
         if (!m) { m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); }
-        m.content = t.bg || '#F7F3FF';
+        m.content = t.bg || (t.design === 'dot' ? (t.light === false ? '#000000' : '#FFFFFF') : '#F7F3FF');
       }
     } catch (e) {}
     try { if (ZC.reminders && ZC.reminders.refreshWidgets) ZC.reminders.refreshWidgets(); } catch (e) {}
@@ -243,10 +251,11 @@
   function setEdgeToEdge(on) { try { if (A() && A().setEdge) A().setEdge(!!on); } catch (e) {} }
 
   // ---------- vibración de la interfaz ----------
-  // haptic('tap' | 'select' | 'success' | 'warning'): Android vibra a su manera,
+  // haptic('tap' | 'select' | 'success' | 'warning' | 'glyph'): Android vibra a su manera,
   // la web con navigator.vibrate (si el navegador sabe) y Windows nada.
+  // 'glyph' es el del diseño Dot: dos golpecitos secos.
   // Respeta el ajuste look.haptics (por defecto, sí).
-  const VIBRATE = { tap: 8, select: 12, success: [10, 50, 10, 50, 20], warning: [25, 50, 25] };
+  const VIBRATE = { tap: 8, select: 12, success: [10, 50, 10, 50, 20], warning: [25, 50, 25], glyph: [5, 35, 4] };
   function haptic(k) {
     try {
       const look = (ZC.store && ZC.store.getPrefs && ZC.store.getPrefs().look) || {};
@@ -349,6 +358,8 @@
     desktopWidget, desktopWidgetOn, desktopWidgetPin, setAutostart, autostart,
     onOpen, notifyPermission, canPinWidget, pinWidget,
     onBack, updates, init, openApp, setWindowMaterial, setEdgeToEdge, haptic,
+    // el diseño del último setTheme: 'zen' | 'dot'
+    get design() { try { const t = ZC.store.local('theme'); return normDesign(t && t.design); } catch (e) { return 'zen'; } },
     // la versión a la que se acaba de actualizar (Android), o '' (también llega el evento 'updated')
     get justUpdated() { return justUpdated; },
     get info() { return info; },

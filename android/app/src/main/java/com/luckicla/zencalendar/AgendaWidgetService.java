@@ -34,7 +34,8 @@ public class AgendaWidgetService extends RemoteViewsService {
         @Override public void onDestroy() { rows.clear(); }
         @Override public int getCount() { return rows.size(); }
         @Override public RemoteViews getLoadingView() { return null; }
-        @Override public int getViewTypeCount() { return 2; }
+        // (4: las filas de Zen y las de Dot; el número no puede cambiar mientras el widget vive)
+        @Override public int getViewTypeCount() { return 4; }
         @Override public long getItemId(int position) { return position; }
         @Override public boolean hasStableIds() { return false; }
 
@@ -63,6 +64,7 @@ public class AgendaWidgetService extends RemoteViewsService {
             if (position < 0 || position >= rows.size()) return null;
             Row r = rows.get(position);
             Intent fill = new Intent();
+            if (theme.dot) return dotRow(r, fill);
             if (r.header) {
                 RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_agenda_day);
                 v.setTextViewText(R.id.day, r.label);
@@ -81,6 +83,35 @@ public class AgendaWidgetService extends RemoteViewsService {
             v.setTextColor(R.id.time, theme.muted);
             v.setTextViewText(R.id.text, (it.task ? "☐ " : "") + it.title);
             v.setTextColor(R.id.text, theme.fg);
+            fill.putExtra("action", "open");
+            fill.putExtra("id", it.id);
+            fill.putExtra("date", it.date);
+            v.setOnClickFillInIntent(R.id.item, fill);
+            return v;
+        }
+
+        /** Las filas con el diseño Dot: el día y las horas en ZenDot, un punto de color por evento. */
+        private RemoteViews dotRow(Row r, Intent fill) {
+            if (r.header) {
+                RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_agenda_day_dot);
+                try { v.setImageViewBitmap(R.id.day_img, DotText.draw(c, 11, DotText.label(r.label), theme.wMuted())); } catch (Throwable ignored) {}
+                v.setContentDescription(R.id.day_img, r.label);
+                fill.putExtra("action", "day");
+                fill.putExtra("date", r.item.date);
+                v.setOnClickFillInIntent(R.id.day, fill);
+                return v;
+            }
+            Widgets.Item it = r.item;
+            RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_agenda_item_dot);
+            v.setInt(R.id.dot, "setColorFilter", Widgets.color(it.color, theme.accent) | 0xFF000000);
+            String time = it.allDay ? allDayText : it.time;
+            if (it.allDay && time.length() > 9) time = "·";
+            try {
+                v.setImageViewBitmap(R.id.time_img, DotText.draw(c, 12, it.allDay ? DotText.label(time) : time, it.allDay ? theme.wMuted() : theme.wFg()));
+            } catch (Throwable ignored) {}
+            v.setContentDescription(R.id.time_img, time);
+            v.setTextViewText(R.id.text, (it.task ? "☐ " : "") + it.title);
+            v.setTextColor(R.id.text, theme.wFg());
             fill.putExtra("action", "open");
             fill.putExtra("id", it.id);
             fill.putExtra("date", it.date);

@@ -53,6 +53,14 @@ function saveSettings() {
   saveT = setTimeout(() => { try { fs.mkdirSync(path.dirname(settingsFile()), { recursive: true }); fs.writeFileSync(settingsFile(), JSON.stringify(S, null, 2)); } catch (e) {} }, 300);
 }
 
+// '#abc' / '#aabbcc' → '#aabbcc' (o null si no es un color así)
+function hex6(c) {
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(c || '').trim());
+  if (!m) return null;
+  const h = m[1].length === 3 ? m[1].split('').map(x => x + x).join('') : m[1];
+  return '#' + h.toUpperCase();
+}
+
 function log(m) {
   try { fs.appendFileSync(path.join(app.getPath('userData'), 'escritorio.log'), new Date().toISOString() + ' ' + m + '\n'); } catch (e) {}
 }
@@ -72,6 +80,10 @@ function iconFile(id) {
   const f = buildFile('icons', (id || 'pastel') + '.ico');
   return fs.existsSync(f) ? f : buildFile('icon.ico');
 }
+// el icono que toca: el que eligió el usuario; si nunca eligió, el del diseño (Dot → 'dot')
+const effIcon = () => S.icon || (S.design === 'dot' ? 'dot' : 'pastel');
+// Dot no lleva Mica ni acrílico: ventana opaca, negra o blanca
+const effMaterial = () => (S.design === 'dot' ? 'none' : (S.material || 'none'));
 
 function serveApp() {
   const root = webDir();
@@ -98,7 +110,7 @@ function createWindow() {
     show: false,
     backgroundColor: S.bg || '#F7F3FF',
     title: 'ZenCalendar',
-    icon: iconFile(S.icon),
+    icon: iconFile(effIcon()),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -109,7 +121,7 @@ function createWindow() {
     },
   });
   if (S.maximized) win.maximize();
-  if (S.material && S.material !== 'none') setMaterial(S.material);
+  if (effMaterial() !== 'none') setMaterial(effMaterial());
   win.once('ready-to-show', () => { if (!startHidden) win.show(); });
   win.loadURL(ORIGIN + '/index.html');
   links(win);
@@ -130,7 +142,7 @@ function createWindow() {
     win.hide();
     if (!S.trayTold) {
       S.trayTold = true; saveSettings();
-      notify({ title: 'ZenCalendar sigue aquí ✿', body: 'Está junto al reloj para avisarte de tus eventos. Para cerrarlo del todo: clic derecho en el icono → Salir.' });
+      notify({ title: S.design === 'dot' ? 'ZenCalendar sigue aquí' : 'ZenCalendar sigue aquí ✿', body: 'Está junto al reloj para avisarte de tus eventos. Para cerrarlo del todo: clic derecho en el icono → Salir.' });
     }
   });
   win.on('closed', () => { win = null; });
@@ -163,7 +175,8 @@ function showWindow() {
   win.focus();
 }
 
-// Mica/Acrílico de Windows 11 (si la página lo pide; si no, el fondo del tema)
+// Mica/Acrílico de Windows 11 (si la página lo pide; si no, el fondo del tema).
+// En el diseño Dot siempre 'none' (lo decide effMaterial()).
 function setMaterial(m) {
   if (!win || process.platform !== 'win32' || typeof win.setBackgroundMaterial !== 'function') return false;
   try {
@@ -243,7 +256,7 @@ function trayMenu() {
 }
 function makeTray() {
   if (tray) return;
-  tray = new Tray(nativeImage.createFromPath(iconFile(S.icon)));
+  tray = new Tray(nativeImage.createFromPath(iconFile(effIcon())));
   tray.setToolTip('ZenCalendar');
   tray.setContextMenu(trayMenu());
   tray.on('click', showWindow);
@@ -270,7 +283,7 @@ function createWidget() {
     frame: false, transparent: true, backgroundColor: '#00000000', hasShadow: false,
     resizable: true, skipTaskbar: true, show: false, title: 'ZenCalendar · widget',
     focusable: W.pin !== 'bottom', alwaysOnTop: W.pin === 'top',
-    icon: iconFile(S.icon),
+    icon: iconFile(effIcon()),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: false, additionalArguments: ['--zc-role=widget'] },
   });
   applyPin(W.pin);
@@ -321,6 +334,10 @@ function setAutostart(on) {
 function setIcon(id) {
   if (!/^[a-z]+$/.test(String(id || ''))) return false;
   S.icon = id; saveSettings();
+  return applyIcon(id, true);
+}
+// shortcuts: cambiar también los accesos directos (solo cuando lo elige el usuario)
+function applyIcon(id, shortcuts) {
   const f = iconFile(id);
   const img = nativeImage.createFromPath(f);
   if (img.isEmpty()) return false;
@@ -328,7 +345,7 @@ function setIcon(id) {
   if (widget && !widget.isDestroyed()) widget.setIcon(img);
   if (tray) tray.setImage(img);
   // los accesos directos del menú Inicio y del escritorio (instalada)
-  if (process.platform === 'win32' && !portable) {
+  if (shortcuts && process.platform === 'win32' && !portable) {
     const lnks = [
       path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'ZenCalendar.lnk'),
       path.join(app.getPath('desktop'), 'ZenCalendar.lnk'),
@@ -427,12 +444,27 @@ function setupIPC() {
 
   ipcMain.on('zc:theme', (_e, t) => {
     if (!t || typeof t !== 'object') return;
-    if (t.bg && /^#[0-9a-f]{6}$/i.test(t.bg)) {
-      S.bg = t.bg; saveSettings();
-      if (win && !win.isDestroyed() && (!S.material || S.material === 'none')) win.setBackgroundColor(t.bg);
+    const design = t.design === 'dot' ? 'dot' : 'zen';
+    const changed = design !== (S.design || 'zen');
+    S.design = design;
+    let bg = hex6(t.bg);
+    // Dot: ventana opaca, negra o blanca (aunque la página mande un fondo con transparencia)
+    if (design === 'dot' && !bg) bg = t.light === false ? '#000000' : '#FFFFFF';
+    if (bg) S.bg = bg;
+    saveSettings();
+    if (win && !win.isDestroyed()) {
+      if (changed) setMaterial(effMaterial());           // al pasar a Dot se quita la Mica (y vuelve al volver a Zen)
+      if (bg && effMaterial() === 'none') win.setBackgroundColor(bg);
     }
+    // el icono sigue al diseño mientras el usuario no haya elegido uno
+    if (changed && !S.icon) applyIcon(effIcon(), false);
   });
-  ipcMain.handle('zc:material', (_e, m) => { S.material = m || 'none'; saveSettings(); return setMaterial(S.material); });
+  // (en Dot se guarda lo pedido para cuando se vuelva a Zen, pero no se aplica: devuelve false)
+  ipcMain.handle('zc:material', (_e, m) => {
+    S.material = ['mica', 'acrylic', 'tabbed'].includes(m) ? m : 'none'; saveSettings();
+    if (S.design === 'dot' && S.material !== 'none') { setMaterial('none'); return false; }
+    return setMaterial(S.material);
+  });
 
   ipcMain.handle('zc:icon', (_e, id) => setIcon(id));
   ipcMain.handle('zc:widget', (_e, on) => (on === undefined || on === null) ? !!(widget && !widget.isDestroyed()) : setWidget(on));

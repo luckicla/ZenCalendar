@@ -15,10 +15,11 @@
       if (step === 0) {
         const look = UI.look.get();
         html = `<div class="wl-card" data-step="0">
-          <img class="wl-logo" src="img/ui/logo.svg" alt="" width="88" height="88">
+          <img class="wl-logo" src="img/ui/logo.svg" alt="" width="88" height="88">${UI.dot ? UI.dot.logo(88, 'wl-dotlogo') : ''}
           <h1>${t('Hola, esto es ZenCalendar')}</h1>
           <p class="lead">${t('Un calendario tranquilo, bonito y tuyo. Empieza eligiendo un estilo (luego puedes cambiar cada detalle en Ajustes).')}</p>
-          <div class="wl-presets">${UI.look.PRESETS.filter(p => PICK.includes(p.id)).map(p => {
+          ${UI.dot ? UI.dot.designPicker('wl') : ''}
+          <div class="wl-presets" ${look.design === 'dot' ? 'hidden' : ''}>${UI.look.PRESETS.filter(p => PICK.includes(p.id)).map(p => {
             const th = UI.look.themeIn(p.set.theme, p.set.scheme === 'dark' ? 'dark' : p.set.scheme === 'light' ? 'light' : UI.look.scheme());
             return `<button class="wl-p ${look.preset === p.id ? 'on' : ''}" data-p="${p.id}" style="--pv-bg:${th.bg};--pv-a1:${th.a1};--pv-a2:${th.a2};--pv-b1:${th.b[0]};--pv-b2:${th.b[1]};--pv-fg:${th.fg}"><span class="wl-sw"><i></i><i></i><i></i></span><b>${esc(t(p.name))}</b><small>${esc(t(p.sub))}</small></button>`;
           }).join('')}</div>
@@ -52,6 +53,7 @@
     }
     box.addEventListener('click', async e => {
       const p = e.target.closest('[data-p]'); if (p) { UI.look.applyPreset(p.dataset.p); box.querySelectorAll('.wl-p').forEach(b => b.classList.toggle('on', b === p)); UI.haptic('tick'); return; }
+      const ds = e.target.closest('[data-design]'); if (ds) { UI.dot.pick(ds.dataset.design); paint(); UI.haptic('tick'); return; }
       const sc = e.target.closest('#wlScheme [data-v]'); if (sc) { UI.look.set({ scheme: sc.dataset.v }); paint(); return; }
       const g = e.target.closest('[data-go]'); if (g) { step = +g.dataset.go; paint(); return; }
       const a = e.target.closest('[data-a]'); if (!a) return;

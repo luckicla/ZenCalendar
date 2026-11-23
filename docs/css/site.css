@@ -368,3 +368,15 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ───── Piezas del diseño Dot (css/dot.css): en Zen no se ven ───── */
+.brand-dot, .dot-screen { display: none; }
+
+/* Selector de diseño Zen / Dot: discreto, como un segmento de la agenda */
+.design-toggle {
+  display: inline-flex; align-items: stretch; padding: 2px; gap: 2px; border: 1px solid var(--rule); border-radius: 8px;
+  background: transparent; color: var(--pencil); cursor: pointer; font: 500 var(--t-12)/1 var(--font-text);
+}
+.design-toggle .dt-opt { display: grid; place-items: center; min-width: 34px; min-height: 28px; padding: 0 8px; border-radius: 6px; transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out); }
+.design-toggle:hover { border-color: color-mix(in srgb, var(--ink) 40%, transparent); color: var(--ink); }
+html:not([data-design="dot"]) .design-toggle .dt-zen { background: var(--paper-2); color: var(--ink); }
