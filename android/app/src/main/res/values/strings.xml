@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ZenCalendar</string>
+    <string name="share_label">Añadir a ZenCalendar</string>
+    <string name="widget_agenda">Agenda</string>
+    <string name="widget_agenda_desc">Lo que tienes en los próximos días</string>
+    <string name="widget_today">Hoy</string>
+    <string name="widget_today_desc">La fecha de hoy y lo siguiente que tienes</string>
+    <string name="channel_reminders">Avisos</string>
+    <string name="channel_reminders_desc">Los avisos de tus eventos y tareas</string>
+    <string name="add">Añadir</string>
+    <string name="empty">Nada a la vista ✿</string>
+    <string name="snooze">Posponer 10 min</string>
+    <string name="done">Hecho</string>
+    <string name="pick_image">Elige una imagen</string>
+    <string name="take_photo">Hacer una foto</string>
+</resources>

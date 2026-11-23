@@ -1,0 +1,186 @@
+name: ZenCalendar (APK + exe)
+
+# Cada cambio en main compila la app de Android (ZenCalendar.apk) y la de
+# Windows (instalador + portable) y las publica en Releases:
+#   android-latest → la última APK, siempre en el mismo enlace
+#   pc-latest      → el último instalador/portable (el instalado se actualiza solo desde aquí)
+#   v1.x.y         → una release con su número para cada compilación
+# Los client IDs de Google salen de las *variables* del repo (Settings → Secrets and
+# variables → Actions → Variables). Si no están, la app funciona igual pero sin Drive.
+
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', 'web/**', 'desktop/**', 'tools/**', 'tests/**', '.github/workflows/build.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+  GOOGLE_DESKTOP_CLIENT_ID: ${{ vars.GOOGLE_DESKTOP_CLIENT_ID }}
+  GOOGLE_DESKTOP_CLIENT_SECRET: ${{ vars.GOOGLE_DESKTOP_CLIENT_SECRET }}
+
+jobs:
+  # el número de versión: 1.0.0, 1.0.1… y cada 100 compilaciones sube el del medio
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      v: ${{ steps.v.outputs.v }}
+    steps:
+      - id: v
+        run: |
+          K=$(( ${{ github.run_number }} - 1 )); K=$(( K < 0 ? 0 : K ))
+          echo "v=1.$(( K / 100 )).$(( K % 100 ))" >> "$GITHUB_OUTPUT"
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Pruebas de web/js/core
+        run: node tests/core/run.js
+
+  apk:
+    needs: [version, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Configuración (Google y versión)
+        env:
+          ZC_VERSION: ${{ needs.version.outputs.v }}
+        run: node tools/setconfig.js
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Compilar
+        working-directory: android
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Nombre y versión
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk ZenCalendar.apk
+          echo "${{ github.run_number }} $(sha256sum ZenCalendar.apk | cut -d' ' -f1)" > version.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ZenCalendar-apk
+          path: ZenCalendar.apk
+
+      - name: Publicar (android-latest)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: ZenCalendar para Android
+          prerelease: true
+          make_latest: false
+          body: Última versión compilada (${{ needs.version.outputs.v }}). Descarga ZenCalendar.apk e instálala en el móvil.
+          files: |
+            ZenCalendar.apk
+            version.txt
+
+  desktop:
+    needs: [version, test]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Configuración (Google y versión)
+        shell: bash
+        env:
+          ZC_VERSION: ${{ needs.version.outputs.v }}
+        run: node tools/setconfig.js
+
+      - name: Compilar
+        working-directory: desktop
+        shell: bash
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: |
+          npm install --no-audit --no-fund
+          npm version "${{ needs.version.outputs.v }}" --no-git-tag-version --allow-same-version
+          npx electron-builder --win nsis portable --publish never
+          ls dist
+          # la portable mira este archivo para saber si hay versión nueva
+          echo "${{ needs.version.outputs.v }} $(sha256sum dist/ZenCalendar-Instalador.exe | cut -d' ' -f1) $(sha256sum dist/ZenCalendar-Portable.exe | cut -d' ' -f1)" > dist/version.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ZenCalendar-windows
+          path: |
+            desktop/dist/ZenCalendar-Instalador.exe
+            desktop/dist/ZenCalendar-Portable.exe
+
+      - name: Publicar (pc-latest)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: pc-latest
+          name: ZenCalendar para Windows
+          prerelease: true
+          make_latest: false
+          body: Última versión compilada (${{ needs.version.outputs.v }}). El instalador se actualiza solo desde aquí.
+          files: |
+            desktop/dist/ZenCalendar-Instalador.exe
+            desktop/dist/ZenCalendar-Instalador.exe.blockmap
+            desktop/dist/ZenCalendar-Portable.exe
+            desktop/dist/latest.yml
+            desktop/dist/version.txt
+
+  # una release con su número (v1.x.y) con la APK y los dos de Windows
+  release:
+    if: always() && needs.apk.result == 'success'
+    needs: [version, apk, desktop]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.version.outputs.v }}
+          target_commitish: ${{ github.sha }}
+          name: ZenCalendar v${{ needs.version.outputs.v }}
+          make_latest: true
+          fail_on_unmatched_files: false
+          files: |
+            out/ZenCalendar.apk
+            out/ZenCalendar-Instalador.exe
+            out/ZenCalendar-Portable.exe
+          body: |
+            ## ZenCalendar v${{ needs.version.outputs.v }}
+
+            Tu calendario tranquilito, para Android y Windows, sincronizado con tu Google Drive.
+
+            **Windows** — `ZenCalendar-Instalador.exe` (se instala como una app más, se queda junto al reloj para avisarte y se actualiza sola) o `ZenCalendar-Portable.exe` (sin instalar: los datos van en una carpeta al lado).
+
+            **Android** — descarga `ZenCalendar.apk` e instálala (Android te pedirá permitir apps de esta fuente). Trae widgets «Agenda» y «Hoy».
+
+            ### ¿Es seguro? Sí
+
+            Windows y Android pueden avisar de que ZenCalendar es «peligroso» o «no seguro». **No es por lo que hace, es porque no está firmado** con un certificado de pago ni viene de una tienda oficial.
+
+            - **Windows** («Windows protegió su PC»): *Más información → Ejecutar de todas formas*.
+            - **Android** («App no segura» de Play Protect): *Más detalles → Instalar de todas formas*.
+
+            Todo el código es abierto y estos archivos los compila GitHub Actions a partir de él. Tus eventos se quedan en tu dispositivo y, si quieres, en una carpeta oculta de **tu** Google Drive. Sin cuentas propias, sin anuncios y sin servidores. Más en el [README](https://github.com/luckicla/zencalendar#es-seguro).

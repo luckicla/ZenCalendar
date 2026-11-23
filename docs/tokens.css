@@ -1,0 +1,65 @@
+/* ZenCalendar · tokens de la web (v2: calendario de pared)
+ * Papel de agenda y tinta ciruela. El color solo significa «calendario»:
+ * lavanda = Personal, menta = Trabajo, rosa = Cumpleaños. */
+:root {
+  color-scheme: light;
+
+  /* Color */
+  --paper: #FCFBFE;          /* Papel */
+  --paper-2: #F4F1FA;        /* Papel de color: planos de widgets y burbujas */
+  --ink: #2B2440;            /* Tinta */
+  --pencil: #665F7A;         /* Lápiz: texto secundario (5,9:1) */
+  --rule: #E3DFEC;           /* Raya */
+  --rule-strong: #2B2440;    /* la raya de arriba del mes y de cada página */
+  --lavender: #9F8DFF;       /* Lavanda: hoy, foco, Personal */
+  --lavender-ink: #5A45D4;   /* Lavanda tinta: enlaces (6,3:1) */
+  --pink: #F0A6CC;           /* Cumpleaños */
+  --mint: #7DD3B9;           /* Trabajo */
+  --tint-lav: #EEEAFD;
+  --tint-mint: #E3F6F0;
+  --btn-bg: #2B2440;
+  --btn-fg: #FCFBFE;
+
+  /* Tipografía: Bitter para fechas y títulos, Fira Sans para el texto */
+  --font-date: "Bitter", "Rockwell", "Roboto Slab", Georgia, serif;
+  --font-text: "Fira Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  /* escala clásica: 12, 14, 17, 21, 28, 36, 48 y el mes del héroe */
+  --t-12: 0.75rem; --t-14: 0.875rem; --t-17: 1.0625rem; --t-21: 1.3125rem;
+  --t-28: 1.75rem; --t-36: clamp(1.75rem, 1.2rem + 1.6vw, 2.25rem);
+  --t-48: clamp(2rem, 1.2rem + 2.4vw, 3rem);
+  --t-month: clamp(3.5rem, 1rem + 9vw, 9.25rem);
+  --leading: 1.55;
+  --measure: 66ch;
+
+  /* Espacio (base 8) */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px; --s-9: 96px;
+  --page-gap: clamp(56px, 3vw + 40px, 96px);
+
+  /* Lienzo: la semana */
+  --container: 1280px;
+  --gutter: clamp(16px, 4vw, 56px);
+  --week: repeat(7, minmax(0, 1fr));
+
+  /* Forma y movimiento */
+  --radius: 10px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-short: 180ms; --dur-medium: 320ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --paper: #16131D;
+    --paper-2: #211D2B;
+    --ink: #ECE8F4;
+    --pencil: #A8A1B9;
+    --rule: #2D2839;
+    --rule-strong: #ECE8F4;
+    --lavender-ink: #B9ADFF;
+    --tint-lav: #262036;
+    --tint-mint: #1C2A27;
+    --btn-bg: #ECE8F4;
+    --btn-fg: #16131D;
+  }
+}

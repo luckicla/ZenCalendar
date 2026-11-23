@@ -1,0 +1,64 @@
+name: Web (GitHub Pages)
+
+# https://luckicla.github.io/zencalendar/      → la web de presentación (carpeta docs/)
+# https://luckicla.github.io/zencalendar/app/  → la app web (carpeta web/), con Drive si hay client ID web
+
+on:
+  push:
+    branches: [main]
+    paths: ['web/**', 'docs/**', 'tools/setconfig.js', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Montar la web
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          mkdir -p _site
+          # la presentación (sin los documentos internos)
+          cp -r docs/. _site/
+          rm -f _site/CONTRATO.md _site/PENDIENTES.md _site/GOOGLE-SETUP.md
+          # la app
+          mkdir -p _site/app
+          cp -r web/. _site/app/
+          node tools/setconfig.js _site/app/js/core/config.js
+          # si todavía no hay presentación, la raíz lleva a la app
+          if [ ! -f _site/index.html ]; then
+            printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=app/"><title>ZenCalendar</title><a href="app/">ZenCalendar</a>\n' > _site/index.html
+          fi
+          touch _site/.nojekyll
+          ls -la _site _site/app
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

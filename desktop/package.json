@@ -1,0 +1,76 @@
+{
+  "name": "zencalendar",
+  "version": "1.0.0",
+  "description": "ZenCalendar: tu calendario tranquilito, con avisos y sincronizado con tu Google Drive",
+  "main": "main.js",
+  "author": "luckicla",
+  "homepage": "https://luckicla.github.io/zencalendar/",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis portable --publish never"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "rcedit": "^3.1.0"
+  },
+  "build": {
+    "appId": "com.luckicla.zencalendar.desktop",
+    "productName": "ZenCalendar",
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "google.js",
+      "package.json"
+    ],
+    "extraResources": [
+      { "from": "../web", "to": "web", "filter": ["**/*", "!sw.js"] },
+      { "from": "build/icon.ico", "to": "icon.ico" },
+      { "from": "build/icons", "to": "icons" }
+    ],
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false,
+      "legalTrademarks": "ZenCalendar"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false,
+      "shortcutName": "ZenCalendar",
+      "uninstallDisplayName": "ZenCalendar",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "artifactName": "ZenCalendar-Instalador.${ext}",
+      "allowToChangeInstallationDirectory": true,
+      "multiLanguageInstaller": true,
+      "installerLanguages": ["es_ES", "en_US", "ca_ES"],
+      "language": "3082",
+      "displayLanguageSelector": false,
+      "warningsAsErrors": false
+    },
+    "portable": {
+      "artifactName": "ZenCalendar-Portable.${ext}"
+    },
+    "copyright": "© 2026 luckicla",
+    "afterPack": "build/afterPack.js",
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/luckicla/zencalendar/releases/download/pc-latest/"
+      }
+    ]
+  }
+}

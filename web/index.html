@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es" data-scheme="light" data-anim="normal">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#F7F3FF">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="ZenCalendar · un calendario tranquilo y bonito">
+<title>ZenCalendar</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="img/favicon.png">
+<link rel="apple-touch-icon" href="img/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/views.css">
+<link rel="stylesheet" href="css/panels.css">
+<script>
+  // primer pintado con el último tema usado (antes de que cargue nada), para que no destelle
+  (function () { try { var c = JSON.parse(localStorage.getItem('zc.lookCache') || 'null'); if (!c) return; var r = document.documentElement; r.dataset.scheme = c.s; r.style.setProperty('--bg', c.bg); r.style.background = c.bg; } catch (e) {} })();
+</script>
+</head>
+<body>
+<canvas id="bgCanvas" aria-hidden="true"></canvas>
+<div id="bgImg" hidden></div>
+<div id="bgVeil"></div>
+
+<div id="app">
+  <header id="top"></header>
+  <aside id="side" aria-label="Panel lateral"></aside>
+  <main id="main">
+    <div id="quick"></div>
+    <div id="viewHost"></div>
+  </main>
+  <nav id="bnav" aria-label="Vistas"></nav>
+  <button class="fab" id="fab" type="button"></button>
+</div>
+
+<div id="splash"><img src="img/ui/logo.svg" alt="ZenCalendar" width="84" height="84"></div>
+
+<!-- núcleo (backend) -->
+<script src="js/core/config.js"></script>
+<script src="js/core/util.js"></script>
+<script src="js/core/store.js"></script>
+<script src="js/core/recur.js"></script>
+<script src="js/core/holidays.js"></script>
+<script src="js/core/nlp.js"></script>
+<script src="js/core/ics.js"></script>
+<script src="js/core/net.js"></script>
+<script src="js/core/platform.js"></script>
+<script src="js/core/reminders.js"></script>
+<script src="js/core/drive.js"></script>
+<script src="js/core/ai.js"></script>
+<script src="js/core/core.js"></script>
+<!-- interfaz (frontend) -->
+<script src="js/ui/i18n.js"></script>
+<script src="js/ui/i18n-dict.js"></script>
+<script src="js/ui/icons.js"></script>
+<script src="js/ui/dom.js"></script>
+<script src="js/ui/bg.js"></script>
+<script src="js/ui/look.js"></script>
+<script src="js/ui/cal.js"></script>
+<script src="js/ui/view-month.js"></script>
+<script src="js/ui/view-time.js"></script>
+<script src="js/ui/view-list.js"></script>
+<script src="js/ui/side.js"></script>
+<script src="js/ui/editor.js"></script>
+<script src="js/ui/quick.js"></script>
+<script src="js/ui/aipanel.js"></script>
+<script src="js/ui/data.js"></script>
+<script src="js/ui/settings.js"></script>
+<script src="js/ui/welcome.js"></script>
+<script src="js/ui/app.js"></script>
+</body>
+</html>

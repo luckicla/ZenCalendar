@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ZenCalendar: el calendario que apunta lo que escribes, para Android y Windows</title>
+<meta name="description" content="Escribe «cena con Marta el viernes a las 9» y ZenCalendar lo pone en su día. Calendario para Android y Windows con IA, sincronización por tu Google Drive, widgets y temas a tu gusto. Gratis y sin anuncios.">
+<meta name="author" content="luckicla">
+<meta name="theme-color" content="#FCFBFE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16131D" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://luckicla.github.io/zencalendar/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_ES">
+<meta property="og:site_name" content="ZenCalendar">
+<meta property="og:title" content="ZenCalendar: apúntalo como lo dirías">
+<meta property="og:description" content="Calendario para Android y Windows que entiende lo que escribes. Con IA, sincronización por tu Google Drive y widgets. Gratis y sin anuncios.">
+<meta property="og:url" content="https://luckicla.github.io/zencalendar/">
+<meta property="og:image" content="https://luckicla.github.io/zencalendar/img/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="La página de un mes de ZenCalendar con eventos apuntados en sus días.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ZenCalendar: apúntalo como lo dirías">
+<meta name="twitter:description" content="Calendario para Android y Windows que entiende lo que escribes. Gratis y sin anuncios.">
+<meta name="twitter:image" content="https://luckicla.github.io/zencalendar/img/og.png">
+<link rel="icon" href="img/logo.svg" type="image/svg+xml">
+<link rel="icon" href="img/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:wght@300;400;500;600&family=Fira+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/mock.css">
+<script>document.documentElement.classList.add('js');</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ZenCalendar",
+  "operatingSystem": "Android, Windows 10, Windows 11",
+  "applicationCategory": "ProductivityApplication",
+  "description": "Calendario para Android y Windows que entiende lo que escribes, con asistente de IA, sincronización por Google Drive, widgets y personalización.",
+  "url": "https://luckicla.github.io/zencalendar/",
+  "downloadUrl": "https://github.com/luckicla/zencalendar/releases/latest",
+  "inLanguage": ["es", "en", "ca"],
+  "author": { "@type": "Person", "name": "luckicla", "url": "https://github.com/luckicla" },
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
+}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Saltar al contenido</a>
+
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="#inicio" aria-label="ZenCalendar, inicio">
+      <img src="img/logo.svg" width="28" height="28" alt="">
+      <span>ZenCalendar</span>
+    </a>
+    <nav class="top-links" aria-label="Principal">
+      <a href="#funciones">Qué hace</a>
+      <a href="#aspecto">Aspecto</a>
+      <a href="#seguro">¿Es seguro?</a>
+      <a href="#descargar" class="top-dl">Descargar</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <!-- Héroe: la página del mes -->
+  <section class="hero" id="inicio" aria-labelledby="hero-title">
+    <div class="wrap">
+      <div class="hero-head">
+        <div class="month" id="demo-head">
+          <p class="month-name" id="demo-month" aria-hidden="true">noviembre</p>
+          <div class="month-meta">
+            <span class="month-year" id="demo-year" aria-hidden="true">2026</span>
+            <span class="month-nav">
+              <button type="button" class="nav-btn" id="demo-prev" aria-label="Mes anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <button type="button" class="nav-btn nav-btn--text" id="demo-today">Hoy</button>
+              <button type="button" class="nav-btn" id="demo-next" aria-label="Mes siguiente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            </span>
+          </div>
+        </div>
+        <div class="hero-text">
+          <h1 id="hero-title">Apúntalo como lo dirías.</h1>
+          <p>Escribe «cena con Marta el viernes a las 9» y ZenCalendar lo pone en su día. Para Android y Windows, gratis y sin anuncios.</p>
+          <div class="actions" id="hero-actions">
+            <a class="btn btn--primary dl-android" href="https://github.com/luckicla/zencalendar/releases/latest/download/ZenCalendar.apk">Descargar para Android</a>
+            <a class="btn dl-windows" href="https://github.com/luckicla/zencalendar/releases/latest/download/ZenCalendar-Instalador.exe">Descargar para Windows</a>
+          </div>
+          <a class="try" href="app/">Probar en el navegador</a>
+        </div>
+      </div>
+
+      <div class="demo" id="demo">
+        <h2 class="visually-hidden" id="demo-label">Prueba: un mes de ZenCalendar</h2>
+        <div class="demo-cal" role="group" aria-labelledby="demo-label">
+          <div class="mo" id="demo-grid"></div>
+        </div>
+        <form class="quick" id="demo-form" autocomplete="off">
+          <label for="demo-input" class="quick-label">Apunta algo</label>
+          <input id="demo-input" type="text" enterkeyhint="done" placeholder="cena con Marta el viernes a las 9" spellcheck="false">
+          <button type="submit" class="btn btn--primary btn--small">Apuntar</button>
+        </form>
+        <div class="tries" role="group" aria-labelledby="tries-label">
+          <span id="tries-label">O prueba con:</span>
+          <button type="button" class="try-chip">dentista mañana a las 5</button>
+          <button type="button" class="try-chip">yoga los martes y jueves a las 7</button>
+          <button type="button" class="try-chip">del 3 al 7 de diciembre vacaciones</button>
+          <button type="button" class="try-chip">recuérdame comprar pan</button>
+        </div>
+        <p class="demo-status" id="demo-status" role="status" aria-live="polite">Funciona sin internet, igual que en la app.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- IA -->
+  <section class="page" id="ia" aria-labelledby="ia-title">
+    <div class="wrap page-grid">
+      <div class="page-head">
+        <h2 id="ia-title">Pídeselo con tus palabras.</h2>
+      </div>
+      <div class="page-body">
+        <p class="lead">Dile que mueva la reunión al jueves, que te apunte el horario del gimnasio o qué tienes la semana que viene. Antes de cambiar nada te enseña lo que va a hacer, y tú decides.</p>
+        <div class="ia">
+          <div class="chat" id="chat" aria-label="Ejemplo de conversación con el asistente">
+            <div class="msg msg--me">
+              <div class="poster" role="img" aria-label="Foto de un cartel: Cine de verano en la Plaza Mayor, 14, 15 y 16 de agosto a las 22:00">
+                <span class="poster-k">Plaza Mayor</span>
+                <span class="poster-t">Cine de verano</span>
+                <span class="poster-d">14, 15 y 16 de agosto</span>
+                <span class="poster-h">22:00 h, entrada libre</span>
+              </div>
+              <p>Apúntame esto, porfa</p>
+            </div>
+            <div class="msg msg--ai">
+              <p>He visto tres sesiones de cine en la Plaza Mayor. ¿Las añado?</p>
+              <ul class="proposal">
+                <li><i class="sq sq--personal"></i><span><b>Cine de verano</b><small>Viernes 14 de agosto, 22:00, Plaza Mayor</small></span></li>
+                <li><i class="sq sq--personal"></i><span><b>Cine de verano</b><small>Sábado 15 de agosto, 22:00, Plaza Mayor</small></span></li>
+                <li><i class="sq sq--personal"></i><span><b>Cine de verano</b><small>Domingo 16 de agosto, 22:00, Plaza Mayor</small></span></li>
+              </ul>
+              <div class="proposal-actions">
+                <button type="button" class="btn btn--primary btn--small" id="chat-apply">Añadir los 3</button>
+                <button type="button" class="btn btn--small" id="chat-undo" hidden>Quitarlos</button>
+                <span class="proposal-done" id="chat-done" role="status"></span>
+              </div>
+            </div>
+          </div>
+          <div class="ia-side">
+            <p>También lee fotos: un cartel, una invitación o el horario de clases. Eliges con qué IA funciona:</p>
+            <dl class="options">
+              <div><dt>Gratis</dt><dd>Con una clave gratuita de Gemini, Groq u OpenRouter. Lo básico va sin internet y sin clave.</dd></div>
+              <div><dt>De pago</dt><dd>Con tu clave de OpenAI, Anthropic, Mistral o cualquier servicio compatible. Les pagas a ellos; ZenCalendar no cobra nada.</dd></div>
+              <div><dt>En tu dispositivo</dt><dd>Un modelo abierto que se descarga una vez y no manda nada a nadie, si tu dispositivo puede con él. En el PC, también con Ollama.</dd></div>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Google Drive -->
+  <section class="page" id="drive" aria-labelledby="drive-title">
+    <div class="wrap page-grid">
+      <div class="page-head">
+        <h2 id="drive-title">Sincroniza con tu Google Drive.</h2>
+      </div>
+      <div class="page-body">
+        <p class="lead">Tus eventos van del móvil al PC a través de tu propio Drive. No hay cuentas nuestras ni servidor de nadie.</p>
+        <div class="drive">
+          <ul class="facts-list">
+            <li><b>Un solo botón.</b> Tocas «Conectar con Google», eliges tu cuenta y listo.</li>
+            <li><b>Una carpeta privada.</b> No ensucia tu Drive y solo ZenCalendar puede abrirla.</li>
+            <li><b>Sin conexión también.</b> Cuando vuelve internet se pone al día sola, evento a evento, sin pisar lo que cambiaste en otro sitio.</li>
+            <li><b>Con las fotos.</b> Las imágenes de tus eventos viajan con ellos.</li>
+          </ul>
+          <div class="sync" id="sync">
+            <div class="sync-line" aria-hidden="true">
+              <span class="sync-node">Móvil</span>
+              <span class="sync-wire"><i></i></span>
+              <span class="sync-node sync-node--drive">Tu Drive</span>
+              <span class="sync-wire sync-wire--back"><i></i></span>
+              <span class="sync-node">PC</span>
+            </div>
+            <div class="gconnect">
+              <span class="g-logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.4 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.4H3.1a10 10 0 0 0 0 9.2z"/><path fill="#EA4335" d="M12 5.9c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3.1 7.4L6.4 10C7.2 7.7 9.4 5.9 12 5.9z"/></svg></span>
+              <div class="gconnect-text">
+                <b>Google Drive</b>
+                <small id="g-sub">Sin conectar</small>
+              </div>
+              <button type="button" class="btn btn--small" id="g-btn" aria-pressed="false">Conectar con Google</button>
+            </div>
+            <p class="note">Es un ejemplo: aquí no se conecta nada.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Personalización -->
+  <section class="page" id="aspecto" aria-labelledby="custom-title">
+    <div class="wrap page-grid">
+      <div class="page-head">
+        <h2 id="custom-title">Ponla a tu gusto.</h2>
+      </div>
+      <div class="page-body">
+        <p class="lead">Prueba aquí el tema, el fondo, el vidrio, las esquinas, la letra y el icono. La app cambia igual.</p>
+        <div class="app" id="app" role="img" aria-label="Maqueta de ZenCalendar con el aspecto elegido">
+          <div class="app-bg" aria-hidden="true"></div>
+          <div class="app-bar">
+            <span class="app-logo" id="app-logo"></span>
+            <b class="app-name">ZenCalendar</b>
+            <span class="app-tabs"><i>Mes</i><i class="on">Semana</i><i>Día</i><i>Agenda</i></span>
+            <span class="app-btns"><i class="app-search"></i><i class="app-add">+</i></span>
+          </div>
+          <div class="app-main">
+            <aside class="app-side pane">
+              <p class="app-month" id="app-month"></p>
+              <div class="mini" id="app-mini"></div>
+              <p class="app-label">Calendarios</p>
+              <ul class="app-cals">
+                <li><i class="dot dot--personal"></i>Personal</li>
+                <li><i class="dot dot--work"></i>Trabajo</li>
+                <li><i class="dot dot--birthdays"></i>Cumpleaños</li>
+              </ul>
+              <p class="app-label">Tareas</p>
+              <ul class="app-tasks" id="app-tasks"></ul>
+            </aside>
+            <div class="app-week pane" id="app-week"></div>
+          </div>
+        </div>
+        <form class="controls" id="controls" aria-label="Aspecto de la maqueta">
+          <fieldset class="ctl ctl--themes">
+            <legend>Tema</legend>
+            <div class="swatches" id="themes"></div>
+          </fieldset>
+          <fieldset class="ctl">
+            <legend>Modo</legend>
+            <div class="seg" id="modes">
+              <label><input type="radio" name="mode" value="light" checked><span>Claro</span></label>
+              <label><input type="radio" name="mode" value="dark"><span>Oscuro</span></label>
+            </div>
+          </fieldset>
+          <fieldset class="ctl">
+            <legend>Fondo animado</legend>
+            <div class="seg seg--wrap" id="bgs">
+              <label><input type="radio" name="bg" value="aurora" checked><span>Aurora</span></label>
+              <label><input type="radio" name="bg" value="sakura"><span>Sakura</span></label>
+              <label><input type="radio" name="bg" value="bubbles"><span>Burbujas</span></label>
+              <label><input type="radio" name="bg" value="stars"><span>Estrellas</span></label>
+              <label><input type="radio" name="bg" value="plain"><span>Liso</span></label>
+            </div>
+          </fieldset>
+          <div class="ctl sliders">
+            <label class="slider"><span>Vidrio</span><input type="range" id="r-glass" min="20" max="95" value="62"><output for="r-glass">62&nbsp;%</output></label>
+            <label class="slider"><span>Desenfoque</span><input type="range" id="r-blur" min="0" max="40" value="18"><output for="r-blur">18&nbsp;px</output></label>
+            <label class="slider"><span>Esquinas</span><input type="range" id="r-radius" min="4" max="28" value="18"><output for="r-radius">18&nbsp;px</output></label>
+          </div>
+          <fieldset class="ctl">
+            <legend>Letra</legend>
+            <div class="seg" id="fonts">
+              <label><input type="radio" name="font" value="modern" checked><span>Moderna</span></label>
+              <label><input type="radio" name="font" value="round"><span>Redonda</span></label>
+              <label><input type="radio" name="font" value="serif"><span>Elegante</span></label>
+            </div>
+          </fieldset>
+          <fieldset class="ctl">
+            <legend>Icono de la app</legend>
+            <div class="icons" id="icons"></div>
+          </fieldset>
+        </form>
+        <p class="note">En la app hay más: colores sacados de tu foto de fondo, transparencia de cada panel, sombras, densidad y animaciones.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Widgets -->
+  <section class="page" id="widgets" aria-labelledby="widgets-title">
+    <div class="wrap page-grid">
+      <div class="page-head">
+        <h2 id="widgets-title">Mira tu día sin abrir la app.</h2>
+      </div>
+      <div class="page-body">
+        <p class="lead">Los widgets llevan los colores de tu tema. Tocas un evento y se abre justo ahí.</p>
+        <div class="widgets">
+          <figure class="wall wall--android">
+            <div class="wall-stage" aria-hidden="true">
+              <div class="widget w-today" id="w-today"></div>
+              <div class="widget w-agenda" id="w-agenda"></div>
+            </div>
+            <figcaption><b>Android.</b> «Hoy» y «Agenda» en la pantalla de inicio. Los añades desde la propia app.</figcaption>
+          </figure>
+          <figure class="wall wall--windows">
+            <div class="wall-stage" aria-hidden="true">
+              <div class="widget w-desk" id="w-desk"></div>
+            </div>
+            <figcaption><b>Windows.</b> Una agenda pequeña y transparente en el escritorio. La enciendes y la apagas en Ajustes.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Funciones -->
+  <section class="page" id="funciones" aria-labelledby="features-title">
+    <div class="wrap page-grid">
+      <div class="page-head">
+        <h2 id="features-title">Lo que hace.</h2>
+      </div>
+      <div class="page-body">
+        <ul class="rows">
+          <li><h3>Cinco vistas</h3><p>Mes, semana, día, agenda y año. En el móvil deslizas para cambiar de mes. Arrastras un evento para moverlo o alargarlo, y arrastras sobre las horas para crear uno.</p></li>
+          <li><h3>Repeticiones</h3><p>Cada día, ciertos días de la semana, el día 15 de cada mes, el tercer martes, cada año. Al cambiar una eliges: solo esta, esta y las siguientes, o todas.</p></li>
+          <li><h3>Avisos que llegan</h3><p>Los que quieras por evento, a la hora o antes. En Android llegan aunque reinicies el móvil, y en Windows aunque cierres la ventana.</p></li>
+          <li><h3>Fotos en los eventos</h3><p>La entrada del concierto, el mapa o la receta, dentro del evento. También se sincronizan.</p></li>
+          <li><h3>Tareas y listas</h3><p>Recordatorios con casilla y listas dentro de cada evento, para la compra o la maleta.</p></li>
+          <li><h3>Festivos</h3><p>Los de España ya vienen puestos, con la Semana Santa calculada. Los puedes quitar.</p></li>
+          <li><h3>Desde Google Calendar</h3><p>Exporta tu calendario de Google a un archivo .ics e impórtalo. También exporta a .ics y hace copias de seguridad.</p></li>
+          <li><h3>Calendarios con color</h3><p>Personal, Trabajo, Cumpleaños y los que crees, cada uno con su color. Y un buscador para encontrar cualquier cosa.</p></li>
+          <li><h3>Atajos de teclado</h3><p>En el PC cambias de vista, saltas a hoy o creas un evento sin tocar el ratón.</p></li>
+          <li><h3>Sin anuncios</h3><p>Ni anuncios, ni registro, ni suscripciones. En español, inglés y catalán.</p></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Capturas -->
+  <section class="page" id="capturas" aria-labelledby="shots-title">
+    <div class="wrap page-grid">
+      <div class="page-head">
+        <h2 id="shots-title">Así se ve.</h2>
+      </div>
+      <div class="page-body">
+        <p class="lead">La misma app en el móvil y en el PC.</p>
+      </div>
+      <div class="shots">
+        <figure class="shot shot--pc" data-shot="pc-semana">
+          <div class="shot-frame"><div class="shot-mock" data-mock="pc"></div></div>
+          <figcaption>La semana en Windows, con la barra de la propia app.</figcaption>
+        </figure>
+        <figure class="shot shot--phone" data-shot="movil-mes">
+          <div class="shot-frame"><div class="shot-mock" data-mock="phone-month"></div></div>
+          <figcaption>El mes en el móvil.</figcaption>
+        </figure>
+        <figure class="shot shot--phone" data-shot="movil-agenda">
+          <div class="shot-frame"><div class="shot-mock" data-mock="phone-agenda"></div></div>
+          <figcaption>La agenda con el tema Noche.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- Descarga -->
+  <section class="page" id="descargar" aria-labelledby="dl-title">
+    <div class="wrap page-grid">
+      <div class="page-head">
+        <h2 id="dl-title">Descárgala.</h2>
+        <p class="head-note" id="dl-version" hidden></p>
+      </div>
+      <div class="page-body">
+        <ul class="files" id="files">
+          <li class="file" data-os="android">
+            <div class="file-text"><h3>Android</h3><p>ZenCalendar.apk. Se instala a mano.</p></div>
+            <span class="file-mine">Para este dispositivo</span>
+            <a class="btn btn--small file-btn" id="dl-apk" href="https://github.com/luckicla/zencalendar/releases/latest/download/ZenCalendar.apk">Descargar el APK</a>
+          </li>
+          <li class="file" data-os="windows">
+            <div class="file-text"><h3>Windows</h3><p>ZenCalendar-Instalador.exe. Se instala con su icono y se actualiza sola.</p></div>
+            <span class="file-mine">Para este dispositivo</span>
+            <a class="btn btn--small file-btn" id="dl-exe" href="https://github.com/luckicla/zencalendar/releases/latest/download/ZenCalendar-Instalador.exe">Descargar el instalador</a>
+          </li>
+          <li class="file" data-os="portable">
+            <div class="file-text"><h3>Windows portable</h3><p>ZenCalendar-Portable.exe. Sin instalar, también desde un USB.</p></div>
+            <span class="file-mine">Para este dispositivo</span>
+            <a class="btn btn--small file-btn" id="dl-portable" href="https://github.com/luckicla/zencalendar/releases/latest/download/ZenCalendar-Portable.exe">Descargar la portable</a>
+          </li>
+          <li class="file" data-os="web">
+            <div class="file-text"><h3>Navegador</h3><p>Sin instalar nada, desde cualquier ordenador o móvil.</p></div>
+            <span class="file-mine">Para este dispositivo</span>
+            <a class="btn btn--small file-btn" href="app/">Abrir la app web</a>
+          </li>
+        </ul>
+        <div class="dl-more">
+          <div class="qr-row">
+            <div class="qr" id="qr" role="img" aria-label="Código QR para descargar el APK en el móvil"></div>
+            <p>¿Estás en el PC? Escanea el código con el móvil y se baja el APK.</p>
+          </div>
+          <ul class="steps">
+            <li><b>En Android</b> abre el APK y, si te lo pide, permite instalar apps de esa fuente.</li>
+            <li><b>En Windows</b>, si sale «Windows protegió su PC», toca <i>Más información</i> y luego <i>Ejecutar de todas formas</i>. <a href="#seguro">Por qué pasa</a>.</li>
+          </ul>
+        </div>
+        <div class="news">
+          <h3>Novedades</h3>
+          <div class="releases" id="releases" aria-live="polite"><p class="empty">Cargando las novedades de GitHub…</p></div>
+          <p class="all-rel"><a class="repo-rel" href="https://github.com/luckicla/zencalendar/releases">Todas las versiones en GitHub</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ¿Es seguro? -->
+  <section class="page" id="seguro" aria-labelledby="safe-title">
+    <div class="wrap page-grid">
+      <div class="page-head">
+        <h2 id="safe-title">¿Es seguro? Sí.</h2>
+      </div>
+      <div class="page-body">
+        <p class="lead">Windows y Android pueden decirte que es «peligrosa» o «no segura». No es por lo que hace: es porque no está firmada con un certificado de pago ni viene de una tienda.</p>
+        <ul class="rows">
+          <li><h3>«Windows protegió su PC»</h3><p>SmartScreen desconfía de los programas sin una firma de pago (cuesta cientos de euros al año) y que aún se han descargado poco. Toca <i>Más información</i> y luego <i>Ejecutar de todas formas</i>.</p></li>
+          <li><h3>«App no segura» en Android</h3><p>Play Protect avisa de cualquier app que no venga de Google Play. Toca <i>Más detalles</i> y luego <i>Instalar de todas formas</i>.</p></li>
+          <li><h3>Código abierto</h3><p>Todo el código está en GitHub. El APK y los .exe los compila GitHub Actions a partir de ese mismo código, no el ordenador de nadie.</p></li>
+          <li><h3>Compruébalo tú</h3><p>Sube el archivo a <a href="https://www.virustotal.com" rel="noopener">VirusTotal</a>, que lo pasa por decenas de antivirus a la vez. O pásale el enlace del código a una IA y pídele que te explique qué hace.</p></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Privacidad -->
+  <section class="page" id="privacidad" aria-labelledby="privacy-title">
+    <div class="wrap page-grid">
+      <div class="page-head">
+        <h2 id="privacy-title">Lo tuyo se queda contigo.</h2>
+      </div>
+      <div class="page-body">
+        <ul class="rows">
+          <li><h3>Tus eventos</h3><p>Se guardan en tu móvil o tu PC y, si conectas Google, en tu propio Drive. En ningún otro sitio.</p></li>
+          <li><h3>Tus claves de IA</h3><p>Se quedan en el dispositivo donde las pones. Ni siquiera se copian a tu Drive.</p></li>
+          <li><h3>Lo que le pides a la IA</h3><p>Si usas un proveedor de internet, le llega a ese proveedor. Con el modelo de tu dispositivo o el modo sin internet, no sale de ahí.</p></li>
+          <li><h3>Sin rastreo</h3><p>La app no tiene anuncios ni analíticas, y esta web no usa cookies.</p></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <p class="foot-by"><img src="img/logo.svg" width="24" height="24" alt=""><span>ZenCalendar lo hace <a href="https://github.com/luckicla">luckicla</a>.</span></p>
+    <ul class="foot-links">
+      <li><a class="repo-link" href="https://github.com/luckicla/zencalendar">Código en GitHub</a></li>
+      <li><a class="repo-rel" href="https://github.com/luckicla/zencalendar/releases">Versiones</a></li>
+      <li><a href="app/">App web</a></li>
+    </ul>
+  </div>
+</footer>
+
+<script src="js/qr.js" defer></script>
+<script src="js/nlp.js" defer></script>
+<script src="js/mock.js" defer></script>
+<script src="js/demo.js" defer></script>
+<script src="js/custom.js" defer></script>
+<script src="js/site.js" defer></script>
+</body>
+</html>

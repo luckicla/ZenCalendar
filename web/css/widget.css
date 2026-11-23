@@ -1,0 +1,30 @@
+/* ZenCalendar · widget de escritorio: ventana transparente con una tarjeta de vidrio. */
+html.widget-page, html.widget-page body { background: transparent !important; overflow: hidden; height: 100%; }
+html.widget-page body { padding: 10px; }
+.w-card { height: 100%; display: flex; flex-direction: column; border-radius: calc(var(--rad) + 6px); background: color-mix(in srgb, var(--s1) var(--wa, 72%), transparent); border: 1px solid var(--edge); box-shadow: 0 6px 20px -8px rgb(var(--sh-rgb) / .35), var(--edge-in); overflow: hidden; color: var(--fg); opacity: 0; transform: scale(.97); transition: opacity .4s, transform .5s var(--spring); }
+.ready .w-card { opacity: 1; transform: none; }
+.w-head { display: flex; align-items: center; gap: 6px; padding: 14px 12px 10px 16px; -webkit-app-region: drag; user-select: none; }
+.w-date { flex: 1; display: flex; align-items: center; gap: 12px; min-width: 0; }
+.w-date b { font: 700 2.4rem/1 var(--font-title); color: var(--a1t); }
+.w-date span { display: grid; min-width: 0; }
+.w-date strong { font: 700 1rem/1.2 var(--font-title); text-transform: capitalize; }
+.w-date small { color: var(--mut); font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.w-btn { -webkit-app-region: no-drag; width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; color: var(--fg); background: rgb(var(--fg-rgb) / .06); transition: background var(--t-fast), transform var(--t-fast) var(--spring); }
+.w-btn:hover { background: rgb(var(--fg-rgb) / .11); }
+.w-btn:active { transform: scale(.9); }
+.w-btn[data-a=new] { background: var(--a1); color: var(--a1ink); }
+.w-body { flex: 1; overflow: auto; padding: 0 8px 12px; -webkit-app-region: no-drag; scrollbar-width: thin; }
+.w-body section + section { margin-top: 6px; }
+.w-body h3 { font: 700 .86rem var(--font-title); color: var(--mut); padding: 8px 8px 4px; }
+.w-body h3 small { font-weight: 600; color: var(--a2t); }
+.w-ev { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border-radius: 12px; text-align: left; font-size: .86rem; transition: background var(--t-fast); }
+.w-ev:hover { background: var(--hover); }
+.w-bar { width: 4px; height: 18px; margin: 0 6px; border-radius: 3px; background: var(--c); flex: none; }
+.w-tk { width: 16px; height: 16px; border-radius: 6px; flex: none; display: grid; place-items: center; box-shadow: inset 0 0 0 1.8px var(--c); color: rgb(40 30 60 / .8); cursor: pointer; }
+.w-tk .ic { opacity: 0; stroke-width: 3; }
+.w-tk.on { background: var(--c); } .w-tk.on .ic { opacity: 1; }
+.w-t { flex: none; width: 52px; line-height: 1.15; color: var(--mut); font-weight: 650; font-size: .78rem; font-variant-numeric: tabular-nums; }
+.w-n { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.w-ev.past { opacity: .5; }
+.w-ev.done .w-n { text-decoration: line-through; color: var(--mut); }
+.w-empty { padding: 4px 8px 6px; color: var(--mut); font-size: .84rem; }

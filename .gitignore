@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc
+tests/*/out/
+android/.gradle/
+android/build/
+android/app/build/
+desktop/web/

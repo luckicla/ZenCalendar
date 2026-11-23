@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<link rel="stylesheet" href="../../docs/tokens.css"><link rel="stylesheet" href="../../docs/css/site.css">
+<style>
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+  .og { padding: 44px 56px 0; display: grid; grid-template-columns: repeat(7, 1fr); }
+  .og-month { grid-column: 1 / 5; font: 300 132px/0.8 var(--font-date); letter-spacing: -0.035em; margin-left: -0.05em; }
+  .og-side { grid-column: 5 / 8; padding-left: 10px; align-self: end; display: grid; gap: 12px; }
+  .og-brand { display: flex; align-items: center; gap: 10px; font: 500 22px/1 var(--font-date); }
+  .og-brand img { width: 34px; height: 34px; }
+  .og-side h1 { font-size: 38px; line-height: 1.05; }
+  .og .demo { grid-column: 1 / -1; margin-top: 26px; }
+  .og .demo .mo-day { min-height: 62px; cursor: default; }
+</style></head>
+<body>
+<div class="og">
+  <div class="og-month" id="m"></div>
+  <div class="og-side"><div class="og-brand"><img src="../../docs/img/logo.svg" alt="">ZenCalendar</div><h1>Apúntalo como lo dirías.</h1></div>
+  <div class="demo"><div class="demo-cal"><div class="mo" id="g"></div></div></div>
+</div>
+<script src="../../docs/js/mock.js"></script>
+<script>
+  const M = ZCW.mock, now = new Date();
+  const ev = M.sample(now);
+  const fri = M.addDays(M.sow(now), 4); fri.setHours(21, 0);
+  ev.push({ id: 'og', title: 'Cena con Marta', cal: 'personal', allDay: false, start: fri, end: new Date(fri.getTime() + 7200000) });
+  document.getElementById('m').textContent = M.MONTHS[now.getMonth()];
+  document.getElementById('g').innerHTML = M.monthHTML(ev, now, { today: now, selected: M.sod(fri), max: 2, dow: ['lun','mar','mié','jue','vie','sáb','dom'] });
+</script>
+</body></html>

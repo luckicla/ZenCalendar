@@ -1,0 +1,75 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.luckicla.zencalendar'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.luckicla.zencalendar'
+        minSdk 24
+        targetSdk 34
+        // el número de compilación de GitHub (lo mismo que el PC: 1.0.<n>, cada 100 sube el del medio)
+        versionCode Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '1')
+        versionName zcVersionName()
+    }
+
+    // Una clave fija para que las versiones nuevas se instalen encima de las
+    // viejas. Es de desarrollo (está en el repo a propósito): su huella SHA-1
+    // es la que va en Google Cloud para el inicio de sesión (docs/GOOGLE-SETUP.md).
+    signingConfigs {
+        dev {
+            storeFile file('zencalendar-dev.keystore')
+            storePassword 'zencalendardev'
+            keyAlias 'zencalendar'
+            keyPassword 'zencalendardev'
+            storeType 'pkcs12'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.dev
+        }
+        debug {
+            signingConfig signingConfigs.dev
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // la interfaz es la misma de Windows y de la web: se copia ../web al compilar
+    sourceSets {
+        main {
+            assets.srcDirs += "$buildDir/generated/webassets"
+        }
+    }
+}
+
+tasks.register('copyWeb', Copy) {
+    from "$rootDir/../web"
+    into "$buildDir/generated/webassets/web"
+    // (el service worker y el manifest solo son para la versión web)
+    exclude 'sw.js'
+}
+preBuild.dependsOn copyWeb
+
+dependencies {
+    // WebViewAssetLoader: la interfaz se sirve desde https://appassets.androidplatform.net
+    implementation 'androidx.webkit:webkit:1.11.0'
+    // FileProvider (la foto de la cámara para el selector de imágenes)
+    implementation 'androidx.core:core:1.13.1'
+    // inicio de sesión de Google para Drive (AuthorizationClient)
+    implementation 'com.google.android.gms:play-services-auth:21.2.0'
+}
+
+// ZenCalendar: 1.0.<n>; cada 100 compilaciones sube el número del medio
+def zcVersionName() {
+    int k = Math.max(0, Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '1') - 1)
+    return "1.${k.intdiv(100)}.${k % 100}"
+}

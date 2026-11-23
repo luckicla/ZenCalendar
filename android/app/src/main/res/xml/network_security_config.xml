@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Todo va por https, salvo un servidor de IA propio en casa (http) si alguien lo pone en «Otro». -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
