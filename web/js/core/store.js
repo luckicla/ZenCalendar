@@ -180,6 +180,7 @@
     return v || (DEFAULT_PREFS[k] ? {} : undefined);
   }
 
+  const COLOR_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
   const T_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
   const D_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -210,6 +211,8 @@
     e.notes = String(e.notes == null ? '' : e.notes);
     e.location = String(e.location == null ? '' : e.location);
     if (!e.calendarId) e.calendarId = 'personal';
+    // solo colores #rgb/#rrggbb (el color acaba en el CSS: nada de texto raro que venga de una copia o de la IA)
+    e.color = COLOR_RE.test(String(e.color || '').trim()) ? String(e.color).trim() : null;
     e.allDay = !!e.allDay;
     let s = fixDate(e.start, e.allDay);
     if (!s) { // sin fecha: la próxima hora en punto
@@ -360,6 +363,7 @@
     const now = Date.now();
     const c = Object.assign({ id: u.uid(), name: '', color: '#C9B8FF', visible: true, order: calendars().length, deleted: false }, prev || {}, partial);
     c.name = String(c.name || '');
+    if (!COLOR_RE.test(String(c.color || '').trim())) c.color = '#C9B8FF';
     c.visible = c.visible !== false;
     c.deleted = !!partial.deleted;
     c.updated = Math.max(now, ((prev && prev.updated) || 0) + 1);

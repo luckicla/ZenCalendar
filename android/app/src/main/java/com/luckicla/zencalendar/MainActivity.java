@@ -103,6 +103,8 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        // (vuelta de Ajustes → «Instalar apps desconocidas»: sigue la actualización)
+        Updater.resume(this);
         js("window.dispatchEvent(new Event('zc-resume'))");
     }
 
@@ -170,6 +172,11 @@ public class MainActivity extends Activity {
             @Override public void onPageFinished(WebView v, String url) {
                 pageReady = true;
                 pushInsets();
+                // lo que llegó mientras cargaba (después de que la página mirase takeOpen):
+                // ZC.platform._open lo guarda hasta que alguien escuche
+                String o = takeOpen(), s = takeShared();
+                if (!o.isEmpty()) js("window.ZC&&ZC.platform&&ZC.platform._open(" + Bridge.quote(o) + ")");
+                if (!s.isEmpty()) js("window.ZC&&ZC.platform&&ZC.platform._open(" + Bridge.quote(s) + ")");
             }
 
             // Android cerró el proceso de la página (poca memoria): se rehace en vez de dejar la pantalla en blanco
@@ -273,6 +280,14 @@ public class MainActivity extends Activity {
         js("window.ZC&&ZC.native&&ZC.native._cb(" + Bridge.quote(id) + "," + Bridge.quote(json) + ")");
     }
 
+    static MainActivity current() { return current.get(); }
+
+    /** Estado de la actualización de Android (Updater) → ZC.platform._update. */
+    static void sendUpdate(String json) {
+        MainActivity a = current.get();
+        if (a != null) a.js("window.ZC&&ZC.platform&&ZC.platform._update&&ZC.platform._update(" + json + ")");
+    }
+
     /** «Hecho» en una notificación con la app abierta: que la página lo recoja ya. */
     static void pokeActions() {
         MainActivity a = current.get();
@@ -309,8 +324,8 @@ public class MainActivity extends Activity {
                         }
                     }
                 }
-                pendingShared = o.toString();
-                if (pageReady) { String s = pendingShared; pendingShared = null; js("window.ZC&&ZC.platform&&ZC.platform._open(" + Bridge.quote(s) + ")"); }
+                synchronized (this) { pendingShared = o.toString(); }
+                if (pageReady) { String s = takeShared(); if (!s.isEmpty()) js("window.ZC&&ZC.platform&&ZC.platform._open(" + Bridge.quote(s) + ")"); }
             }
         } catch (Exception e) {
             Log.w(TAG, "intent", e);
@@ -321,7 +336,7 @@ public class MainActivity extends Activity {
 
     private void deliverOpen(String json) {
         if (pageReady) js("window.ZC&&ZC.platform&&ZC.platform._open(" + Bridge.quote(json) + ")");
-        else pendingOpen = json;
+        else synchronized (this) { pendingOpen = json; }
     }
 
     synchronized String takeOpen() { String s = pendingOpen; pendingOpen = null; return s != null ? s : ""; }
@@ -438,6 +453,8 @@ public class MainActivity extends Activity {
         edge = on;
         box.requestApplyInsets();
     }
+
+    View webView() { return web; }
 
     String insetsJson() {
         return "{\"top\":" + insetTop + ",\"bottom\":" + insetBottom + ",\"left\":" + insetLeft + ",\"right\":" + insetRight + "}";

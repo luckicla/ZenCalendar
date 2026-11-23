@@ -156,5 +156,14 @@ const GOOGLE = [
     assert.ok(B(mine[6].title));
   });
   await t('basura no rompe', () => { assert.strictEqual(ZC.ics.parse('hola').length, 0); assert.strictEqual(ZC.ics.parse('').length, 0); });
+  await t('exportar y reimportar lo de ZenCalendar conserva los ids (no duplica)', () => {
+    const mine = [
+      { id: 'serie-1234', kind: 'event', title: 'Yoga', allDay: false, start: '2026-11-02T10:00', end: '2026-11-02T11:00', rrule: { freq: 'weekly', interval: 1, byDay: ['MO'] }, exdates: ['2026-11-16'], reminders: [] },
+      { id: 'suelta-5678', kind: 'event', title: 'Yoga (cambiada)', allDay: false, start: '2026-11-16T12:00', end: '2026-11-16T13:00', recurrenceOf: 'serie-1234', recurrenceDate: '2026-11-16', exdates: [], reminders: [] },
+    ];
+    const back = ZC.ics.parse(ZC.ics.build(mine));
+    assert.deepStrictEqual(back.map(e => e.id).sort(), ['serie-1234', 'suelta-5678']);
+    assert.strictEqual(back.find(e => e.id === 'suelta-5678').recurrenceOf, 'serie-1234');
+  });
   report(__filename);
 })();

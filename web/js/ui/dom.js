@@ -168,7 +168,7 @@
     for (const it of items) {
       if (it === '-') { m.appendChild(h('<hr>')); continue; }
       if (it.title) { m.appendChild(h(`<div class="menu-t">${esc(it.title)}</div>`)); continue; }
-      const b = h(`<button role="menuitem" class="${it.danger ? 'danger' : ''} ${it.on ? 'on' : ''}">${it.icon ? UI.icon(it.icon, 18) : (it.dot ? `<i class="dot" style="background:${it.dot}"></i>` : '')}<span>${esc(it.label)}</span>${it.kbd ? `<kbd>${esc(it.kbd)}</kbd>` : ''}${it.on ? UI.icon('check', 16, 'menu-on') : ''}</button>`);
+      const b = h(`<button role="menuitem" class="${it.danger ? 'danger' : ''} ${it.on ? 'on' : ''}">${it.icon ? UI.icon(it.icon, 18) : (it.dot ? `<i class="dot" style="background:${esc(it.dot)}"></i>` : '')}<span>${esc(it.label)}</span>${it.kbd ? `<kbd>${esc(it.kbd)}</kbd>` : ''}${it.on ? UI.icon('check', 16, 'menu-on') : ''}</button>`);
       b.onclick = () => { close(); it.act && it.act(); };
       m.appendChild(b);
     }

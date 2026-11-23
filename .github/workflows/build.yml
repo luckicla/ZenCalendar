@@ -2,20 +2,31 @@ name: ZenCalendar (APK + exe)
 
 # Cada cambio en main compila la app de Android (ZenCalendar.apk) y la de
 # Windows (instalador + portable) y las publica en Releases:
-#   android-latest → la última APK, siempre en el mismo enlace
-#   pc-latest      → el último instalador/portable (el instalado se actualiza solo desde aquí)
-#   v1.x.y         → una release con su número para cada compilación
+#   android-latest → la última APK, siempre en el mismo enlace, con version.txt
+#                    («<compilación> <sha256> <versión>»): la app de Android se
+#                    actualiza sola desde aquí en cada compilación (versionCode = run_number)
+#   pc-latest      → el último instalador/portable (el instalado se actualiza solo
+#                    desde aquí, pero solo cuando cambia VERSION: electron-updater compara la versión)
+#   v<VERSION>     → la release oficial (la «latest» de GitHub, la de los enlaces de la
+#                    web), con los tres archivos. Se crea UNA vez por versión: la primera
+#                    compilación en la que salen bien Android y Windows. Para sacar una
+#                    versión nueva basta con cambiar el archivo VERSION.
 # Los client IDs de Google salen de las *variables* del repo (Settings → Secrets and
 # variables → Actions → Variables). Si no están, la app funciona igual pero sin Drive.
 
 on:
   push:
     branches: [main]
-    paths: ['android/**', 'web/**', 'desktop/**', 'tools/**', 'tests/**', '.github/workflows/build.yml']
+    paths: ['VERSION', 'android/**', 'web/**', 'desktop/**', 'tools/**', 'tests/**', '.github/workflows/build.yml']
   workflow_dispatch:
 
 permissions:
   contents: write
+
+# (dos cambios seguidos: el segundo espera al primero, para que no se pisen al subir a las releases)
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
@@ -23,16 +34,30 @@ env:
   GOOGLE_DESKTOP_CLIENT_SECRET: ${{ vars.GOOGLE_DESKTOP_CLIENT_SECRET }}
 
 jobs:
-  # el número de versión: 1.0.0, 1.0.1… y cada 100 compilaciones sube el del medio
+  # la versión sale del archivo VERSION; «release» dice si todavía no existe
+  # la release oficial v<VERSION> (si ya existe, esta compilación solo
+  # actualiza android-latest y pc-latest)
   version:
     runs-on: ubuntu-latest
     outputs:
       v: ${{ steps.v.outputs.v }}
+      release: ${{ steps.v.outputs.release }}
     steps:
+      - uses: actions/checkout@v4
       - id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          K=$(( ${{ github.run_number }} - 1 )); K=$(( K < 0 ? 0 : K ))
-          echo "v=1.$(( K / 100 )).$(( K % 100 ))" >> "$GITHUB_OUTPUT"
+          V=$(tr -d ' \r\n' < VERSION)
+          if ! echo "$V" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then echo "::error::VERSION tiene que ser X.Y.Z (ahora: «$V»)"; exit 1; fi
+          echo "v=$V" >> "$GITHUB_OUTPUT"
+          if gh release view "v$V" -R "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "La release v$V ya existe: solo se actualizan android-latest y pc-latest."
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "Si todo sale bien, se crea la release oficial v$V."
+          fi
 
   test:
     runs-on: ubuntu-latest
@@ -74,8 +99,10 @@ jobs:
 
       - name: Nombre y versión
         run: |
+          ls -la android/app/build/outputs/apk/release/
           cp android/app/build/outputs/apk/release/app-release.apk ZenCalendar.apk
-          echo "${{ github.run_number }} $(sha256sum ZenCalendar.apk | cut -d' ' -f1)" > version.txt
+          # lo que mira la app para actualizarse: «<versionCode> <sha256> <versionName>»
+          echo "${{ github.run_number }} $(sha256sum ZenCalendar.apk | cut -d' ' -f1) ${{ needs.version.outputs.v }}" > version.txt
 
       - uses: actions/upload-artifact@v4
         with:
@@ -89,7 +116,7 @@ jobs:
           name: ZenCalendar para Android
           prerelease: true
           make_latest: false
-          body: Última versión compilada (${{ needs.version.outputs.v }}). Descarga ZenCalendar.apk e instálala en el móvil.
+          body: Última compilación (versión ${{ needs.version.outputs.v }}, compilación ${{ github.run_number }}). Descarga ZenCalendar.apk e instálala en el móvil; después se actualiza sola desde aquí.
           files: |
             ZenCalendar.apk
             version.txt
@@ -137,7 +164,7 @@ jobs:
           name: ZenCalendar para Windows
           prerelease: true
           make_latest: false
-          body: Última versión compilada (${{ needs.version.outputs.v }}). El instalador se actualiza solo desde aquí.
+          body: Última compilación (versión ${{ needs.version.outputs.v }}, compilación ${{ github.run_number }}). El instalador se actualiza solo desde aquí cuando sale una versión nueva.
           files: |
             desktop/dist/ZenCalendar-Instalador.exe
             desktop/dist/ZenCalendar-Instalador.exe.blockmap
@@ -145,9 +172,13 @@ jobs:
             desktop/dist/latest.yml
             desktop/dist/version.txt
 
-  # una release con su número (v1.x.y) con la APK y los dos de Windows
+  # la release oficial v<VERSION>, marcada como «latest»: de aquí salen los
+  # enlaces de la web (releases/latest/download/ZenCalendar.apk,
+  # ZenCalendar-Instalador.exe y ZenCalendar-Portable.exe). Solo si todavía no
+  # existe y si han salido bien Android y Windows; si algo falla, la siguiente
+  # compilación lo vuelve a intentar con la misma versión.
   release:
-    if: always() && needs.apk.result == 'success'
+    if: needs.version.outputs.release == 'true'
     needs: [version, apk, desktop]
     runs-on: ubuntu-latest
     steps:
@@ -156,13 +187,16 @@ jobs:
           path: out
           merge-multiple: true
 
+      - run: ls -la out
+
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.version.outputs.v }}
           target_commitish: ${{ github.sha }}
           name: ZenCalendar v${{ needs.version.outputs.v }}
           make_latest: true
-          fail_on_unmatched_files: false
+          fail_on_unmatched_files: true
+          generate_release_notes: true
           files: |
             out/ZenCalendar.apk
             out/ZenCalendar-Instalador.exe
@@ -174,7 +208,7 @@ jobs:
 
             **Windows** — `ZenCalendar-Instalador.exe` (se instala como una app más, se queda junto al reloj para avisarte y se actualiza sola) o `ZenCalendar-Portable.exe` (sin instalar: los datos van en una carpeta al lado).
 
-            **Android** — descarga `ZenCalendar.apk` e instálala (Android te pedirá permitir apps de esta fuente). Trae widgets «Agenda» y «Hoy».
+            **Android** — descarga `ZenCalendar.apk` e instálala (Android te pedirá permitir apps de esta fuente); después se actualiza sola. Trae widgets «Agenda» y «Hoy».
 
             ### ¿Es seguro? Sí
 

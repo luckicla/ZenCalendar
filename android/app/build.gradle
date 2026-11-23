@@ -10,7 +10,9 @@ android {
         applicationId 'com.luckicla.zencalendar'
         minSdk 24
         targetSdk 34
-        // el número de compilación de GitHub (lo mismo que el PC: 1.0.<n>, cada 100 sube el del medio)
+        // versionCode = el número de compilación de GitHub (siempre sube: es lo que
+        // compara la app para actualizarse desde android-latest, ver Updater.java)
+        // versionName = el archivo VERSION de la raíz del repo (1.0.0…)
         versionCode Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '1')
         versionName zcVersionName()
     }
@@ -43,6 +45,13 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
+    // (no hay Play Store: que un aviso de lint no pare la APK de GitHub Actions;
+    // para revisarlo a mano: gradle lintRelease)
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+
     // la interfaz es la misma de Windows y de la web: se copia ../web al compilar
     sourceSets {
         main {
@@ -68,8 +77,8 @@ dependencies {
     implementation 'com.google.android.gms:play-services-auth:21.2.0'
 }
 
-// ZenCalendar: 1.0.<n>; cada 100 compilaciones sube el número del medio
+// la versión «oficial»: el archivo VERSION de la raíz del repo
 def zcVersionName() {
-    int k = Math.max(0, Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '1') - 1)
-    return "1.${k.intdiv(100)}.${k % 100}"
+    def f = rootProject.file('../VERSION')
+    return f.exists() ? f.text.trim() : '1.0.0'
 }

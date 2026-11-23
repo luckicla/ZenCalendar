@@ -14,4 +14,6 @@
     <string name="done">Hecho</string>
     <string name="pick_image">Elige una imagen</string>
     <string name="take_photo">Hacer una foto</string>
+    <string name="updated_title">ZenCalendar actualizado</string>
+    <string name="updated_text">Actualizado a la versión %1$s · toca para abrirlo</string>
 </resources>

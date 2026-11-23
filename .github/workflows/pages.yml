@@ -6,7 +6,7 @@ name: Web (GitHub Pages)
 on:
   push:
     branches: [main]
-    paths: ['web/**', 'docs/**', 'tools/setconfig.js', '.github/workflows/pages.yml']
+    paths: ['VERSION', 'web/**', 'docs/**', 'tools/setconfig.js', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:
@@ -39,7 +39,11 @@ jobs:
           # la app
           mkdir -p _site/app
           cp -r web/. _site/app/
-          node tools/setconfig.js _site/app/js/core/config.js
+          ZC_VERSION="$(tr -d ' \r\n' < VERSION)" node tools/setconfig.js _site/app/js/core/config.js
+          # cada publicación cambia sw.js: así el navegador ve que hay versión nueva
+          # (ZC.platform.updates → «ready») y la caché vieja se borra
+          sed -i "s/^const BUILD = .*/const BUILD = '${{ github.run_number }}-${GITHUB_SHA::7}';/" _site/app/sw.js
+          grep -q "^const BUILD = '${{ github.run_number }}-" _site/app/sw.js
           # si todavía no hay presentación, la raíz lleva a la app
           if [ ! -f _site/index.html ]; then
             printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=app/"><title>ZenCalendar</title><a href="app/">ZenCalendar</a>\n' > _site/index.html

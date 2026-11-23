@@ -90,8 +90,9 @@
   }
   const esc = s => UI.esc(s);
   const titleOf = ev => (ev.emoji ? ev.emoji + ' ' : '') + (ev.title || (ev.kind === 'task' ? t('Tarea sin título') : t('Sin título')));
-  // color legible para texto sobre el color del evento
-  function evVars(o) { return `--c:${o.color || (o.calendar && o.calendar.color) || 'var(--a1)'}`; }
+  // color del evento para el CSS (solo colores de verdad: el valor acaba dentro de un atributo style)
+  const safeColor = c => (/^#[0-9a-f]{3,8}$/i.test(String(c || '').trim()) ? String(c).trim() : '');
+  function evVars(o) { return `--c:${safeColor(o.color) || safeColor(o.calendar && o.calendar.color) || 'var(--a1)'}`; }
 
   // ---------- mover / cambiar duración (con la pregunta de las series) ----------
   async function askSeries(o, verb) {
@@ -102,42 +103,121 @@
       { v: 'all', label: t('Todos'), icon: 'repeat', danger: verb === 'delete' },
     ]);
   }
+  // ---------- series: mover, dividir y deshacer ----------
+  const WDS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+  const clone = x => JSON.parse(JSON.stringify(x));
+  // cuánto se ha movido algo «de calendario»: días y minutos de reloj (así el horario de verano no cambia la hora)
+  const shiftOf = (a, b) => ({ days: daysBetween(a, b), mins: (b.getHours() * 60 + b.getMinutes()) - (a.getHours() * 60 + a.getMinutes()) });
+  function applyShift(d, sh) { const x = addDays(d, sh.days); x.setMinutes(x.getMinutes() + sh.mins); return x; }
+  const moveYmd = (s, days) => ymd(addDays(parse(s), days));
+  // una serie semanal que se mueve n días: sus días de la semana se mueven con ella
+  function shiftRule(rr, days) {
+    if (!rr || !days) return rr;
+    const r = { ...rr };
+    if (r.freq === 'weekly' && Array.isArray(r.byDay) && r.byDay.length) r.byDay = r.byDay.map(d => WDS[(((WDS.indexOf(d) + days) % 7) + 7) % 7]);
+    if (r.until) r.until = moveYmd(r.until, days);
+    return r;
+  }
+  /** Cambios para mover toda la serie lo mismo que se ha movido una aparición (de occStart a newStart). */
+  function seriesShifted(ev, occStart, newStart, newEnd, { allDay = ev.allDay, kind = ev.kind, rrule = ev.rrule, moveDays = true } = {}) {
+    const sh = shiftOf(occStart, newStart), s0 = applyShift(parse(ev.start), sh);
+    const out = { start: toLocal(s0, allDay), rrule };
+    if (kind === 'task') out.end = out.start;
+    else if (allDay) out.end = toLocal(addDays(s0, Math.max(0, daysBetween(newStart, newEnd))), true);
+    else out.end = toLocal(new Date(s0.getTime() + Math.max(0, newEnd - newStart)), false);
+    if (sh.days) {
+      if (moveDays) out.rrule = shiftRule(rrule, sh.days);
+      out.exdates = (ev.exdates || []).map(d => moveYmd(d, sh.days));
+      if (ev.doneDates) out.doneDates = ev.doneDates.map(d => moveYmd(d, sh.days));
+    }
+    return out;
+  }
+  /**
+   * «Este y los siguientes»: corta la serie el día antes de occStart y crea otra desde ahí con los cambios.
+   * Conserva lo que queda de `count`, las repeticiones quitadas y las apariciones sueltas de después.
+   */
+  async function splitSeries(ev, occStart, changes, { moveDays = 0 } = {}) {
+    const date = ymd(occStart);
+    const copy = { ...clone(ev), ...clone(changes) };
+    delete copy.id; delete copy.created; delete copy.updated;
+    copy.recurrenceOf = null; delete copy.recurrenceDate;
+    const sameRule = JSON.stringify(ZC.recur.normRule(changes.rrule === undefined ? ev.rrule : changes.rrule)) === JSON.stringify(ZC.recur.normRule(ev.rrule));
+    let rr = changes.rrule === undefined ? ev.rrule : changes.rrule;
+    if (rr && sameRule) {
+      rr = { ...rr };
+      if (rr.count) {
+        // las que ya han pasado cuentan para el total
+        const before = ZC.recur.expand({ ...ev, exdates: [], end: ev.start }, parse(ev.start), sod(occStart)).length;
+        rr.count = Math.max(1, rr.count - before);
+      }
+      if (moveDays) rr = shiftRule(rr, moveDays);
+    }
+    copy.rrule = rr;
+    copy.exdates = (ev.exdates || []).filter(d => d >= date).map(d => moveDays ? moveYmd(d, moveDays) : d);
+    if (ev.doneDates) copy.doneDates = ev.doneDates.filter(d => d >= date).map(d => moveDays ? moveYmd(d, moveDays) : d);
+    await ZC.store.saveEvent({ id: ev.id, rrule: { ...ev.rrule, until: ymd(addDays(occStart, -1)), count: null } });
+    const saved = await ZC.store.saveEvent(copy);
+    // las apariciones cambiadas sueltas de ahí en adelante pasan a ser de la serie nueva
+    for (const x of ZC.store.events().filter(x => x.recurrenceOf === ev.id && (x.recurrenceDate || ymd(parse(x.start))) >= date)) await ZC.store.saveEvent({ id: x.id, recurrenceOf: saved.id });
+    return saved;
+  }
+  /**
+   * Foto de una serie (con sus apariciones sueltas) antes de cambiarla. Después del cambio, snap() apunta lo que
+   * se ha creado y devuelve el «deshacer»: quita eso y deja la serie como estaba.
+   */
+  function snapshotSeries(ev) {
+    const before = clone(ev), kids = ZC.store.events().filter(x => x.recurrenceOf === ev.id).map(clone);
+    const ids = new Set(ZC.store.events().map(e => e.id));
+    return () => {
+      const created = ZC.store.events().filter(e => !ids.has(e.id)).map(e => e.id);
+      return async () => {
+        for (const id of created) await ZC.store.deleteEvent(id, { mode: 'all' });
+        await ZC.store.saveEvent({ ...before, deleted: false });
+        for (const k of kids) await ZC.store.saveEvent({ ...k, deleted: false });
+      };
+    };
+  }
+  /** Guarda en memoria las imágenes que se van a borrar → función que las vuelve a poner (para «Deshacer»). */
+  async function holdBlobs(ids) {
+    const kept = [];
+    for (const id of new Set(ids)) { try { const b = await ZC.store.getBlob(id), info = ZC.store.blobInfo(id); if (b) kept.push([id, b, info && info.name]); } catch {} }
+    return async () => { for (const [id, b, name] of kept) if (!ZC.store.blobInfo(id)) await ZC.store.putBlob(b, { id, name }); };
+  }
+  /** Borra las imágenes que ya no usa ningún evento. */
+  async function dropUnusedBlobs(ids) {
+    const used = new Set(); for (const e of ZC.store.events()) for (const a of (e.attachments || [])) used.add(a.id);
+    for (const id of new Set(ids)) if (!used.has(id)) await ZC.store.deleteBlob(id).catch(() => {});
+  }
   async function moveOccurrence(o, newStart, newEnd) {
     const ev = o.ev;
     const changes = { start: toLocal(newStart, ev.allDay), end: toLocal(newEnd, ev.allDay) };
     if (ev.kind === 'task') changes.end = changes.start;
     const mode = await askSeries(o, 'move');
     if (!mode) { UI.app && UI.app.render(); return; }
-    const before = JSON.parse(JSON.stringify(ev));
+    const snap = snapshotSeries(ev);
     try {
-      if (mode === 'one') await ZC.store.saveEventOccurrence(ev.id, ymd(o.start), changes);
-      else if (mode === 'future' && !sameDay(o.start, parse(ev.start))) {
-        // corta la serie aquí y crea una nueva desde esta ocurrencia
-        const until = ymd(addDays(o.start, -1));
-        await ZC.store.saveEvent({ id: ev.id, rrule: { ...ev.rrule, until, count: null } });
-        const copy = { ...JSON.parse(JSON.stringify(ev)), ...changes }; delete copy.id; delete copy.created; delete copy.updated;
-        copy.exdates = []; await ZC.store.saveEvent(copy);
-      } else {
-        // toda la serie: desplaza el original lo mismo que se ha movido esta ocurrencia
-        const dS = newStart - o.start, dur = newEnd - newStart;
-        const s0 = new Date(parse(ev.start).getTime() + dS);
-        let e0 = new Date(s0.getTime() + dur);
-        if (ev.allDay) { const span = daysBetween(newStart, newEnd); e0 = addDays(s0, span); }
-        await ZC.store.saveEvent({ id: ev.id, start: toLocal(s0, ev.allDay), end: ev.kind === 'task' ? toLocal(s0, ev.allDay) : toLocal(e0, ev.allDay) });
-      }
+      if (!ev.rrule) await ZC.store.saveEvent({ id: ev.id, ...changes });
+      else if (mode === 'one') await ZC.store.saveEventOccurrence(ev.id, ymd(o.start), changes);
+      else if (mode === 'future' && !sameDay(o.start, parse(ev.start))) await splitSeries(ev, o.start, changes, { moveDays: daysBetween(o.start, newStart) });
+      // toda la serie: se mueve lo mismo que esta aparición (días de la semana y repeticiones quitadas incluidos)
+      else await ZC.store.saveEvent({ id: ev.id, ...seriesShifted(ev, o.start, newStart, newEnd) });
       UI.haptic('ok');
-      UI.toast(t('Movido'), { icon: 'check', undo: () => ZC.store.saveEvent(before) });
+      UI.toast(t('Movido'), { icon: 'check', undo: snap() });
     } catch (e) { console.error(e); UI.toast(t('No se ha podido guardar')); UI.app && UI.app.render(); }
   }
   async function deleteOccurrence(o) {
     const ev = o.ev;
     const mode = await askSeries(o, 'delete');
     if (!mode) return false;
-    const before = JSON.parse(JSON.stringify(ev));
+    const snap = snapshotSeries(ev);
+    // (el núcleo borra las imágenes de lo borrado: se guardan un rato por si se deshace)
+    const imgs = mode === 'one' ? [] : [ev, ...ZC.store.events().filter(x => x.recurrenceOf === ev.id)].flatMap(x => (x.attachments || []).map(a => a.id));
+    const restoreImgs = imgs.length ? await holdBlobs(imgs) : null;
     try {
       await ZC.store.deleteEvent(ev.id, { mode, date: ymd(o.start) });
       UI.haptic('warn');
-      UI.toast(t('«{x}» borrado', { x: (ev.title || t('Sin título')).slice(0, 40) }), { icon: 'trash', undo: () => ZC.store.saveEvent({ ...before, deleted: false }) });
+      const undo = snap();
+      UI.toast(t('«{x}» borrado', { x: (ev.title || t('Sin título')).slice(0, 40) }), { icon: 'trash', undo: async () => { if (restoreImgs) await restoreImgs(); await undo(); } });
       return true;
     } catch (e) { console.error(e); UI.toast(t('No se ha podido borrar')); return false; }
   }
@@ -150,6 +230,15 @@
     } catch (e) { console.error(e); }
   }
 
+  // la aparición de una tarea que toca: en las que se repiten, la primera sin hacer de hoy en adelante
+  // (si la serie ya acabó, la última sin hacer); en las demás, la tarea tal cual
+  function taskOcc(ev) {
+    if (!ev.rrule) return occOf(ev);
+    const td = today();
+    const list = occ(addDays(td, -60), addDays(td, 400), { includeHidden: true }).filter(o => o.id === ev.id);
+    return list.find(o => !o.done && o.start >= td) || list.filter(o => !o.done).pop() || null;
+  }
+
   // ocurrencia «virtual» de un evento en su fecha (para abrir desde búsqueda, IA…)
   function occOf(ev, date) {
     const d = date ? parse(date) : parse(ev.start);
@@ -160,5 +249,5 @@
     return { key: ev.id + '@' + ymd(parse(ev.start)), id: ev.id, ev, start: parse(ev.start), end: parse(ev.end || ev.start), allDay: ev.allDay, color: ev.color || (cal && cal.color), calendar: cal, isTask: ev.kind === 'task', done: !!ev.done };
   }
 
-  UI.cal = { CAL0, prefsCal, pad, ymd, parse, sod, addDays, addMonths, sameDay, daysBetween, sow, toLocal, isoWeek, today, lastDay, multiDay, occ, onDay, clearCache, holidays, whenText, durText, remText, titleOf, evVars, moveOccurrence, deleteOccurrence, toggleTask, askSeries, occOf, fmtT, esc };
+  UI.cal = { CAL0, prefsCal, pad, ymd, parse, sod, addDays, addMonths, sameDay, daysBetween, sow, toLocal, isoWeek, today, lastDay, multiDay, occ, onDay, clearCache, holidays, whenText, durText, remText, titleOf, evVars, moveOccurrence, deleteOccurrence, toggleTask, askSeries, occOf, taskOcc, safeColor, fmtT, esc, shiftOf, applyShift, seriesShifted, splitSeries, snapshotSeries, holdBlobs, dropUnusedBlobs };
 })();

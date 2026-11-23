@@ -177,12 +177,29 @@
     if (ap === 'pm') { if (h < 12) h += 12; }
     else if (ap === 'am') { if (h === 12) h = 0; }
     else if (dp) h = applyDaypart(h, dp);
-    else if (h >= 1 && h <= 12 && g[1] == null && ap !== 'h' && ap !== 'hs') {
-      amb = true;
-      // «a las 5» casi siempre es por la tarde
-      if (defaultPm && h <= 7) h += 12;
-    } else if (h >= 1 && h <= 12 && ap !== 'h' && ap !== 'hs') amb = true;
+    // «a las 9», «5:30»: sin am/pm ni parte del día puede ser mañana o tarde (lo decide guessHour al final).
+    // Con un cero delante («07:30») es una hora de 24 h y no se toca.
+    else if (h >= 1 && h <= 12 && ap !== 'h' && ap !== 'hs' && !/^0\d/.test(String(g[0]))) amb = true;
     return { h, m, amb };
+  }
+  // palabras que dicen si un plan es de tarde/noche («cena a las 9» = 21:00) o de mañana («desayuno a las 9»)
+  const PM_WORDS = /\b(cena|cenas|cenar|cenamos|cenita|concierto|conciertos|copas?|fiesta|fiestas|discoteca|disco|botellon|cubatas?|birras?|teatro|musical|sopar|festa|concert|dinner|supper|drinks?|party|gig|nightclub|club|pub|afterwork|after\s+work)\b/;
+  const AM_WORDS = /\b(desayuno|desayunar|desayunamos|esmorzar|esmorzem|breakfast)\b/;
+  /** hora ambigua → la más probable: de 1 a 7 por la tarde; con planes de tarde/noche, de 1 a 11 también */
+  function guessHour(t, hint) {
+    if (!t || !t.amb || t.h >= 12) return t;
+    if (hint === 'am') return Object.assign({}, t, { amb: false });
+    if (t.h <= 7 || hint === 'pm') return Object.assign({}, t, { h: t.h + 12 });
+    return t;
+  }
+  /** final de un rango («de 10 a 2»): si es ambiguo, la primera de las dos posibles que va después del inicio */
+  function rangeEnd(t1, t2) {
+    if (!t2.amb || t2.h >= 12) return t2;
+    const a = t1.h * 60 + t1.m;
+    const pm = t2.h + 12;
+    if (t2.h * 60 + t2.m > a) return t2;
+    if (pm * 60 + t2.m > a) return Object.assign({}, t2, { h: pm });
+    return t2; // al día siguiente (p. ej. de 22:00 a 2:00)
   }
   function applyDaypart(h, dp) {
     if (/^(tarde|tarda|afternoon|evening|vespre)$/.test(dp)) return h < 12 ? h + 12 : h;
@@ -358,7 +375,6 @@
       if (!g1[2] && !g1[6] && (g2[2] === 'pm' || g2[6])) { g1[6] = g2[6] || ''; if (g2[2] === 'pm') g1[2] = 'pm'; }
       const t1 = timeFrom(g1, true), t2 = timeFrom(g2, true);
       if (!t1 || !t2) return false;
-      if (t2.h * 60 + t2.m <= t1.h * 60 + t1.m && t2.amb && t2.h < 12) t2.h += 12;
       R.time = t1; R.time2 = t2;
     });
     if (!R.time) take(S, '\\b(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm|h)?\\s*[-–]\\s*(\\d{1,2})(?::(\\d{2}))?\\s*(h|am|pm)\\b|\\b(\\d{1,2}):(\\d{2})\\s*[-–]\\s*(\\d{1,2}):(\\d{2})\\b', m => {
@@ -506,23 +522,26 @@
       start = new Date(R.rel.getTime()); start.setSeconds(0, 0);
     } else if (R.date || R.time) {
       let date = R.date;
-      let t = R.time;
-      if (!date) {
-        date = today;
-        // la hora ya pasó hoy: si podía ser por la tarde, por la tarde; si no, mañana
+      const fo = u.fold(orig);
+      const hint = AM_WORDS.test(fo) ? 'am' : PM_WORDS.test(fo) ? 'pm' : null;
+      let t = guessHour(R.time, hint);
+      if (!date || u.sameDay(date, today)) {
+        // la hora ya pasó hoy: si podía ser por la tarde, por la tarde; si no, mañana (si no se ha dicho «hoy»)
         if (t) {
           const nowMin = now.getHours() * 60 + now.getMinutes();
           if (t.h * 60 + t.m <= nowMin) {
             if (R.rrule) { /* se repite: la primera puede quedar atrás, da igual */ }
             else if (t.amb && t.h < 12 && (t.h + 12) * 60 + t.m > nowMin) t = Object.assign({}, t, { h: t.h + 12 });
-            else date = u.addDays(today, 1);
+            else if (!date) date = u.addDays(today, 1);
           }
         }
+        if (!date) date = today;
       }
       if (t && !R.allDay) start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), t.h, t.m);
       else { start = new Date(date.getTime()); allDay = true; }
       if (R.time2 && !allDay) {
-        end = new Date(date.getFullYear(), date.getMonth(), date.getDate(), R.time2.h, R.time2.m);
+        const t2 = rangeEnd(t, R.time2);
+        end = new Date(date.getFullYear(), date.getMonth(), date.getDate(), t2.h, t2.m);
         if (end <= start) end = u.addDays(end, 1);
       }
     } else if (R.kind === 'task') {

@@ -388,7 +388,9 @@
     clearTimeout(timer);
     try {
       if (kind() === 'desktop') await root.zcDesktop.google('disconnect');
-      else if (t) {
+      else if (t && kind() === 'web' && root.google && google.accounts && google.accounts.oauth2 && google.accounts.oauth2.revoke) {
+        google.accounts.oauth2.revoke(t, () => {});
+      } else if (t) {
         await ZC.net.fetch('https://oauth2.googleapis.com/revoke?token=' + q(t), { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 10000 }).catch(() => {});
         if (kind() === 'android' && root.ZCAndroid.googleClear) root.ZCAndroid.googleClear(t);
       }
@@ -423,11 +425,20 @@
     if (ZC.platform && ZC.platform.isWidget) return;
     if (st.connected) {
       if (!available()) { st.error = 'Falta configurar Google en esta versión'; return; }
-      if (kind() === 'web') loadGIS().catch(() => {});
+      // (web: Google Identity Services solo se carga si de verdad hace falta,
+      // al pulsar «Conectar» o cuando caduca la sesión: armGesture)
       start();
       setTimeout(() => sync(), 1500);
     }
   }
 
-  ZC.drive = { available, state, connect, disconnect, sync, on, init, _fetchBlob };
+  // (opcional) en la web, cargar ya Google Identity Services, p. ej. al abrir la
+  // pantalla de Google Drive: así el «Conectar» abre la ventanita al instante y
+  // el navegador no la bloquea por tardar. En Android y Windows no hace nada.
+  function prepare() {
+    if (kind() === 'web' && available() && root.document) return loadGIS().catch(() => {});
+    return Promise.resolve();
+  }
+
+  ZC.drive = { available, state, connect, disconnect, sync, on, init, prepare, _fetchBlob };
 })(typeof window !== 'undefined' ? window : globalThis);

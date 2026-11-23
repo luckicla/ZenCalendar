@@ -18,7 +18,7 @@
   }
 
   function open(prefill, images) {
-    if (images && images.length) { pending = []; images.forEach(b => pending.push({ blob: b, url: URL.createObjectURL(b) })); }
+    if (images && images.length) { pending.forEach(x => URL.revokeObjectURL(x.url)); pending = []; images.forEach(b => pending.push({ blob: b, url: URL.createObjectURL(b) })); }
     if (L && !L.closed) { const ta = L.body.querySelector('textarea'); if (images && images.length) paintAtt(); if ((prefill || (images && images.length)) && ta) { ta.value = prefill || ''; send(); } else ta && ta.focus(); return; }
     const { p } = providerInfo();
     L = UI.openLayer({ kind: 'drawer', cls: 'ai-layer', panelCls: 'ai-panel', label: t('Asistente'), scrim: UI.isMobile(), html: `
@@ -60,7 +60,7 @@
   function evWhen(ev) {
     try { return C.whenText({ ev, start: parse(ev.start), end: parse(ev.end || ev.start), allDay: !!ev.allDay, isTask: ev.kind === 'task' }, { withDate: true }); } catch { return ''; }
   }
-  function actionCard(a, i, state) {
+  function actionCard(a, i, state, k) {
     let ic = 'plus', title = '', sub = '', cls = a.type;
     if (a.type === 'create') { const ev = a.event || {}; title = C.titleOf(ev); sub = evWhen(ev) + (ev.location ? ', ' + ev.location : '') + (ev.rrule ? '. ' + (ZC.recur.describe(ev.rrule, ZC.i18n.lang(), parse(ev.start)) || '') : '') + ((ev.reminders || []).length ? '. ' + t('Aviso: {x}', { x: ev.reminders.map(m => C.remText(m)).join(', ') }) : ''); ic = ev.kind === 'task' ? 'tasks' : 'plus'; }
     else {
@@ -74,7 +74,7 @@
     const ev = a.type === 'create' ? a.event : ZC.store.get(a.id);
     const cal = ev && ZC.store.calendar(ev.calendarId);
     const color = (ev && ev.color) || (cal && cal.color) || 'var(--a1)';
-    return `<div class="ai-act ${cls} ${a._off ? 'off' : ''}" style="--c:${esc(color)};--i:${i}"><span class="ai-act-ic">${UI.icon(ic, 18)}</span><span class="ai-act-tx"><small>${esc(verb)}</small><b>${esc(title)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</span>${state === 'preview' ? `<button class="ibtn sm" data-tog="${i}" aria-label="${a._off ? t('Incluir') : t('Quitar')}" title="${a._off ? t('Incluir') : t('Quitar')}">${UI.icon(a._off ? 'plus' : 'x', 16)}</button>` : ''}</div>`;
+    return `<div class="ai-act ${cls} ${a._off ? 'off' : ''}" style="--c:${esc(color)};--i:${i}"><span class="ai-act-ic">${UI.icon(ic, 18)}</span><span class="ai-act-tx"><small>${esc(verb)}</small><b>${esc(title)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</span>${state === 'preview' ? `<button class="ibtn sm" data-tog="${k}:${i}" aria-label="${a._off ? t('Incluir') : t('Quitar')}" title="${a._off ? t('Incluir') : t('Quitar')}">${UI.icon(a._off ? 'plus' : 'x', 16)}</button>` : ''}</div>`;
   }
 
   function paintLog() {
@@ -90,7 +90,7 @@
       const acts = m.actions || [];
       return `<div class="msg ai"><span class="ai-av">${UI.icon('sparkles', 16)}</span><div class="ai-col">
         <div class="bub ${m.state === 'thinking' && !m.text ? 'typing' : ''}">${m.state === 'thinking' && !m.text ? '<i></i><i></i><i></i>' : esc(m.text || '').replace(/\n/g, '<br>')}</div>
-        ${acts.length ? `<div class="ai-acts">${acts.map((a, i) => actionCard(a, i, m.state)).join('')}
+        ${acts.length ? `<div class="ai-acts">${acts.map((a, i) => actionCard(a, i, m.state, k)).join('')}
           ${m.state === 'preview' ? `<div class="ai-btns"><button class="btn sm ghost" data-discard="${k}">${t('Descartar')}</button><button class="btn sm pri" data-apply="${k}">${UI.icon('check', 16)}${(() => { const on = acts.filter(a => !a._off); if (on.length > 1) return t('Aplicar {n} cambios', { n: on.length }); const a = on[0] || {}; return { create: a.event && a.event.kind === 'task' ? t('Crear tarea') : t('Crear evento'), update: t('Guardar el cambio'), delete: t('Borrar evento'), complete: t('Marcar como hecha') }[a.type] || t('Aplicar'); })()}</button></div>` : ''}
           ${m.state === 'applied' ? `<div class="ai-done">${UI.icon('check', 16)}${t('Hecho')}${m.undo ? ` <button class="link" data-undo="${k}">${t('Deshacer')}</button>` : ''}</div>` : ''}
           ${m.state === 'discarded' ? `<div class="ai-done off">${t('Descartado')}</div>` : ''}
@@ -116,7 +116,7 @@
       const res = await ZC.ai.run(text, { images: imgs.map(i => i.blob), history: history.slice(-12), lang: ZC.i18n.lang(), onToken: tok => { m.text += tok; const bubs = L && L.body.querySelectorAll('.msg.ai .bub'); const b = bubs && bubs[bubs.length - 1]; if (b) { b.classList.remove('typing'); b.innerHTML = esc(m.text).replace(/\n/g, '<br>'); const lg = L.body.querySelector('.ai-log'); lg.scrollTop = lg.scrollHeight; } } }) || {};
       m.text = res.reply || m.text || (res.actions && res.actions.length ? t('Esto es lo que haría:') : t('Hecho.'));
       m.actions = res.actions || [];
-      if (res.error) { m.error = true; m.text = (m.text ? m.text + '\n\n' : '') + '⚠️ ' + res.error; }
+      if (res.error) { m.error = true; if (!m.text.includes(res.error)) m.text = (m.text ? m.text + '\n\n' : '') + '⚠️ ' + res.error; }
       history.push({ role: 'user', content: text }, { role: 'assistant', content: m.text });
       if (m.actions.length) {
         let auto = false; try { auto = !!ZC.ai.getConfig().autoApply; } catch {}
@@ -158,13 +158,14 @@
   async function onClick(e) {
     const s = e.target.closest('[data-s]'); if (s) { L.body.querySelector('textarea').value = s.dataset.s; send(); return; }
     const rm = e.target.closest('[data-rm]'); if (rm) { const p = pending.splice(+rm.dataset.rm, 1)[0]; if (p) URL.revokeObjectURL(p.url); paintAtt(); return; }
-    const tg = e.target.closest('[data-tog]'); if (tg) { const m = [...log].reverse().find(x => x.state === 'preview'); if (m) { const a = m.actions[+tg.dataset.tog]; a._off = !a._off; paintLog(); } return; }
+    // (cada tarjeta dice de qué mensaje es: con dos vistas previas abiertas se quita en la buena)
+    const tg = e.target.closest('[data-tog]'); if (tg) { const [k, i] = tg.dataset.tog.split(':').map(Number); const m = log[k]; const a = m && m.state === 'preview' && m.actions[i]; if (a) { a._off = !a._off; paintLog(); } return; }
     const ap = e.target.closest('[data-apply]'); if (ap) { apply(+ap.dataset.apply); return; }
     const di = e.target.closest('[data-discard]'); if (di) { log[+di.dataset.discard].state = 'discarded'; paintLog(); return; }
     const un = e.target.closest('[data-undo]'); if (un) { const m = log[+un.dataset.undo]; if (m && m.undo) { await m.undo(); m.undo = null; m.state = 'discarded'; m.text += '\n' + t('(deshecho)'); paintLog(); } return; }
     const a = e.target.closest('[data-a]'); if (!a) return;
     if (a.dataset.a === 'close') L.close();
-    if (a.dataset.a === 'clear') { log = []; history = []; paintLog(); }
+    if (a.dataset.a === 'clear') { log.forEach(m => (m.images || []).forEach(u => { try { URL.revokeObjectURL(u); } catch {} })); log = []; history = []; paintLog(); }
     if (a.dataset.a === 'cfg') { L.close(); UI.settings.open('ai'); }
     if (a.dataset.a === 'img') { const f = await UI.pickFile({ accept: 'image/*', multiple: true }); if (f.length) addImgs(f); }
   }

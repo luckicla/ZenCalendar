@@ -52,15 +52,16 @@
     const box = document.getElementById('sideCals'); if (!box) return;
     const list = ZC.store.calendars();
     box.innerHTML = `<header><h3>${t('Calendarios')}</h3><button class="ibtn sm" data-act="newcal" aria-label="${t('Nuevo calendario')}" title="${t('Nuevo calendario')}">${UI.icon('plus', 18)}</button></header>` +
-      list.map(c => `<div class="cal-row ${c.visible === false ? 'off' : ''}" style="--c:${esc(c.color)}" data-cal="${esc(c.id)}" role="button" tabindex="0" aria-pressed="${c.visible !== false}"><span class="cbox">${UI.icon('check', 14)}</span><span class="nm">${esc(c.name)}</span><button class="ibtn sm more" data-calmenu="${esc(c.id)}" aria-label="${t('Opciones de {x}', { x: c.name })}">${UI.icon('more', 18)}</button></div>`).join('');
+      list.map(c => `<div class="cal-row ${c.visible === false ? 'off' : ''}" style="--c:${esc(c.color)}" data-cal="${esc(c.id)}" role="button" tabindex="0" aria-pressed="${c.visible !== false}"><span class="cbox">${UI.icon('check', 14)}</span><span class="nm">${esc(c.name)}</span><button class="ibtn sm more" data-calmenu="${esc(c.id)}" aria-label="${esc(t('Opciones de {x}', { x: c.name }))}">${UI.icon('more', 18)}</button></div>`).join('');
   }
   function tasks() {
     const box = document.getElementById('sideTasks'); if (!box) return;
-    const all = ZC.store.events().filter(e => e.kind === 'task' && !e.done).sort((a, b) => a.start < b.start ? -1 : 1);
+    // (las que se repiten salen con la aparición que toca, no con la primera de la serie)
+    const all = ZC.store.events().filter(e => e.kind === 'task' && !e.done).map(ev => ({ ev, o: C.taskOcc(ev) })).filter(x => x.o).sort((a, b) => a.o.start - b.o.start);
     const tdy = C.today();
     box.innerHTML = `<header><h3>${t('Tareas')}</h3><button class="ibtn sm" data-act="newtask" aria-label="${t('Nueva tarea')}" title="${t('Nueva tarea')}">${UI.icon('plus', 18)}</button></header>` +
-      (all.length ? all.slice(0, 5).map(ev => {
-        const o = C.occOf(ev), s = C.parse(ev.start), late = s < tdy;
+      (all.length ? all.slice(0, 5).map(({ ev, o }) => {
+        const s = o.start, late = s < tdy;
         const when = sameDay(s, tdy) ? (ev.allDay ? t('Hoy') : t('Hoy') + ', ' + C.fmtT(s)) : sameDay(s, addDays(tdy, 1)) ? t('Mañana') : ZC.i18n.D.short(s);
         return `<div class="task-row" data-task="${esc(ev.id)}" style="${C.evVars(o)}"><span class="tick" role="checkbox" aria-checked="false" tabindex="0" aria-label="${t('Marcar como hecha')}">${UI.icon('check', 14)}</span><span class="tt"><b>${esc(C.titleOf(ev))}</b><small class="${late ? 'late' : ''}">${esc(when)}</small></span></div>`;
       }).join('') + (all.length > 5 ? `<button class="side-more" data-act="alltasks">${t('Ver las {n}', { n: all.length })}</button>` : '')
@@ -102,7 +103,7 @@
     const tr = e.target.closest('[data-task]');
     if (tr) {
       const ev = ZC.store.get(tr.dataset.task); if (!ev) return;
-      const o = C.occOf(ev);
+      const o = C.taskOcc(ev) || C.occOf(ev);
       if (tick) { tr.classList.add('done'); C.toggleTask(o, tick); }
       else { UI.app.closeSide(); UI.editor.detail(o, tr); }
     }

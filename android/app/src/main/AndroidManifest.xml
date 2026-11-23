@@ -10,6 +10,8 @@
     <!-- avisos a la hora exacta: en Android 12 se pide, en 13+ un calendario lo tiene sin preguntar -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- actualizarse desde GitHub (Updater): abrir el instalador de Android con la APK nueva -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- para poder abrir la cámara desde el selector de imágenes (Android 11+) -->
     <queries>
@@ -151,7 +153,7 @@
             android:exported="false"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
 
-        <!-- la foto hecha con la cámara para el selector de imágenes -->
+        <!-- la foto hecha con la cámara para el selector de imágenes, y la APK de las actualizaciones -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.files"

@@ -58,7 +58,7 @@
   const fecha = d => new Date(d).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
   const relBox = $('#releases');
   const fallback = msg => { relBox.innerHTML = `<p class="empty">${msg} Míralas en <a href="${GH}/releases">GitHub</a>.</p>`; };
-  fetch(`https://api.github.com/repos/${REPO}/releases?per_page=6`, { headers: { Accept: 'application/vnd.github+json' } })
+  fetch(`https://api.github.com/repos/${REPO}/releases?per_page=8`, { headers: { Accept: 'application/vnd.github+json' } })
     .then(r => r.ok ? r.json() : Promise.reject(r.status))
     .then(list => {
       const rel = (Array.isArray(list) ? list : []).filter(r => !r.draft && !r.prerelease);

@@ -504,33 +504,59 @@
     return { actions: out, dropped };
   }
 
-  // ---------- frases de respuesta ----------
+  // ---------- frases de respuesta (en el idioma de la interfaz) ----------
+  const SAY = {
+    es: { loc: 'es-ES', at: ' a las ', on: ' el ', ok: 'Vale: ', change: 'cambiar «%s»', del: 'borrar «%s»', done: 'marcar «%s» como hecha',
+      empty: 'Escribe qué quieres apuntar, por ejemplo «mañana a las 5 dentista».', askDel: '¿Borro «%s» (%w)?', noEv: 'No encuentro ese evento.',
+      markDone: 'Marco «%s» como hecha.', noTask: 'No encuentro esa tarea.', free: 'El %d no tienes nada. ✿', day: 'El %d: ',
+      what: 'No lo he entendido. Prueba con algo como «cena con Marta el viernes a las 21:30».', noPhotos: 'El integrado no entiende fotos: para eso elige Gemini (gratis) u otro con visión en Ajustes → IA. ',
+      unsure: 'No he sabido qué hacer con eso. ¿Me lo dices de otra forma?', dropped: ' (La IA propuso cambios que no tenían sentido y los he quitado.)' },
+    en: { loc: 'en-GB', at: ' at ', on: ' on ', ok: 'OK: ', change: 'change “%s”', del: 'delete “%s”', done: 'mark “%s” as done',
+      empty: 'Type what you want to add, for example “dentist tomorrow at 5”.', askDel: 'Delete “%s” (%w)?', noEv: "I can't find that event.",
+      markDone: 'Marking “%s” as done.', noTask: "I can't find that task.", free: 'Nothing on %d. ✿', day: '%d: ',
+      what: "I didn't get that. Try something like “dinner with Marta on Friday at 9:30pm”.", noPhotos: "The built-in assistant can't read photos: choose Gemini (free) or another one with vision in Settings → AI. ",
+      unsure: "I didn't know what to do with that. Could you say it another way?", dropped: ' (The AI suggested changes that made no sense and I removed them.)' },
+    ca: { loc: 'ca-ES', at: ' a les ', on: ' el ', ok: "D'acord: ", change: 'canviar «%s»', del: 'esborrar «%s»', done: 'marcar «%s» com a feta',
+      empty: 'Escriu què vols apuntar, per exemple «demà a les 5 dentista».', askDel: 'Esborro «%s» (%w)?', noEv: 'No trobo aquest esdeveniment.',
+      markDone: 'Marco «%s» com a feta.', noTask: 'No trobo aquesta tasca.', free: 'El %d no tens res. ✿', day: 'El %d: ',
+      what: 'No ho he entès. Prova amb alguna cosa com «sopar amb la Marta divendres a les 21:30».', noPhotos: "L'integrat no entén fotos: per a això tria Gemini (gratis) o un altre amb visió a Ajustos → IA. ",
+      unsure: "No he sabut què fer-ne. M'ho dius d'una altra manera?", dropped: " (La IA va proposar canvis que no tenien sentit i els he tret.)" },
+  };
+  let sayLang = 'es';
+  const say = () => SAY[sayLang] || SAY.es;
+  function langOf(l) {
+    let x = l;
+    if (!x || x === 'auto') { try { x = ZC.store.getPrefs().cal.lang; } catch (e) {} }
+    if (!x || x === 'auto') x = (root.navigator && navigator.language) || 'es';
+    x = String(x).slice(0, 2).toLowerCase();
+    return SAY[x] ? x : 'es';
+  }
   function when(ev) {
     const u = U();
     const d = u.parse(ev.start);
     if (!d) return '';
     let txt = u.ymd(d);
     try {
-      txt = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).format(d);
-      if (!ev.allDay) txt += ' a las ' + u.hm(d);
+      txt = new Intl.DateTimeFormat(say().loc, { weekday: 'long', day: 'numeric', month: 'short' }).format(d);
+      if (!ev.allDay) txt += say().at + u.hm(d);
     } catch (e) {}
     return txt;
   }
   function describeActions(actions) {
-    const parts = [];
+    const S = say(), parts = [];
     for (const a of actions) {
-      if (a.type === 'create') parts.push('«' + a.event.title + '» el ' + when(a.event) + (a.event.rrule ? ' (' + ZC.recur.describe(a.event.rrule, 'es', a.event.start).toLowerCase() + ')' : ''));
-      else if (a.type === 'update') { const e = ZC.store.get(a.id); parts.push('cambiar «' + (e ? e.title : '') + '»'); }
-      else if (a.type === 'delete') { const e = ZC.store.get(a.id); parts.push('borrar «' + (e ? e.title : '') + '»'); }
-      else if (a.type === 'complete') { const e = ZC.store.get(a.id); parts.push('marcar «' + (e ? e.title : '') + '» como hecha'); }
+      if (a.type === 'create') parts.push('«' + a.event.title + '»' + S.on + when(a.event) + (a.event.rrule ? ' (' + ZC.recur.describe(a.event.rrule, sayLang, a.event.start).toLowerCase() + ')' : ''));
+      else if (a.type === 'update') { const e = ZC.store.get(a.id); parts.push(S.change.replace('%s', e ? e.title : '')); }
+      else if (a.type === 'delete') { const e = ZC.store.get(a.id); parts.push(S.del.replace('%s', e ? e.title : '')); }
+      else if (a.type === 'complete') { const e = ZC.store.get(a.id); parts.push(S.done.replace('%s', e ? e.title : '')); }
     }
-    return parts.length ? 'Vale: ' + parts.join('; ') + '.' : '';
+    return parts.length ? S.ok + parts.join('; ') + '.' : '';
   }
 
   // ---------- proveedor «integrado» ----------
   function bestMatch(text, onlyTasks) {
     const u = U();
-    const p = ZC.nlp.parse(text) || {};
+    const p = ZC.nlp.parse(text, { lang: sayLang }) || {};
     const words = (p.title || text).trim();
     let list = ZC.store.search(words);
     if (!list.length) list = ZC.store.search(u.fold(words).split(/\s+/).filter(w => w.length > 3).slice(0, 2).join(' '));
@@ -547,27 +573,28 @@
     const u = U();
     const t = String(text || '').trim();
     const f = u.fold(t);
-    if (!t) return { reply: 'Escribe qué quieres apuntar, por ejemplo «mañana a las 5 dentista».', actions: [] };
+    const S = say();
+    if (!t) return { reply: S.empty, actions: [] };
     let m = /^(?:borra|borrar|elimina|eliminar|quita|quitar|cancela|cancelar|delete|remove|cancel|esborra)\s+(?:el\s+|la\s+|los\s+|las\s+|mi\s+|the\s+|my\s+)?(.+)$/.exec(f);
     if (m) {
       const ev = bestMatch(t.slice(t.length - m[1].length));
-      return ev ? { reply: '¿Borro «' + ev.title + '» (' + when(ev) + ')?', actions: [{ type: 'delete', id: ev.id }] } : { reply: 'No encuentro ese evento.', actions: [] };
+      return ev ? { reply: S.askDel.replace('%s', ev.title).replace('%w', when(ev)), actions: [{ type: 'delete', id: ev.id }] } : { reply: S.noEv, actions: [] };
     }
     m = /^(?:he\s+hecho|ya\s+he|hecho:?|completa|completar|marca(?:r)?(?:\s+como\s+hecha?)?|tacha(?:r)?|done:?|complete|finished|i\s+did)\s+(?:el\s+|la\s+|lo\s+de\s+|the\s+)?(.+)$/.exec(f);
     if (m) {
       const ev = bestMatch(t.slice(t.length - m[1].length), true);
-      return ev ? { reply: 'Marco «' + ev.title + '» como hecha.', actions: [{ type: 'complete', id: ev.id }] } : { reply: 'No encuentro esa tarea.', actions: [] };
+      return ev ? { reply: S.markDone.replace('%s', ev.title), actions: [{ type: 'complete', id: ev.id }] } : { reply: S.noTask, actions: [] };
     }
     if (/^(?:que|cual|cuales|what|do\s+i|tengo\s+algo|hay\s+algo)\b.*\b(?:tengo|hay|have|got|toca)\b|\?$/.test(f)) {
-      const p = ZC.nlp.parse(t) || {};
+      const p = ZC.nlp.parse(t, { lang: sayLang }) || {};
       const d = u.parse(p.start && p.confidence >= 0.6 ? p.start.slice(0, 10) : u.ymd(new Date()));
       const occ = ZC.store.occurrences(d, u.addDays(d, 1));
       const day = when({ start: u.ymd(d), allDay: true });
-      if (!occ.length) return { reply: 'El ' + day + ' no tienes nada. ✿', actions: [] };
-      return { reply: 'El ' + day + ': ' + occ.map(o => (o.allDay ? '' : u.hm(o.start) + ' ') + o.ev.title).join(', ') + '.', actions: [] };
+      if (!occ.length) return { reply: S.free.replace('%d', day), actions: [] };
+      return { reply: S.day.replace('%d', day) + occ.map(o => (o.allDay ? '' : u.hm(o.start) + ' ') + o.ev.title).join(', ') + '.', actions: [] };
     }
-    const p = ZC.nlp.parse(t);
-    if (!p || (!p.title && p.confidence < 0.5)) return { reply: 'No lo he entendido. Prueba con algo como «cena con Marta el viernes a las 21:30».', actions: [] };
+    const p = ZC.nlp.parse(t, { lang: sayLang });
+    if (!p || (!p.title && p.confidence < 0.5)) return { reply: S.what, actions: [] };
     const ev = { kind: p.kind, title: p.title || (p.kind === 'task' ? 'Tarea' : 'Evento'), start: p.start, end: p.end, allDay: p.allDay, location: p.location || '', rrule: p.rrule };
     if (p.reminders) ev.reminders = p.reminders;
     if (p.calendarId && ZC.store.calendar(p.calendarId)) ev.calendarId = p.calendarId;
@@ -581,6 +608,7 @@
     opts = opts || {};
     const conf = getConfig();
     const p = provider(conf.provider);
+    sayLang = langOf(opts.lang);
     const images = (opts.images || []).filter(Boolean);
     const fallback = why => {
       const fb = text ? runRules(text) : { actions: [] };
@@ -590,7 +618,7 @@
     try {
       if (p.id === 'rules') {
         const r = runRules(text);
-        if (images.length) r.reply = 'El integrado no entiende fotos: para eso elige Gemini (gratis) u otro con visión en Ajustes → IA. ' + (text ? r.reply : '');
+        if (images.length) r.reply = say().noPhotos + (text ? r.reply : '');
         return Object.assign(r, { provider: 'rules' });
       }
       if (images.length && !p.vision) return fallback('«' + p.name + '» no entiende fotos; elige Gemini, Groq, OpenRouter, OpenAI, Anthropic o Mistral.');
@@ -620,8 +648,8 @@
       const parsed = parseReply(raw);
       const v = validate(parsed.actions);
       let reply = parsed.reply.trim();
-      if (!reply) reply = v.actions.length ? describeActions(v.actions) : 'No he sabido qué hacer con eso. ¿Me lo dices de otra forma?';
-      if (v.dropped && !v.actions.length && !parsed.reply) reply += ' (La IA propuso cambios que no tenían sentido y los he quitado.)';
+      if (!reply) reply = v.actions.length ? describeActions(v.actions) : say().unsure;
+      if (v.dropped && !v.actions.length && !parsed.reply) reply += say().dropped;
       return { reply, actions: v.actions, provider: p.id, dropped: v.dropped };
     } catch (e) {
       console.warn('[ZC] IA', e);

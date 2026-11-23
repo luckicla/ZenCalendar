@@ -135,7 +135,9 @@
     });
 
     el.addEventListener('pointerdown', e => {
-      if (e.button !== 0 || P) return;
+      // (si un toque anterior se quedó a medias, p. ej. soltando fuera de la ventana, se olvida en vez de bloquear la rejilla)
+      if (e.button !== 0 || (P && P.active)) return;
+      if (P) clearTimeout(P.timer);
       const col = e.target.closest('.tg-col'); if (!col) return;
       const evb = e.target.closest('.tg-ev');
       const touch = e.pointerType !== 'mouse';

@@ -169,10 +169,12 @@
       press = null;
     };
     el.addEventListener('pointerup', up);
-    el.addEventListener('pointercancel', () => { if (press && press.dragging) cancelDrag(press); if (press) clearTimeout(press.t); press = null; });
+    // (si se cancela a medias, el siguiente toque no se puede perder: _dragged vuelve a false)
+    el.addEventListener('pointercancel', () => { if (press && press.dragging) { cancelDrag(press); setTimeout(() => { el._dragged = false; }, 50); } if (press) clearTimeout(press.t); press = null; });
     el.addEventListener('touchmove', e => { if (press && press.dragging && e.cancelable) e.preventDefault(); }, { passive: false });
 
-    function cellAt(x, y) { const n = document.elementFromPoint(x, y); return n && n.closest && n.closest('.mc-day'); }
+    // por coordenadas: con elementFromPoint, soltar encima de otra barra (o del fantasma) no encontraba el día
+    function cellAt(x, y) { for (const c of el.querySelectorAll('.mc-day')) { const r = c.getBoundingClientRect(); if (x >= r.left && x < r.right && y >= r.top && y < r.bottom) return c; } return null; }
     function startDrag(p, e) {
       p.dragging = true; el._dragged = true;
       const o = p.ev._o;
@@ -180,6 +182,8 @@
       document.body.appendChild(p.ghost);
       p.from = cellAt(p.x, p.y);
       p.ev.classList.add('dragging');
+      // (igual que en Semana/Día: así deslizar para cambiar de mes no se cuela y cancela el arrastre)
+      document.documentElement.classList.add('dragging-ev');
       try { el.setPointerCapture(p.id); } catch {}
       UI.haptic('tick');
       moveDrag(p, e);
@@ -189,7 +193,7 @@
       const c = cellAt(e.clientX, e.clientY);
       if (c !== p.over) { if (p.over) p.over.classList.remove('drop'); p.over = c; if (c) { c.classList.add('drop'); UI.haptic('tick'); } }
     }
-    function cancelDrag(p) { p.ghost && p.ghost.remove(); p.over && p.over.classList.remove('drop'); p.ev && p.ev.classList.remove('dragging'); }
+    function cancelDrag(p) { p.ghost && p.ghost.remove(); p.over && p.over.classList.remove('drop'); p.ev && p.ev.classList.remove('dragging'); document.documentElement.classList.remove('dragging-ev'); }
     function endDrag(p) {
       cancelDrag(p);
       const o = p.ev._o, to = p.over, from = p.from;

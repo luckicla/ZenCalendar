@@ -28,7 +28,7 @@
     S.blobs = Array.from({ length: n(kind === 'aurora' ? 6 : 4) }, (_, i) => ({ x: r(), y: r(), rad: .35 + r() * .35, sx: .02 + r() * .05, sy: .02 + r() * .05, p: r() * 6.28, c: i % 4 }));
     S.petals = Array.from({ length: n(26 * Math.min(2, .6 + area)) }, () => ({ x: r() * W, y: r() * H, s: 2.4 + r() * 3.4, v: .25 + r() * .5, w: r() * 6.28, rot: r() * 6.28, vr: (r() - .5) * .04, c: r() }));
     S.bubbles = Array.from({ length: n(22 * Math.min(2, .6 + area)) }, () => ({ x: r() * W, y: r() * H, s: 3 + r() * 12, v: .15 + r() * .4, w: r() * 6.28, c: r() }));
-    S.stars = Array.from({ length: n(W * H / 260) }, () => ({ x: r() * W, y: r() * H, p: r() * 6.28, s: r() < .08 ? 1.6 : .9, f: .4 + r() * 1.2 }));
+    S.stars = Array.from({ length: n(Math.min(260, W * H / 260)) }, () => ({ x: r() * W, y: r() * H, p: r() * 6.28, s: r() < .08 ? 1.6 : .9, f: .4 + r() * 1.2 }));
     S.clouds = Array.from({ length: n(7) }, (_, i) => ({ x: r() * 1.3 - .15, y: .05 + r() * .75, s: .5 + r() * .8, v: .004 + r() * .008, puffs: Array.from({ length: 5 }, () => [r() * 2 - 1, r() * .6 - .3, .45 + r() * .45]) }));
     S.shoot = null;
   }

@@ -392,7 +392,7 @@ function installUpdate() {
 
 // ---------- lo que la página puede pedir (preload.js → window.zcDesktop) ----------
 function setupIPC() {
-  ipcMain.handle('zc:info', () => ({ version: app.getVersion(), portable }));
+  ipcMain.handle('zc:info', () => ({ version: app.getVersion(), portable, packaged: app.isPackaged }));
 
   ipcMain.handle('zc:win', (e, what) => {
     const w = BrowserWindow.fromWebContents(e.sender);

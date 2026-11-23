@@ -86,7 +86,8 @@
     ZC.store.local('lastView', state.view);
     if (state.view !== prevView) {
       const doIt = () => render(null);
-      if (document.startViewTransition && UI.anim()) { try { document.startViewTransition(doIt); return; } catch {} }
+      // (si se cambia de vista muy deprisa la transición anterior se salta y sus promesas fallan: sin errores en la consola)
+      if (document.startViewTransition && UI.anim()) { try { const vt = document.startViewTransition(doIt); ['ready', 'finished', 'updateCallbackDone'].forEach(k => vt[k] && vt[k].catch(() => {})); return; } catch {} }
       render('fade');
       return;
     }
@@ -151,8 +152,12 @@
       $('#wMin').onclick = () => P.win.minimize();
       $('#wMax').onclick = () => P.win.maximize();
       $('#wClose').onclick = () => P.win.close();
-      try { P.win.onState(s => { $('#wMax').innerHTML = UI.icon(s && s.max ? 'restore' : 'square', 16); $('#wMax').setAttribute('aria-label', t(s && s.max ? 'Restaurar' : 'Maximizar')); }); } catch {}
-      $('#top').addEventListener('dblclick', e => { if (!e.target.closest('button, input, a, .seg')) P.win.maximize(); });
+      // (buildChrome se repite al cambiar de idioma: estos dos solo se enganchan una vez)
+      if (!buildChrome.winWired) {
+        buildChrome.winWired = true;
+        try { P.win.onState(s => { $('#wMax').innerHTML = UI.icon(s && s.max ? 'restore' : 'square', 16); $('#wMax').setAttribute('aria-label', t(s && s.max ? 'Restaurar' : 'Maximizar')); }); } catch {}
+        $('#top').addEventListener('dblclick', e => { if (!e.target.closest('button, input, a, .seg')) P.win.maximize(); });
+      }
     }
     document.documentElement.classList.add('plat-' + (P.kind || 'web'));
     if (UI.touchy()) document.documentElement.classList.add('touch');
@@ -278,7 +283,7 @@
   }
   let curLang = 'es';
   function rebuild() {
-    $('#side').dataset.built = ''; buildChrome(); render(null);
+    $('#side').dataset.built = ''; buildChrome(); UI.quick.mount(); render(null);
     if (UI.settings.isOpen && UI.settings.isOpen()) UI.settings.refresh();
   }
 
@@ -306,7 +311,8 @@
     UI.quick.mount();
     if (UI.anim()) { document.documentElement.classList.add('boot'); setTimeout(() => document.documentElement.classList.remove('boot'), 1300); }
     render(null);
-    swipe(); keys(); dropFiles();
+    if (!(UI.gestures && UI.gestures.swipe)) swipe();   // gestures.js trae su propio deslizar (y la rueda)
+    keys(); dropFiles();
     ZC.store.on('change', onStoreChange);
     try { ZC.drive && ZC.drive.on('state', () => { UI.side.sync(); UI.settings.onDrive && UI.settings.onDrive(); }); } catch {}
     try {

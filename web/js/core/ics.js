@@ -224,7 +224,9 @@
         const d = icalDate(rid.value, rid.params);
         ev._rid = d ? d.local.slice(0, 10) : null;
       }
-      ev.id = hashId((uidv || (ev.title + ev.start)) + (ev._rid ? '#' + ev._rid : ''));
+      // lo que exporta ZenCalendar lleva su id (X-ZC-ID): reimportarlo actualiza en vez de duplicar
+      const own = c['X-ZC-ID'] && /^[\w-]{6,64}$/.test(c['X-ZC-ID'].value.trim()) ? c['X-ZC-ID'].value.trim() : null;
+      ev.id = own || hashId((uidv || (ev.title + ev.start)) + (ev._rid ? '#' + ev._rid : ''));
       ev._uid = uidv;
       events.push(ev);
       if (uidv && !ev._rid) byUid[uidv] = ev;
@@ -302,6 +304,7 @@
       L.push(task ? 'BEGIN:VTODO' : 'BEGIN:VEVENT');
       const master = ev.recurrenceOf ? byId[ev.recurrenceOf] : null;
       L.push('UID:' + (master ? master.id : ev.id) + '@zencalendar');
+      L.push('X-ZC-ID:' + ev.id);
       L.push('DTSTAMP:' + now);
       if (ev.created) L.push('CREATED:' + utcStamp(ev.created));
       if (ev.updated) L.push('LAST-MODIFIED:' + utcStamp(ev.updated));

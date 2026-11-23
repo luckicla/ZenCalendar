@@ -130,6 +130,18 @@ const titles = ZC => ZC.store.events().map(e => e.title).sort();
     assert.strictEqual(m.data.events.length, 0);
   });
 
+  await t('fusión: da igual el orden (A con B = B con A) y repetir no cambia nada', () => {
+    const now = Date.now();
+    const a = { events: [{ id: '1', title: 'A1', updated: now - 50 }, { id: '2', deleted: true, updated: now - 10 }, { id: '3', title: 'tie-a', updated: now - 5 }], calendars: [], blobs: {} };
+    const b = { events: [{ id: '1', deleted: true, updated: now - 20 }, { id: '2', title: 'B2 viejo', updated: now - 30 }, { id: '3', deleted: true, updated: now - 5 }, { id: '4', title: 'B4', updated: now - 1 }], calendars: [], blobs: {} };
+    const ab = merge(a, b).data, ba = merge(b, a).data;
+    const key = d => JSON.stringify(d.events.slice().sort((x, y) => x.id < y.id ? -1 : 1));
+    assert.strictEqual(key(ab), key(ba));
+    assert.strictEqual(ab.events.find(e => e.id === '1').deleted, true);   // la lápida es más nueva que «A1»
+    assert.strictEqual(ab.events.find(e => e.id === '2').deleted, true);   // y aquí la edición es más vieja
+    const again = merge(ab, b);
+    assert.strictEqual(again.localChanged, false);
+  });
   // ---------- el store (en memoria) ----------
   await Z.store.init();
   await t('store: calendarios por defecto', () => assert.deepStrictEqual(Z.store.calendars().map(c => c.id), ['personal', 'work', 'birthdays']));
@@ -180,6 +192,22 @@ const titles = ZC => ZC.store.events().map(e => e.title).sort();
     await Z.store.deleteCalendar(c.id);
     assert.ok(!Z.store.events().some(e => e.title === 'Mates'));
     assert.ok(!Z.store.calendars().some(x => x.id === c.id));
+  });
+  await t('store: volver a guardar algo borrado (deshacer) gana a su lápida al sincronizar', async () => {
+    const e = await Z.store.saveEvent({ title: 'Deshacer', start: '2026-12-02T10:00' });
+    const before = JSON.parse(JSON.stringify(e));
+    await Z.store.deleteEvent(e.id);
+    const tombU = Z.store.snapshot().events.find(x => x.id === e.id).updated;
+    const back = await Z.store.saveEvent({ ...before, deleted: false });
+    assert.ok(back.updated > tombU);
+    // otro dispositivo que solo tiene la lápida recibe el evento de vuelta
+    const m = merge({ events: [{ id: e.id, deleted: true, updated: tombU }] }, { events: [back] });
+    assert.strictEqual(m.data.events[0].deleted, false);
+  });
+  await t('store: colores raros (de una copia o de la IA) no se guardan', async () => {
+    const e = await Z.store.saveEvent({ title: 'Color', start: '2026-12-03T10:00', color: '#fff" onmouseover="x' });
+    assert.strictEqual(e.color, null);
+    assert.strictEqual((await Z.store.saveEvent({ id: e.id, color: '#A9D8FF' })).color, '#A9D8FF');
   });
   await t('store: buscar sin tildes', () => assert.ok(Z.store.search('dentísta').length === 1));
   await t('store: copia JSON y volver a importar', async () => {

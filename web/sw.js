@@ -2,12 +2,15 @@
 // ZenCalendar: service worker de la versión web (GitHub Pages).
 //
 //  - La app funciona sin conexión: los archivos de la propia app se guardan
-//    en caché al usarlos (primero la red para las páginas, para tener siempre
-//    la última versión; la caché si no hay red).
+//    en caché al usarlos (primero la red, para tener siempre la última
+//    versión entera; la caché si no hay red).
 //  - NUNCA guarda nada de fuera (Google Drive, las APIs de IA, WebLLM…): solo
 //    lo de este mismo sitio.
 //  - Los toques en las notificaciones (y sus botones) vuelven a la app.
-const CACHE = 'zencalendar-v1';
+// (el workflow de Pages pone aquí el número de cada publicación: si sw.js
+// cambia, el navegador instala el nuevo y la página sabe que hay versión nueva)
+const BUILD = 'dev';
+const CACHE = 'zencalendar-' + BUILD;
 const CORE = ['./', './index.html', './manifest.webmanifest', './img/icon-192.png', './img/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -30,23 +33,17 @@ self.addEventListener('fetch', e => {
   const scope = new URL(self.registration.scope);
   if (!url.pathname.startsWith(scope.pathname)) return;
 
-  if (req.mode === 'navigate') {
-    // páginas: primero la red (la última versión) y, sin red, la guardada
-    e.respondWith(fetch(req).then(res => {
-      const copy = res.clone();
-      if (res.ok) caches.open(CACHE).then(c => c.put(req, copy));
-      return res;
-    }).catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('./index.html'))));
-    return;
-  }
-  // el resto (js, css, imágenes): la guardada al momento y, por detrás, se actualiza
-  e.respondWith(caches.open(CACHE).then(async c => {
-    const hit = await c.match(req);
-    const net = fetch(req).then(res => { if (res.ok && res.type === 'basic') c.put(req, res.clone()); return res; }).catch(() => null);
-    if (hit) { e.waitUntil(net); return hit; }
-    const res = await net;
-    return res || new Response('', { status: 504, statusText: 'Sin conexión' });
-  }));
+  // Todo lo de la app (páginas, js, css, imágenes): primero la red y, sin red,
+  // lo guardado. Así, después de publicar una versión nueva nunca se mezcla un
+  // index.html nuevo con scripts viejos de la caché (GitHub Pages ya cachea
+  // 10 min por su cuenta, así que no es más lento).
+  const navigate = req.mode === 'navigate';
+  e.respondWith(fetch(req).then(res => {
+    if (res.ok && res.type === 'basic') { const copy = res.clone(); e.waitUntil(caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {})); }
+    return res;
+  }).catch(() => caches.match(req, { ignoreSearch: navigate }).then(r => r
+    || (navigate ? caches.match('./index.html') : null)
+    || new Response('', { status: 504, statusText: 'Sin conexión' }))));
 });
 
 // notificaciones: tocar = abrir el evento; botones «Posponer» y «Hecho»

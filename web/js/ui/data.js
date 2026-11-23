@@ -2,7 +2,8 @@
 // ZenCalendar · importar y exportar: .ics (entrada y salida) y copia de seguridad .json.
 (function () {
   const ZC = window.ZC, UI = ZC.ui, t = (...a) => ZC.t(...a);
-  const stamp = () => new Date().toISOString().slice(0, 10);
+  // (fecha local: toISOString daría la de UTC, el día anterior pasada la medianoche en España)
+  const stamp = () => UI.cal.ymd(new Date());
 
   async function importFile(file) {
     if (!file) return;
@@ -21,10 +22,12 @@
     try { evs = ZC.ics.parse(text) || []; } catch (e) { console.error(e); }
     if (!evs.length) { UI.toast(t('No hay eventos en el archivo')); return; }
     const cals = ZC.store.calendars();
-    const base = name.replace(/\.ics$/i, '') || t('Importado');
+    const base = (evs.calendarName || '').trim() || name.replace(/\.ics$/i, '') || t('Importado');
+    // al reimportar el mismo archivo no se ofrece otro calendario igual: ya está en la lista
+    const same = cals.find(c => c.name === base);
     const v = await UI.choose(t('Importar {n} eventos', { n: evs.length }), [
       ...cals.map(c => ({ v: c.id, label: c.name, icon: 'calendar' })),
-      { v: '__new', label: t('Nuevo calendario «{x}»', { x: base }), icon: 'plus' },
+      ...(same ? [] : [{ v: '__new', label: t('Nuevo calendario «{x}»', { x: base }), icon: 'plus' }]),
     ], { text: t('¿En qué calendario los pongo?') });
     if (!v) return;
     let calId = v;

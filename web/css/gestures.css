@@ -1,0 +1,47 @@
+/* ZenCalendar · lo que necesitan los gestos (gestures.js). */
+/* el navegador solo se queda el desplazamiento vertical: lo horizontal y los pellizcos son nuestros */
+#viewHost { touch-action: pan-y; }
+.v-month .mv-grid, .v-month .mv-head { touch-action: none; }
+.v-month .mv-daylist { touch-action: pan-y; }
+.ag-card, .task-row { touch-action: pan-y; }
+#side { touch-action: pan-y; }
+.lightbox .layer-body, .lightbox img { touch-action: none; user-select: none; -webkit-user-drag: none; }
+.lightbox img { will-change: transform; transform-origin: center; }
+html.pinching, html.pinching * { user-select: none; }
+
+/* el periodo de al lado que asoma mientras deslizas */
+#viewHost > .view.peek { pointer-events: none; }
+
+/* filas deslizables */
+.sw-row { position: relative; overflow: hidden; border-radius: calc(var(--r-l) - 4px); transition: height calc(260ms * var(--spd)) var(--soft), opacity calc(200ms * var(--spd)); }
+.sw-row.gone { height: 0 !important; opacity: 0; }
+.sw-row > .ag-card, .sw-row > .task-row { position: relative; z-index: 1; background: var(--s1); }
+[data-scheme=dark] .sw-row > .ag-card, [data-scheme=dark] .sw-row > .task-row { background: color-mix(in srgb, var(--s1) 92%, var(--fg)); }
+.sw-row > .ag-card::before { display: none; }
+.sw-bg { position: absolute; inset: 0; display: flex; align-items: center; opacity: 0; transition: opacity var(--t-fast), background var(--t-fast); }
+.sw-row.to-right .sw-left, .sw-row.to-left .sw-right { opacity: 1; }
+.sw-left { justify-content: flex-start; padding-left: 18px; background: color-mix(in srgb, var(--a3) 40%, var(--s1)); color: var(--fg); font-weight: 700; }
+.sw-left span { display: inline-flex; align-items: center; gap: 8px; transition: transform var(--t-med) var(--spring); }
+.sw-row.arm-done .sw-left { background: var(--a3); }
+.sw-row.arm-done .sw-left span { transform: scale(1.12); }
+.sw-right { justify-content: flex-end; gap: 0; background: color-mix(in srgb, var(--b4) 60%, var(--s1)); }
+.sw-act { height: 100%; min-width: 70px; display: grid; place-items: center; align-content: center; gap: 2px; font-size: .74rem; font-weight: 700; color: var(--fg); }
+.sw-act.post { background: color-mix(in srgb, var(--b4) 85%, var(--s1)); }
+.sw-act.del { background: #ff8aa2; color: #3a0f1c; }
+.sw-row.arm-del .sw-act.post { min-width: 0; width: 0; overflow: hidden; padding: 0; }
+.sw-row.arm-del .sw-act.del { flex: 1; transition: flex var(--t-med) var(--spring); }
+
+/* tirar para sincronizar */
+.pull-ind { position: absolute; z-index: 5; left: 50%; top: 6px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--s1); color: var(--a1t); box-shadow: var(--sh-2); opacity: 0; pointer-events: none; transform: translate(-50%, 0); }
+.pull-ind.armed { color: var(--a1ink); background: var(--a1); }
+.pull-ind.busy .ic { animation: spin .9s linear infinite; }
+.pull-ind.out { opacity: 0 !important; transition: opacity .25s; }
+[data-anim=none] .pull-ind.busy .ic { animation-duration: .9s !important; }
+
+/* hoja inferior expandida */
+.layer-sheet > .panel.expanded { height: calc(100% - var(--zc-safe-top, env(safe-area-inset-top, 0px)) - 8px); max-height: none; }
+.layer-sheet > .panel { transition: transform var(--t-slow) var(--spring), height var(--t-med) var(--spring); }
+
+/* menú de clic derecho: fila de colores */
+.ctx-colors { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px 6px; }
+.ctx-colors .cdot.sm { width: 24px; height: 24px; }

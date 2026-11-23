@@ -14,7 +14,8 @@
   ZC.config = {
     app: 'ZenCalendar',
     version: '1.0.0',
-    // ↓ no cambiar el formato de estas tres líneas: el workflow las rellena con sed
+    // ↓ no cambiar el formato de estas líneas (ni el de «version»): los workflows
+    //   las rellenan con tools/setconfig.js
     googleWebClientId: '',
     googleDesktopClientId: '',
     googleDesktopClientSecret: '',

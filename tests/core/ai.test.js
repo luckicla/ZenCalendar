@@ -139,5 +139,14 @@ const { load, t, report, assert } = require('./_load');
     assert.ok(/Calendarios \(id: nombre\): personal: Personal/.test(p));
     assert.ok(p.includes('SOLO con un objeto JSON'));
   });
+  await t('integrado: responde en el idioma de la interfaz (en/ca)', async () => {
+    await ZC.ai.setConfig({ provider: 'rules' });
+    const en = await ZC.ai.run('dinner with Anna friday at 9', { lang: 'en' });
+    assert.ok(/^OK: /.test(en.reply) && /at 21:00/.test(en.reply), en.reply);
+    const ca = await ZC.ai.run('què tinc demà?', { lang: 'ca' });
+    assert.ok(!/tienes/.test(ca.reply), ca.reply);
+    const es = await ZC.ai.run('cena con Marta el viernes a las 9', { lang: 'es' });
+    assert.ok(/^Vale: /.test(es.reply) && /21:00/.test(es.reply), es.reply);
+  });
   report(__filename);
 })();

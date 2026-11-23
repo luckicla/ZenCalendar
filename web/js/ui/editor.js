@@ -69,6 +69,7 @@
     const orig = o.ev ? JSON.parse(JSON.stringify(o.ev)) : null;
     const addedBlobs = [], removedBlobs = [];
     let nlpHint = null, nlpDismissed = false, datesTouched = !!(o.start || o.ev);
+    let customOpen = false; // «Personalizado…» elegido a mano: se ve el panel aunque la regla coincida con un preset
     const L = UI.openLayer({ kind: 'modal', cls: 'ed-layer', panelCls: 'ed-panel', from: o.from, label: isNew ? t('Nuevo evento') : t('Editar'), html: '', dismissable: true, onClose: why => { if (why !== 'saved') cleanup(); } });
     const fab = document.getElementById('fab'); if (fab) fab.classList.add('open');
     const body = L.body;
@@ -81,7 +82,7 @@
       const cal = ZC.store.calendar(D.calendarId) || cals[0] || {};
       const color = D.color || cal.color || '#B9A2FF';
       const s = parse(D.start), e = parse(D.end || D.start);
-      const preset = presetOf(D.rrule, D.start);
+      const preset = customOpen && D.rrule ? 'custom' : presetOf(D.rrule, D.start);
       body.style.setProperty('--c', color);
       body.innerHTML = `
         <div class="sheet-head ed-head">
@@ -231,6 +232,7 @@
       if (n === 'repeat') {
         read();
         const v = e.target.value, pr = repeatPresets(D.start).find(x => x[0] === v);
+        customOpen = v === 'custom';
         if (v === 'custom') { D.rrule = D.rrule || { freq: 'weekly', interval: 1, byDay: [WD[parse(D.start).getDay()]], until: null, count: null }; }
         else D.rrule = pr && pr[2] ? { until: null, count: null, byDay: null, monthMode: 'day', ...pr[2] } : null;
         paint();
@@ -283,7 +285,7 @@
       else if (act === 'nlpok') applyNlp(nlpHint);
       else if (act === 'nlpno') { nlpDismissed = true; nlpHint = null; body.querySelector('.ed-nlp').hidden = true; }
       else if (act === 'delete') { const occ = o.occ || C.occOf(orig); if (await C.deleteOccurrence(occ)) L.close('saved'); }
-      else if (act === 'dup') { read(); const copy = clean({ ...JSON.parse(JSON.stringify(D)) }); delete copy.id; copy.title = D.title; const saved = await ZC.store.saveEvent(copy); L.close('saved'); UI.toast(t('Duplicado'), { icon: 'copy', undo: () => ZC.store.deleteEvent(saved.id, { mode: 'all' }) }); open({ ev: saved }); }
+      else if (act === 'dup') { read(); const copy = clean({ ...JSON.parse(JSON.stringify(D)) }); delete copy.id; delete copy.created; delete copy.updated; delete copy.recurrenceOf; delete copy.recurrenceDate; delete copy.doneDates; copy.title = D.title; const saved = await ZC.store.saveEvent(copy); L.close('saved'); UI.toast(t('Duplicado'), { icon: 'copy', undo: () => ZC.store.deleteEvent(saved.id, { mode: 'all' }) }); open({ ev: saved }); }
     });
     function remMenu(anchor) {
       const opts = D.allDay ? [[0, t('El mismo día (9:00)')], [1440, t('1 día antes')], [2880, t('2 días antes')], [10080, t('1 semana antes')]]
@@ -314,31 +316,34 @@
       if (!ev.allDay && ev.kind !== 'task' && parse(ev.end) < parse(ev.start)) ev.end = toLocal(new Date(parse(ev.start).getTime() + 3600000));
       const btn = body.querySelector('[data-act=save]'); if (btn) btn.disabled = true;
       try {
+        let undo = null;
         if (isNew) { await ZC.store.saveEvent(ev); UI.toast(ev.kind === 'task' ? t('Tarea guardada') : t('Evento guardado'), { icon: 'check' }); }
         else if (orig.rrule && o.occ) {
-          const rruleChanged = JSON.stringify(orig.rrule) !== JSON.stringify(ev.rrule);
+          const rruleChanged = JSON.stringify(ZC.recur.normRule(orig.rrule)) !== JSON.stringify(ZC.recur.normRule(ev.rrule));
           const opts = [...(rruleChanged ? [] : [{ v: 'one', label: t('Solo este'), icon: 'calendar' }]), { v: 'future', label: t('Este y los siguientes'), icon: 'chevR' }, { v: 'all', label: t('Todos'), icon: 'repeat' }];
           const mode = await UI.choose(t('Cambiar evento repetido'), opts);
           if (!mode) { if (btn) btn.disabled = false; return; }
-          const occStart = o.occ.start;
-          if (mode === 'one') { const ch = { ...ev }; delete ch.id; delete ch.rrule; delete ch.exdates; await ZC.store.saveEventOccurrence(orig.id, ymd(occStart), ch); }
+          const occStart = o.occ.start, snap = C.snapshotSeries(orig);
+          if (mode === 'one') { const ch = { ...ev }; delete ch.id; delete ch.rrule; delete ch.exdates; delete ch.doneDates; delete ch.created; delete ch.updated; await ZC.store.saveEventOccurrence(orig.id, ymd(occStart), ch); }
           else if (mode === 'future' && !sameDay(occStart, parse(orig.start))) {
-            await ZC.store.saveEvent({ id: orig.id, rrule: { ...orig.rrule, until: ymd(addDays(occStart, -1)), count: null } });
-            const copy = { ...ev }; delete copy.id; delete copy.created; delete copy.updated; copy.exdates = [];
-            await ZC.store.saveEvent(copy);
+            const ch = { ...ev }; delete ch.id; delete ch.exdates; delete ch.doneDates;
+            await C.splitSeries(orig, occStart, ch);
           } else {
-            // toda la serie: mantiene la fecha de inicio de la serie, con la hora y duración nuevas
-            const dS = parse(ev.start) - occStart, s0 = new Date(parse(orig.start).getTime() + dS);
-            const dur = parse(ev.end) - parse(ev.start);
-            const all = { ...ev, start: toLocal(s0, ev.allDay), end: ev.kind === 'task' ? toLocal(s0, ev.allDay) : (ev.allDay ? toLocal(addDays(s0, C.daysBetween(parse(ev.start), parse(ev.end))), true) : toLocal(new Date(s0.getTime() + dur))) };
+            // toda la serie: se mueve lo mismo que se ha movido esta aparición (en días y en hora de reloj)
+            const all = { ...ev, ...C.seriesShifted(orig, occStart, parse(ev.start), parse(ev.end || ev.start), { allDay: ev.allDay, kind: ev.kind, rrule: ev.rrule, moveDays: !rruleChanged }) };
             await ZC.store.saveEvent(all);
           }
-          UI.toast(t('Cambios guardados'), { icon: 'check', undo: () => ZC.store.saveEvent(orig) });
+          undo = snap();
         } else {
           await ZC.store.saveEvent(ev);
-          UI.toast(t('Cambios guardados'), { icon: 'check', undo: () => ZC.store.saveEvent(orig) });
+          undo = () => ZC.store.saveEvent(orig);
         }
-        removedBlobs.forEach(id => ZC.store.deleteBlob(id).catch(() => {}));
+        if (!isNew) {
+          // las imágenes quitadas se borran si ya no las usa nadie (en «solo este» la serie las sigue teniendo)
+          const restoreImgs = removedBlobs.length ? await C.holdBlobs(removedBlobs) : null;
+          await C.dropUnusedBlobs(removedBlobs);
+          UI.toast(t('Cambios guardados'), { icon: 'check', undo: async () => { if (restoreImgs) await restoreImgs(); await undo(); } });
+        }
         addedBlobs.length = 0;
         UI.haptic('ok');
         if (fab) fab.classList.remove('open');
@@ -420,7 +425,7 @@
       const act = b.dataset.act;
       if (act === 'close') L.close();
       if (act === 'edit') { L.close(); setTimeout(() => open({ ev, occ: o }), UI.anim() ? 120 : 0); }
-      if (act === 'dup') { const copy = JSON.parse(JSON.stringify(ev)); delete copy.id; delete copy.created; delete copy.updated; copy.done = false; copy.doneAt = null; const saved = await ZC.store.saveEvent(copy); L.close(); UI.toast(t('Duplicado'), { icon: 'copy', undo: () => ZC.store.deleteEvent(saved.id, { mode: 'all' }) }); }
+      if (act === 'dup') { const copy = JSON.parse(JSON.stringify(ev)); delete copy.id; delete copy.created; delete copy.updated; delete copy.recurrenceOf; delete copy.recurrenceDate; delete copy.doneDates; copy.done = false; copy.doneAt = null; const saved = await ZC.store.saveEvent(copy); L.close(); UI.toast(t('Duplicado'), { icon: 'copy', undo: () => ZC.store.deleteEvent(saved.id, { mode: 'all' }) }); }
       if (act === 'delete') { if (await C.deleteOccurrence(o)) L.close(); }
       if (act === 'maps') openMaps(ev.location);
       if (act === 'done') { await C.toggleTask(o, o.done ? null : b); L.close(); }

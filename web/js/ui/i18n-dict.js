@@ -3,6 +3,18 @@
 (function () {
   const D = window.ZC.i18n.DICT;
   D.en = {
+ "Entiende frases como «mañana a las 5 dentista» o «cada lunes gimnasio a las 7». Instantáneo, sin internet y sin cuentas. No entiende fotos.": "Understands phrases like “dentist tomorrow at 5” or “gym every monday at 7”. Instant, offline and no accounts. Doesn't read photos.",
+ "Un modelo abierto (Qwen 2.5) que se descarga una vez y funciona sin internet. Lo que escribes no sale de tu dispositivo. Necesita WebGPU.": "An open model (Qwen 2.5) downloaded once that works offline. What you type never leaves your device. Needs WebGPU.",
+ "Usa los modelos que tengas instalados en Ollama, en tu PC. Privado y gratis. Para fotos, un modelo con visión (gemma3, llava, qwen2.5vl).": "Uses the models installed in Ollama on your PC. Private and free. For photos, a vision model (gemma3, llava, qwen2.5vl).",
+ "Gratis con una clave de Google AI Studio (se saca en un minuto). Muy bueno leyendo fotos de carteles y horarios.": "Free with a Google AI Studio key (takes a minute to get). Very good at reading photos of posters and timetables.",
+ "Gratis con clave y rapidísimo. Modelos abiertos (Llama).": "Free with a key and super fast. Open models (Llama).",
+ "Muchos modelos; los que acaban en «:free» son gratis (con límite diario).": "Lots of models; the ones ending in “:free” are free (with a daily limit).",
+ "Los modelos GPT. De pago por uso.": "The GPT models. Pay as you go.",
+ "Los modelos Claude. De pago por uso; Haiku es el más barato y rápido.": "The Claude models. Pay as you go; Haiku is the cheapest and fastest.",
+ "IA europea. Tiene un plan gratis para probar.": "European AI. Has a free plan to try it out.",
+ "Otro (compatible con OpenAI)": "Other (OpenAI-compatible)",
+ "Cualquier servicio con la API de OpenAI (LM Studio, vLLM, LocalAI…): pon su dirección y, si hace falta, la clave.": "Any service with the OpenAI API (LM Studio, vLLM, LocalAI…): enter its address and, if needed, the key.",
+ "En tu dispositivo": "On your device",
  "(deshecho)": "(undone)",
  "0 = sin desenfoque (gasta menos batería).": "0 = no blur (uses less battery).",
  "1 día antes": "1 day before",
@@ -614,6 +626,18 @@
  "Gimnasio": "Gym"
 };
   D.ca = {
+ "Entiende frases como «mañana a las 5 dentista» o «cada lunes gimnasio a las 7». Instantáneo, sin internet y sin cuentas. No entiende fotos.": "Entén frases com «demà a les 5 dentista» o «cada dilluns gimnàs a les 7». Instantani, sense internet i sense comptes. No entén fotos.",
+ "Un modelo abierto (Qwen 2.5) que se descarga una vez y funciona sin internet. Lo que escribes no sale de tu dispositivo. Necesita WebGPU.": "Un model obert (Qwen 2.5) que es baixa un cop i funciona sense internet. El que escrius no surt del teu dispositiu. Necessita WebGPU.",
+ "Usa los modelos que tengas instalados en Ollama, en tu PC. Privado y gratis. Para fotos, un modelo con visión (gemma3, llava, qwen2.5vl).": "Fa servir els models que tinguis instal·lats a Ollama, al teu PC. Privat i gratis. Per a fotos, un model amb visió (gemma3, llava, qwen2.5vl).",
+ "Gratis con una clave de Google AI Studio (se saca en un minuto). Muy bueno leyendo fotos de carteles y horarios.": "Gratis amb una clau de Google AI Studio (s'aconsegueix en un minut). Molt bo llegint fotos de cartells i horaris.",
+ "Gratis con clave y rapidísimo. Modelos abiertos (Llama).": "Gratis amb clau i rapidíssim. Models oberts (Llama).",
+ "Muchos modelos; los que acaban en «:free» son gratis (con límite diario).": "Molts models; els que acaben en «:free» són gratis (amb límit diari).",
+ "Los modelos GPT. De pago por uso.": "Els models GPT. De pagament per ús.",
+ "Los modelos Claude. De pago por uso; Haiku es el más barato y rápido.": "Els models Claude. De pagament per ús; Haiku és el més barat i ràpid.",
+ "IA europea. Tiene un plan gratis para probar.": "IA europea. Té un pla gratuït per provar-la.",
+ "Otro (compatible con OpenAI)": "Un altre (compatible amb OpenAI)",
+ "Cualquier servicio con la API de OpenAI (LM Studio, vLLM, LocalAI…): pon su dirección y, si hace falta, la clave.": "Qualsevol servei amb l'API d'OpenAI (LM Studio, vLLM, LocalAI…): posa'n l'adreça i, si cal, la clau.",
+ "En tu dispositivo": "Al teu dispositiu",
  "(deshecho)": "(desfet)",
  "0 = sin desenfoque (gasta menos batería).": "0 = sense desenfocament (gasta menys bateria).",
  "1 día antes": "1 dia abans",

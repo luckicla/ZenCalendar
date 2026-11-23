@@ -1,0 +1,26 @@
+/* ZenCalendar · aviso de versión nueva y Ajustes → Actualizaciones (updates.js). */
+.upd-banner { position: fixed; z-index: 90; right: 20px; bottom: 20px; width: min(440px, calc(100% - 24px)); display: flex; align-items: center; gap: 12px; padding: 12px 10px 12px 14px; border-radius: calc(var(--rad) + 4px); background: color-mix(in srgb, var(--s1) calc(var(--o-card) + 10%), transparent); -webkit-backdrop-filter: blur(calc(var(--gb) + 10px)) saturate(1.6); backdrop-filter: blur(calc(var(--gb) + 10px)) saturate(1.6); border: 1px solid var(--edge); box-shadow: var(--sh-3), var(--edge-in); animation: updIn calc(520ms * var(--spd)) var(--spring) backwards; }
+.upd-banner.out { opacity: 0; transform: translateY(16px); transition: all calc(260ms * var(--spd)) var(--soft); }
+@keyframes updIn { from { opacity: 0; transform: translateY(24px) scale(.96); } }
+.upd-banner img { flex: none; border-radius: 11px; }
+.ub-tx { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.ub-tx b { font: 700 .95rem/1.25 var(--font-title); }
+.ub-tx small { color: var(--mut); font-size: .8rem; }
+.ub-tx .prog { height: 6px; margin-top: 3px; }
+.ub-acts { display: flex; gap: 4px; flex: none; }
+.upd-banner > .ibtn { align-self: flex-start; color: var(--mut); }
+.upd-top { display: flex; align-items: center; gap: 14px; }
+.upd-top img { border-radius: 16px; filter: drop-shadow(0 8px 16px rgb(var(--sh-rgb) / .25)); }
+.upd-top b { display: block; font: 700 1.15rem var(--font-title); }
+.upd-top small { display: block; margin-top: 2px; }
+.upd-top small.bad { color: #d0416a; }
+.upd-prog { margin: 6px 0 2px; }
+.upd-md { line-height: 1.55; font-size: .92rem; max-height: 50vh; overflow: auto; }
+.upd-md h4 { font: 700 1rem var(--font-title); margin: 10px 0 4px; }
+.upd-md ul { margin: 4px 0 8px; padding-left: 20px; }
+.upd-md p { margin: 4px 0; }
+.upd-notes { width: min(560px, 100%) !important; }
+@media (max-width: 759px) {
+  .upd-banner { left: 10px; right: 10px; width: auto; bottom: calc(86px + var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px))); flex-wrap: wrap; }
+  .ub-acts { order: 3; width: 100%; justify-content: flex-end; }
+}

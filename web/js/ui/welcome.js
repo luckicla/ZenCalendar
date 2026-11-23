@@ -25,7 +25,7 @@
           <div class="seg" id="wlScheme"><button data-v="system" class="${look.scheme === 'system' ? 'on' : ''}">${UI.icon('monitor', 16)}${t('Como el sistema')}</button><button data-v="light" class="${look.scheme === 'light' ? 'on' : ''}">${UI.icon('sun', 16)}${t('Claro')}</button><button data-v="dark" class="${look.scheme === 'dark' ? 'on' : ''}">${UI.icon('moon', 16)}${t('Oscuro')}</button></div>
           <div class="wl-acts"><span></span><button class="btn pri lg" data-go="1">${t('Siguiente')}</button></div></div>`;
       } else if (step === 1) {
-        let av = false, s = {}; try { av = ZC.drive.available(); s = ZC.drive.state() || {}; } catch {}
+        let av = false, s = {}; try { av = ZC.drive.available(); s = ZC.drive.state() || {}; if (av && ZC.drive.prepare) ZC.drive.prepare(); } catch {}
         html = `<div class="wl-card" data-step="1">
           <div class="wl-art">${UI.icon('cloudSync', 46)}</div>
           <h1>${t('¿Lo quieres en todos tus dispositivos?')}</h1>

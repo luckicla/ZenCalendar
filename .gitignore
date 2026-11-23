@@ -8,4 +8,3 @@ tests/*/out/
 android/.gradle/
 android/build/
 android/app/build/
-desktop/web/

@@ -139,6 +139,28 @@ final class Bridge {
         try { return app.getPackageManager().getPackageInfo(app.getPackageName(), 0).versionName; } catch (Exception e) { return ""; }
     }
 
+    // 'tap' | 'select' | 'success' | 'warning' (el ajuste «haptics» lo mira la página)
+    @JavascriptInterface public void haptic(String kind) {
+        a.runOnUiThread(() -> Haptics.play(app, a.webView(), kind));
+    }
+
+    // ---------- actualizaciones (Updater) ----------
+    @JavascriptInterface public void updateCheck(boolean download) {
+        Updater.check(app, download);
+    }
+
+    @JavascriptInterface public void updateInstall() {
+        a.runOnUiThread(() -> Updater.install(a));
+    }
+
+    @JavascriptInterface public String updateState() {
+        return Updater.state(app);
+    }
+
+    @JavascriptInterface public String takeUpdated() {
+        return Updater.takeUpdated(app);
+    }
+
     @JavascriptInterface public void setEdge(boolean on) {
         a.runOnUiThread(() -> a.setEdge(on));
     }

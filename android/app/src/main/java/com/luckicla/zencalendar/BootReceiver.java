@@ -13,6 +13,8 @@ public class BootReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context c, Intent intent) {
         String a = intent.getAction();
         if (!Widgets.ACTION_TICK.equals(a)) Alarms.schedule(c);
+        // recién actualizada: se vuelve a abrir y dice a qué versión (Updater)
+        if (Intent.ACTION_MY_PACKAGE_REPLACED.equals(a)) Updater.onUpdated(c);
         Widgets.updateAll(c);
         Widgets.scheduleTicks(c);
     }

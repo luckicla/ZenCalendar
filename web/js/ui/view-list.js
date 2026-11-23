@@ -62,7 +62,7 @@
       for (let dd = new Date(a); dd < b; dd = addDays(dd, 1)) {
         const items = C.onDay(list, dd);
         items.forEach(o => map.set(o.key, o));
-        if (items.length || sameDay(dd, C.today())) { html += dayBlock(dd, items, idx++); any = true; }
+        if (items.length || sameDay(dd, C.today())) { html += dayBlock(dd, items, idx++); if (items.length) any = true; }
       }
       return html;
     }
@@ -75,15 +75,31 @@
     prevBtn.onclick = () => {
       const a = addDays(from, -30), h0 = sc.scrollHeight, keepMonth = lastMonth;
       lastMonth = null;
-      const html = render(a, from);
+      const html = render(a, from), lastNew = lastMonth;
       lastMonth = keepMonth;
+      // si lo nuevo acaba en el mismo mes que lo que ya había arriba, sobra el título de mes de antes
+      const oldHead = box.querySelector('.ag-month');
+      if (html && oldHead && oldHead === box.firstElementChild && lastNew === from.getFullYear() * 12 + from.getMonth()) oldHead.remove();
       box.insertAdjacentHTML('afterbegin', html || `<div class="ag-gap">${t('Nada en los 30 días anteriores')}</div>`);
       from = a;
       sc.scrollTop += sc.scrollHeight - h0;
     };
-    const io = new IntersectionObserver(es => { if (es.some(x => x.isIntersecting)) more(); }, { root: sc, rootMargin: '600px' });
+    // carga trozos mientras el final esté cerca: con pocos eventos un trozo no llena la pantalla y el
+    // observador no vuelve a avisar (se quedaría parada). Como mucho unos dos años de golpe.
+    let stopped = false;
+    const sent = el.querySelector('.ag-sent');
+    function fill() {
+      for (let i = 0; i < 16 && !stopped; i++) {
+        const r = sent.getBoundingClientRect(), sr = sc.getBoundingClientRect();
+        if (!sr.height || r.top > sr.bottom + 600) break;
+        more();
+      }
+    }
+    const io = new IntersectionObserver(es => { if (es.some(x => x.isIntersecting)) fill(); }, { root: sc, rootMargin: '600px' });
+    const disconnect = io.disconnect.bind(io);
+    io.disconnect = () => { stopped = true; disconnect(); };
     more();
-    setTimeout(() => io.observe(el.querySelector('.ag-sent')), 50);
+    setTimeout(() => io.observe(sent), 50);
     el._io = io;
     return el;
   }
@@ -128,7 +144,6 @@
   };
 
   // ---------- tareas ----------
-  function taskOcc(ev) { return C.occOf(ev); }
   function buildTasks() {
     const el = UI.h(`<div class="view v-tasks"><div class="tk-scroll">
       <form class="tk-add"><span class="tick ghost">${UI.icon('plus', 14)}</span><input class="in" placeholder="${esc(t('Añadir tarea… (p. ej. «comprar pan mañana»)'))}" aria-label="${esc(t('Añadir tarea'))}"><button class="btn sm pri" type="submit">${t('Añadir')}</button></form>
@@ -137,12 +152,15 @@
     const showDone = UI.views._tasksDone;
     const all = ZC.store.events().filter(e => e.kind === 'task');
     const tdy = C.today(), tmw = addDays(tdy, 1), wk = addDays(tdy, 7);
-    const pending = all.filter(e => !e.done).sort((a, b) => (a.start < b.start ? -1 : 1));
+    // cada tarea con la aparición que toca (en las que se repiten, la primera sin hacer de hoy en adelante)
+    const occOf = new Map(all.map(e => [e.id, e.done ? C.occOf(e) : C.taskOcc(e)]));
+    const startOf = e => occOf.get(e.id).start;
+    const pending = all.filter(e => !e.done && occOf.get(e.id)).sort((a, b) => startOf(a) - startOf(b));
     const done = all.filter(e => e.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)).slice(0, 60);
-    const groups = [[t('Atrasadas'), e => C.parse(e.start) < tdy, 'late'], [t('Hoy'), e => sameDay(C.parse(e.start), tdy)], [t('Mañana'), e => sameDay(C.parse(e.start), tmw)], [t('Esta semana'), e => C.parse(e.start) >= addDays(tmw, 1) && C.parse(e.start) < wk], [t('Más adelante'), e => C.parse(e.start) >= wk]];
+    const groups = [[t('Atrasadas'), e => startOf(e) < tdy, 'late'], [t('Hoy'), e => sameDay(startOf(e), tdy)], [t('Mañana'), e => sameDay(startOf(e), tmw)], [t('Esta semana'), e => startOf(e) >= addDays(tmw, 1) && startOf(e) < wk], [t('Más adelante'), e => startOf(e) >= wk]];
     let html = '', k = 0;
     const row = (ev, late) => {
-      const o = taskOcc(ev), s = C.parse(ev.start);
+      const o = occOf.get(ev.id), s = o.start;
       const when = ev.allDay ? ZC.i18n.D.short(s) : ZC.i18n.D.short(s) + ', ' + C.fmtT(s);
       return `<div class="task-row ${ev.done ? 'done' : ''}" data-key="${esc(o.key)}" style="${C.evVars(o)};--i:${k++}"><span class="tick ${ev.done ? 'on' : ''}" role="checkbox" aria-checked="${!!ev.done}" tabindex="0">${UI.icon('check', 14)}</span><span class="tt"><b>${esc(C.titleOf(ev))}</b><small class="${late ? 'late' : ''}">${esc(when)}${ev.rrule ? '. ' + esc(ZC.recur.describe(ev.rrule, ZC.i18n.lang(), C.parse(ev.start))) : ''}</small></span></div>`;
     };
@@ -157,7 +175,7 @@
     }
     body.innerHTML = `<div class="tk-top"><div class="seg" id="tkSeg"><button data-v="0" class="${showDone ? '' : 'on'}">${t('Pendientes')} <span class="cnt">${pending.length}</span></button><button data-v="1" class="${showDone ? 'on' : ''}">${t('Hechas')}</button></div></div>` + html;
     const map = new Map();
-    for (const e of all) { const o = taskOcc(e); map.set(o.key, o); }
+    for (const o of occOf.values()) if (o) map.set(o.key, o);
     body.addEventListener('click', e => {
       const sb = e.target.closest('#tkSeg button'); if (sb) { UI.views._tasksDone = sb.dataset.v === '1'; UI.app.render(); return; }
       const r = e.target.closest('[data-key]'); if (!r) return;

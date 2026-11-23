@@ -4,7 +4,7 @@
 (function () {
   const ZC = window.ZC, UI = ZC.ui, C = UI.cal, t = (...a) => ZC.t(...a);
   const esc = s => UI.esc(s);
-  let L = null, cur = 'look';
+  let L = null, cur = 'look', unwire = null;
 
   const SECS = [
     ['look', 'Aspecto', 'palette', 'Estilos, tema, claro u oscuro y colores'],
@@ -141,7 +141,7 @@
       let next = []; try { next = (ZC.reminders && ZC.reminders.next && ZC.reminders.next(6)) || []; } catch {}
       return card(h3(t('Avisos'), t('ZenCalendar te avisa de tus eventos y tareas aunque esté cerrado.'))
         + row(t('Permiso de notificaciones'), perm === 'granted' ? t('Concedido') : perm === 'denied' ? t('Bloqueado: actívalo en los ajustes del sistema o del navegador.') : t('Aún no lo has concedido.'), `<button type="button" class="btn ${perm === 'granted' ? 'soft' : 'pri'} sm" data-act="perm">${perm === 'granted' ? UI.icon('check', 16) + t('Permitido') : t('Permitir avisos')}</button>`))
-        + card(h3(t('Próximos avisos')) + (next.length ? `<div class="next-rem">${next.map(r => { const ev = r.ev || (r.id && ZC.store.get(r.id)) || {}; const at = r.at ? new Date(r.at) : null; return `<div class="nr">${UI.icon('bell', 16)}<b>${esc(C.titleOf(ev))}</b><small>${at ? esc(ZC.i18n.D.short(at) + ', ' + C.fmtT(at)) : ''}</small></div>`; }).join('')}</div>` : `<p class="note">${t('No hay avisos programados.')}</p>`));
+        + card(h3(t('Próximos avisos')) + (next.length ? `<div class="next-rem">${next.map(r => { const ev = r.ev || (r.eventId && ZC.store.get(r.eventId)) || (r.id && ZC.store.get(r.id)) || null; const at = r.at ? new Date(r.at) : null; return `<div class="nr">${UI.icon('bell', 16)}<b>${esc(ev ? C.titleOf(ev) : (r.title || t('Sin título')))}</b><small>${at ? esc(ZC.i18n.D.short(at) + ', ' + C.fmtT(at)) : ''}</small></div>`; }).join('')}</div>` : `<p class="note">${t('No hay avisos programados.')}</p>`));
     },
     ai: aiSection,
     drive: driveSection,
@@ -154,6 +154,7 @@
 
   // ---------- actualizaciones (Windows) ----------
   function updCard() {
+    if (UI.updates) return '';   // tiene su propia sección (updates.js)
     const U = ZC.platform && ZC.platform.updates;
     if (!U || !U.available) return '';
     let s = {}; try { s = U.state() || {}; } catch {}
@@ -217,6 +218,8 @@
     // miniaturas de los fondos
     box.querySelectorAll('.bgc-th').forEach(el => { try { const cv = UI.bg.thumb(el.dataset.bg, 132, 84); el.appendChild(cv); } catch (e) { console.warn(e); } });
     if (id === 'ai') aiExtras();
+    // (en la web baja ya el script de Google: así la ventanita sale al instante al pulsar «Conectar»)
+    if (id === 'drive') { try { ZC.drive.prepare && ZC.drive.prepare(); } catch {} }
     refresh();
   }
   async function aiExtras() {
@@ -270,7 +273,7 @@
     cur = sec || 'look';
     L = UI.openLayer({ kind: 'modal', cls: 'set-layer', panelCls: 'set-panel', label: t('Ajustes'), html: `
       <div class="set-top sheet-head"><h2>${t('Ajustes')}</h2><span class="mut set-saved">${UI.icon('check', 15)}${t('Todo se guarda al momento')}</span><button type="button" class="ibtn" data-act="close" aria-label="${t('Cerrar')}">${UI.icon('x', 20)}</button></div>
-      <div class="set-wrap"><nav class="set-nav">${navHTML()}</nav><div class="set-content layer-scroll"></div></div>`, onClose: () => { UI.look.endPreview(); L = null; } });
+      <div class="set-wrap"><nav class="set-nav">${navHTML()}</nav><div class="set-content layer-scroll"></div></div>`, onClose: () => { UI.look.endPreview(); if (unwire) unwire(); unwire = null; L = null; } });
     paintSection(cur);
     if (UI.isMobile() && !sec) L.body.classList.add('at-list');
     wire();
@@ -367,7 +370,9 @@
       body.querySelectorAll('input[type=range]').forEach(r => r._drag = false);
       refresh();
     };
+    // (en la ventana: se quitan al cerrar los ajustes, si no se acumulaban cada vez que se abrían)
     addEventListener('pointerup', end); addEventListener('pointercancel', end);
+    unwire = () => { removeEventListener('pointerup', end); removeEventListener('pointercancel', end); clearTimeout(holdT); };
     body.addEventListener('contextmenu', e => { if (e.target.closest('[data-peek]')) e.preventDefault(); });
   }
   function saveAiFields() {
@@ -379,5 +384,12 @@
   UI.look.onChange(() => { if (L && !L.closed) refresh(); });
   try { ZC.platform.on && ZC.platform.on('update', () => { if (L && !L.closed && cur === 'about') paintSection('about'); }); } catch {}
 
-  UI.settings = { open, refresh: () => refresh(true), isOpen: () => !!(L && !L.closed), onDrive: () => { if (L && !L.closed && cur === 'drive') paintSection('drive'); } };
+  // otras partes (gestures.js, updates.js) añaden su propia sección: render() devuelve el HTML
+  function addSection(id, name, ic, sub, render, after) {
+    if (SECS.some(s => s[0] === id)) return;
+    SECS.push([id, name, ic, sub]); S[id] = render;
+    const g = GROUPS.find(x => x.includes(after)) || GROUPS[GROUPS.length - 1];
+    g.splice(after && g.includes(after) ? g.indexOf(after) + 1 : g.length, 0, id);
+  }
+  UI.settings = { addSection, open, refresh: () => refresh(true), isOpen: () => !!(L && !L.closed), onDrive: () => { if (L && !L.closed && cur === 'drive') paintSection('drive'); } };
 })();

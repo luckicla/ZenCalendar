@@ -15,7 +15,7 @@ window.ZCW.nlp = (() => {
     once: 11, doce: 12, quince: 15, veinte: 20, treinta: 30, media: 0.5, a: 1, an: 1, one: 1, two: 2, three: 3 };
   const DAY_RE = '(lunes|martes|miercoles|jueves|viernes|sabados?|domingos?|monday|tuesday|wednesday|thursday|friday|saturday|sunday)';
   const MONTH_RE = '(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|june|july|august|september|october|november|december|ene|feb|mar|abr|may|jun|jul|ago|sept|sep|oct|nov|dic|dec)';
-  const NIGHTY = /\b(cena|cenar|cenamos|copas|fiesta|concierto|cine|pelicula|teatro|noche|partido|bar|tapas|dinner|party)\b/;
+  const NIGHTY = /\b(cena|cenar|cenamos|copas|fiesta|concierto|cine|pelicula|teatro|noche|partido|bar|tapas|discoteca|sopar|dinner|drinks|party|concert)\b/;
   const WORK = /\b(reunion|trabajo|cliente|oficina|entrega|proyecto|presentacion|equipo|jefe|meeting|call|llamada con)\b/;
   const BDAY = /\b(cumple|cumpleanos|aniversario|birthday)\b/;
 
@@ -42,7 +42,7 @@ window.ZCW.nlp = (() => {
 
     const out = { kind: 'event', title: '', start: null, end: null, allDay: false, location: '', reminders: [], rrule: null, calendar: 'personal', guessed: false };
     const today = startOfDay(now);
-    let date = null, endDate = null, hh = null, mm = 0, eh = null, em = 0, period = null, offsetMin = null;
+    let date = null, endDate = null, hh = null, mm = 0, eh = null, em = 0, period = null, offsetMin = null, h24 = false;
 
     // tareas
     let m = take(/^\s*(recuerdame(?: que)?|recordarme|recordar|tarea:?|pendiente:?|remind me to|todo:)\s+/);
@@ -96,10 +96,13 @@ window.ZCW.nlp = (() => {
     if ((m = take(/\b(?:de|desde las?|entre las?|from)\s+(\d{1,2})(?:[:.h](\d{2}))?\s*(?:a|hasta las?|y las?|-|to)\s*(?:las?\s+)?(\d{1,2})(?:[:.h](\d{2}))?\s*(?:h\b)?/)) ||
         (m = take(/\b(\d{1,2})[:.h](\d{2})\s*-\s*(\d{1,2})[:.h](\d{2})\b/))) {
       hh = +m[1]; mm = +(m[2] || 0); eh = +m[3]; em = +(m[4] || 0);
+      h24 = /^0\d/.test(m[1]);
     } else if ((m = take(/\b(?:a\s+las?|a\s+la|sobre\s+las?|hacia\s+las?|at)\s+(\d{1,2})(?:[:.h](\d{2}))?(?:\s+(y media|y cuarto|menos cuarto))?(?:\s*(am|pm|h)\b)?/)) ||
                (m = take(/\b(\d{1,2})[:h](\d{2})(?:\s*(am|pm))?\b/)) ||
                (m = take(/\b(\d{1,2})\s*(am|pm|h)\b/))) {
       hh = +m[1];
+      // «07:30» o «7h»: hora de 24 h, no se pasa a la tarde
+      h24 = /^0\d/.test(m[1]) || /\dh\b|\s+h\b/.test(m[0]);
       const second = m[2];
       if (second && /^\d+$/.test(second)) mm = +second;
       const extra = [m[2], m[3], m[4]].filter(x => x && !/^\d+$/.test(x)).join(' ');
@@ -174,9 +177,10 @@ window.ZCW.nlp = (() => {
     if (hh != null) {
       if (period === 'pm' && hh < 12) hh += 12;
       else if (period === 'night') { if (hh === 12) hh = 0; else if (hh >= 5 && hh < 12) hh += 12; }
-      else if (period == null && hh >= 1 && hh <= 7) hh += 12;
-      else if (period == null && hh >= 8 && hh <= 11 && NIGHTY.test(fl)) hh += 12;
-      if (eh != null && eh < hh && eh + 12 <= 23) eh += 12;
+      else if (period == null && !h24 && hh >= 1 && hh <= 7) hh += 12;
+      else if (period == null && !h24 && hh >= 8 && hh <= 11 && NIGHTY.test(fl)) hh += 12;
+      // final del rango: «de 5 a 7» → 17–19; «de 10 a 2» de fiesta → 22:00–02:00 (del día siguiente)
+      if (eh != null && eh * 60 + em <= hh * 60 + mm && eh < 12 && (eh + 12) * 60 + em > hh * 60 + mm) eh += 12;
     } else if (period && !endDate) {
       hh = period === 'am' ? 9 : period === 'pm' ? 17 : 21;
     }
@@ -204,7 +208,7 @@ window.ZCW.nlp = (() => {
       out.end = endDate ? new Date(endDate) : new Date(out.start);
     } else if (eh != null) {
       out.end = new Date(out.start); out.end.setHours(eh, em, 0, 0);
-      if (out.end <= out.start) out.end = new Date(out.start.getTime() + 3600000);
+      if (out.end <= out.start) out.end = addDays(out.end, 1);
     } else {
       const mins = out.kind === 'task' ? 0 : /\b(cena|comida|cine|concierto|teatro)\b/.test(fl) ? 120 : 60;
       out.end = new Date(out.start.getTime() + mins * 60000);

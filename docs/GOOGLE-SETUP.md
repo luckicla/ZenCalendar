@@ -36,7 +36,7 @@ Luego, en las secciones de la izquierda:
 
 - **Desarrollo de la marca** (Branding):
   - Página principal de la app: `https://luckicla.github.io/zencalendar/`
-  - Política de privacidad: `https://github.com/luckicla/zencalendar#es-seguro` (o una página de privacidad en la web, si la hay).
+  - Política de privacidad: `https://luckicla.github.io/zencalendar/#privacidad` (el apartado «Privacidad» de la web; Google prefiere que esté en un dominio autorizado, como este).
   - Dominios autorizados: `luckicla.github.io`
   - El logo es opcional. Si lo subes, Google tiene que revisar la marca (unos días) antes de enseñarlo; se puede dejar para después.
 - **Acceso a los datos** (Data Access) → **Añadir o quitar permisos**: marca `.../auth/drive.appdata`, `openid`, `.../auth/userinfo.email` y `.../auth/userinfo.profile` → **Actualizar** → **Guardar**.
@@ -58,6 +58,7 @@ Menú ☰ → **APIs y servicios → Credenciales** (o **Google Auth Platform �
 
 - Tipo: **App de escritorio**. Nombre: `ZenCalendar Windows`.
 - Crear → copia el **ID de cliente** y el **secreto del cliente**.
+- **URIs de redireccionamiento: ninguna** (este tipo de cliente ni siquiera lo pide). La app abre el navegador con la página de Google y la respuesta vuelve a `http://127.0.0.1:<puerto>`, un servidor pequeñito que la app abre solo durante el inicio de sesión (el método «loopback» que Google permite a las apps de escritorio, con cualquier puerto). Por eso tiene que ser de tipo **App de escritorio**: con uno de tipo «Aplicación web» Google contesta `redirect_uri_mismatch`.
 - (En las apps de escritorio Google sabe que el «secreto» no es secreto de verdad, porque va dentro del programa; por eso además se usa PKCE. Va en una *variable* del repo, no hace falta que sea un *secret*.)
 
 ### c) Android
@@ -93,7 +94,9 @@ Los workflows (`build.yml` y `pages.yml`) los escriben en `web/js/core/config.js
 
 Después, en la pestaña **Actions**, vuelve a lanzar «ZenCalendar (APK + exe)» y «Web (GitHub Pages)» (botón **Run workflow**), o haz cualquier cambio en `main`.
 
-Para GitHub Pages: **Settings → Pages → Source: GitHub Actions** (una vez).
+Para GitHub Pages: **Settings → Pages → Build and deployment → Source: GitHub Actions** (una vez, antes de la primera publicación).
+
+Si las variables no están, los workflows compilan igual (la app sale sin Drive, con el botón en gris). En Android no hace falta ninguna variable.
 
 ## 6. Pasar la app a «En producción»
 
@@ -117,3 +120,4 @@ Como solo usa permisos no sensibles, no hace falta la verificación de Google (l
 - **Android: «Error 10» (DEVELOPER_ERROR) o no sale la hoja de Google**: el paquete o la huella SHA-1 del cliente Android no coinciden con la APK. También tarda unos minutos en funcionar después de crear el cliente.
 - **«Acceso bloqueado: la app no se ha verificado» / solo funciona para ti**: la app sigue «En pruebas» (paso 6).
 - **Windows: el navegador dice que no puede conectar con 127.0.0.1**: es normal si se tardó más de 5 minutos; vuelve a pulsar el botón.
+- **Windows: «Error 400: redirect_uri_mismatch» o «invalid_client»**: el cliente de `GOOGLE_DESKTOP_CLIENT_ID` no es de tipo «App de escritorio», o el secreto (`GOOGLE_DESKTOP_CLIENT_SECRET`) no es el de ese mismo cliente.

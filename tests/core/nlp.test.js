@@ -69,5 +69,21 @@ const has = (r, exp) => { for (const k of Object.keys(exp)) assert.strictEqual(J
   await t('confianza alta con fecha y hora', () => assert.ok(P('mañana a las 5 dentista').confidence >= 0.8));
   await t('a mediodía', () => has(P('comida mañana a mediodía'), { start: '2026-11-24T12:00' }));
   await t('català: demà a les 5', () => has(P('demà a les 5 dentista'), { start: '2026-11-24T17:00', title: 'Dentista' }));
+  // horas ambiguas: planes de tarde/noche y horas de 1 a 7 → por la tarde (revisión de errores)
+  await t('cena con Marta el viernes a las 9 → 21:00', () => has(P('cena con Marta el viernes a las 9'), { start: '2026-11-27T21:00', title: 'Cena con Marta' }));
+  await t('concierto/copas/fiesta → por la noche', () => {
+    has(P('concierto el sábado a las 10'), { start: '2026-11-28T22:00' });
+    has(P('copas el viernes a las 11'), { start: '2026-11-27T23:00' });
+    has(P('fiesta el viernes a las 10:30'), { start: '2026-11-27T22:30' });
+    has(P('dinner friday at 8', { lang: 'en' }), { start: '2026-11-27T20:00' });
+    has(P('sopar divendres a les 9', { lang: 'ca' }), { start: '2026-11-27T21:00' });
+  });
+  await t('«de la mañana» manda sobre «cena»', () => has(P('cena el viernes a las 9 de la mañana'), { start: '2026-11-27T09:00' }));
+  await t('desayuno a las 9 → por la mañana (ya pasó → mañana)', () => has(P('desayuno a las 9'), { start: '2026-11-24T09:00' }));
+  await t('hora de 1 a 7 con minutos → tarde', () => { has(P('dentista mañana a las 5:30'), { start: '2026-11-24T17:30' }); has(P('café el jueves 6:15'), { start: '2026-11-26T18:15' }); });
+  await t('hora con cero delante es de 24 h', () => has(P('tren el jueves a las 07:30'), { start: '2026-11-26T07:30' }));
+  await t('hoy a una hora que ya pasó → por la tarde', () => has(P('cena hoy a las 9'), { start: '2026-11-23T21:00' }));
+  await t('fiesta de 10 a 2 → 22:00 a 02:00', () => has(P('fiesta el sábado de 10 a 2'), { start: '2026-11-28T22:00', end: '2026-11-29T02:00' }));
+  await t('de 11 a 1 → 11:00 a 13:00', () => has(P('clase mañana de 11 a 1'), { start: '2026-11-24T11:00', end: '2026-11-24T13:00' }));
   report(__filename);
 })();

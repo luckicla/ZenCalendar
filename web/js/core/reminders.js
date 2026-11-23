@@ -241,7 +241,8 @@
 
   ZC.reminders = {
     snoozeOptions, init, compute, snooze, done, refreshWidgets, widgetData, deliver: deliverSoon,
-    next: n => compute().slice(0, n || 5),
+    // próximos avisos para enseñarlos (pantalla de Notificaciones): [{ at, ev, id, title, … }]
+    next: n => compute().slice(0, n || 5).map(r => Object.assign({}, r, { ev: (r.eventId && ZC.store.get(r.eventId)) || null })),
     get list() { return list; },
     _action,
   };
