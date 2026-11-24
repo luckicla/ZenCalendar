@@ -214,9 +214,12 @@
     cur = id;
     const box = L.body.querySelector('.set-content');
     const sec = SECS.find(s => s[0] === id) || SECS[0];
-    box.innerHTML = `<div class="set-sec stagger" data-sec="${id}"><header class="set-sec-h"><button type="button" class="ibtn set-back" data-act="back" aria-label="${t('Volver')}">${UI.icon('chevL', 22)}</button><h2>${esc(t(sec[1]))}</h2></header>${S[id]()}</div>`;
+    // (si se vuelve a pintar la misma sección —una opción que lo cambia todo, una sincronización…— se queda
+    //  donde estabas y sin la animación de entrada; antes saltaba arriba del todo con cada toque)
+    const prevSec = box.querySelector('.set-sec'), same = !!prevSec && prevSec.dataset.sec === id, keepY = box.scrollTop;
+    box.innerHTML = `<div class="set-sec ${same ? '' : 'stagger'}" data-sec="${id}"><header class="set-sec-h"><button type="button" class="ibtn set-back" data-act="back" aria-label="${t('Volver')}">${UI.icon('chevL', 22)}</button><h2>${esc(t(sec[1]))}</h2></header>${S[id]()}</div>`;
     box.querySelectorAll('.set-sec > *').forEach((el, i) => el.style.setProperty('--i', i));
-    box.scrollTop = 0;
+    box.scrollTop = same ? keepY : 0;
     L.body.querySelectorAll('.set-nav button').forEach(b => b.classList.toggle('on', b.dataset.sec === id));
     L.body.classList.remove('at-list');
     // miniaturas de los fondos

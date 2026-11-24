@@ -81,7 +81,14 @@
     body.classList.add('ed');
     function cleanup() { if (fab) fab.classList.remove('open'); addedBlobs.forEach(id => ZC.store.deleteBlob(id).catch(() => {})); }
 
+    // (cada opción vuelve a dibujar el formulario: se guarda por dónde ibas y se recupera, para no saltar arriba)
     function paint() {
+      const sel = '.layer-scroll', old = body.querySelector(sel), y = old ? old.scrollTop : 0, yb = body.scrollTop;
+      paintNow();
+      const now = body.querySelector(sel); if (now && y) now.scrollTop = y;   // (el que se desplaza se vuelve a crear)
+      if (yb) body.scrollTop = yb;
+    }
+    function paintNow() {
       const task = D.kind === 'task';
       const cals = ZC.store.calendars();
       const cal = ZC.store.calendar(D.calendarId) || cals[0] || {};

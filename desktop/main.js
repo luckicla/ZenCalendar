@@ -439,7 +439,7 @@ function setAutostart(on) {
 
 // ---------- icono ----------
 function setIcon(id) {
-  if (!/^[a-z]+$/.test(String(id || ''))) return false;
+  if (!/^[a-z][a-z_]*$/.test(String(id || ''))) return false;   // («dot_mes»…)
   S.icon = id; saveSettings();
   return applyIcon(id, true);
 }

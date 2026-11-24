@@ -536,7 +536,7 @@
       const icons = P.appIcons || [];
       if (!P.setAppIcon || !icons.some(i => i.id === 'dot')) return;
       if (ZC.store.local('dotIconAsked')) return;
-      if ((UI.look.get().appIcon || '') === 'dot') return;
+      if (/^dot($|_)/.test(UI.look.get().appIcon || '')) return;   // ya lleva uno de los iconos Dot
       // durante la bienvenida el aviso taparía sus botones: se ofrece al terminarla
       if (document.querySelector('.welcome .wl-card')) return;
       ZC.store.local('dotIconAsked', true);

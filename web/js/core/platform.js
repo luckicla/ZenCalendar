@@ -14,7 +14,8 @@
   const role = (D() && D().role) || (root.location && /widget\.html$/i.test(root.location.pathname || '') ? 'widget' : 'main');
 
   // ---------- iconos de la app (los genera tools/mkicons.py) ----------
-  // design: el diseño con el que va (al elegir Dot, la interfaz puede sugerir el icono 'dot')
+  // design: el diseño con el que va (al elegir Dot, la interfaz puede sugerir el icono 'dot').
+  // Los ids van con «_»: son también nombres de recursos de Android (ic_zc_<id>).
   const appIcons = [
     { id: 'pastel', name: 'Pastel', design: 'zen' },
     { id: 'sakura', name: 'Sakura', design: 'zen' },
@@ -23,6 +24,12 @@
     { id: 'cielo', name: 'Cielo', design: 'zen' },
     { id: 'melocoton', name: 'Melocotón', design: 'zen' },
     { id: 'dot', name: 'Dot', design: 'dot' },
+    { id: 'dot_blanco', name: 'Dot blanco', design: 'dot' },
+    { id: 'dot_rojo', name: 'Dot rojo', design: 'dot' },
+    { id: 'dot_mes', name: 'Dot mes', design: 'dot' },
+    { id: 'dot_z', name: 'Dot Z', design: 'dot' },
+    { id: 'dot_glyph', name: 'Glyph', design: 'dot' },
+    { id: 'dot_reloj', name: 'Dot reloj', design: 'dot' },
   ].map(x => Object.assign(x, { src: 'img/icons/' + x.id + '.png' }));
 
   // ---------- avisos de «abrir» (widget, notificación, compartir, atajos) ----------

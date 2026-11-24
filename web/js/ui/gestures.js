@@ -9,6 +9,7 @@
 //  - borde izquierdo = abrir el panel lateral; deslizarlo a la izquierda = cerrarlo
 //  - hoja inferior: arrastrar hacia arriba la expande
 //  - visor de imágenes: pellizcar, doble toque para ampliar, deslizar para cambiar o cerrar
+//  - la foto del selector de calendario (workspaces): deslizarla pasa al siguiente (está en ws.js; aquí, su interruptor)
 //  - PC: Mayús+rueda o trackpad horizontal = cambiar de periodo; clic derecho = menú; clic central = editar
 // Todo se puede apagar por grupos en Ajustes → Gestos (prefs.cal.gestures).
 (function () {
@@ -28,6 +29,7 @@
     ['edge', 'Borde para el panel lateral', 'Desliza desde el borde izquierdo para abrir el panel.'],
     ['viewer', 'Visor de imágenes', 'Pellizcar, doble toque para ampliar y deslizar para cerrar.'],
     ['context', 'Menú con clic derecho', 'Editar, duplicar, cambiar el color o borrar. El clic central abre el editor.'],
+    ['wsswipe', 'Cambiar de calendario deslizando la foto', 'Desliza la foto o el icono del selector de arriba para pasar al siguiente workspace. En el PC, con la rueda encima.'],
     ['haptics', 'Vibración', 'Un toque suave al soltar, completar o mover.'],
   ];
   const gp = () => { try { return (C().prefsCal().gestures) || {}; } catch { return {}; } };
@@ -414,6 +416,8 @@
   let downInfo = null;
   function onDown(e) {
     if (e.target.closest('.layer, .menu')) return;
+    // (el selector de calendario tiene su propio deslizar: el gesto se queda con él)
+    if (e.target.closest('#wsChip')) return;
     if (isTouch(e)) {
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (pts.size === 2 && on('pinch') && e.target.closest('#viewHost')) { owner = 'pinch'; pinchStart(); return; }
@@ -614,7 +618,7 @@
   function section() {
     const g = gp();
     return `<section class="scard"><div class="s-h"><h3>${t('Gestos')}</h3><p>${t('Apaga los que no uses. Todos respetan el ajuste de animaciones.')}</p></div>
-      ${GROUPS.map(([k, name, sub]) => `<div class="srow"><div class="sl"><b>${t(name)}</b><small>${t(sub)}</small></div><div class="sc"><button type="button" class="sw" role="switch" data-gest="${k}" aria-checked="${g[k] !== false}" aria-label="${UI.esc(t(name))}"></button></div></div>`).join('')}
+      ${GROUPS.filter(g => g[0] !== 'wsswipe' || (UI.wsui && UI.wsui.available())).map(([k, name, sub]) => `<div class="srow"><div class="sl"><b>${t(name)}</b><small>${t(sub)}</small></div><div class="sc"><button type="button" class="sw" role="switch" data-gest="${k}" aria-checked="${g[k] !== false}" aria-label="${UI.esc(t(name))}"></button></div></div>`).join('')}
       <div class="srow"><div class="sl"><b>${t('Alto de las horas')}</b><small>${t('También se cambia pellizcando la rejilla.')}</small></div><div class="sc"><button type="button" class="btn sm ghost" data-hz="-1">−</button><b class="hz-v">${Math.round(hz * 100)} %</b><button type="button" class="btn sm ghost" data-hz="1">+</button><button type="button" class="btn sm ghost" data-hz="0">${t('Restablecer')}</button></div></div></section>`;
   }
   document.addEventListener('click', async e => {
@@ -655,6 +659,8 @@
     'Ver detalles': ['View details', 'Veure detalls'], 'Pasar a mañana': ['Move to tomorrow', 'Passar a demà'], 'Este color': ['This color', 'Aquest color'], 'Color cambiado': ['Color changed', 'Color canviat'],
     'El del calendario': ['Calendar color', 'El del calendari'], 'Nuevo evento este día': ['New event on this day', 'Esdeveniment nou aquest dia'], 'Nuevo evento a esta hora': ['New event at this time', 'Esdeveniment nou a aquesta hora'],
     'Ver el día': ['View the day', 'Veure el dia'], 'Color': ['Color', 'Color'],
+    'Cambiar de calendario deslizando la foto': ['Switch calendar by swiping the picture', 'Canviar de calendari lliscant la foto'],
+    'Desliza la foto o el icono del selector de arriba para pasar al siguiente workspace. En el PC, con la rueda encima.': ['Swipe the picture or icon of the switcher at the top to go to the next workspace. On PC, use the wheel over it.', 'Llisca la foto o la icona del selector de dalt per passar al workspace següent. Al PC, amb la roda a sobre.'],
   };
   for (const [k, [en, ca]] of Object.entries(TR)) { D.en[k] = D.en[k] || en; D.ca[k] = D.ca[k] || ca; }
 

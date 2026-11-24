@@ -1050,6 +1050,8 @@
       const problem2 = await pushAccount(acc);
       setL(id, { lastSync: Date.now(), error: problem || problem2 || null, reauth: false, soft: false });
     } catch (e) {
+      // (token caducado en la web: se renueva solo con el siguiente toque, sin enseñar error)
+      if (e.soft) { setL(id, { error: null, soft: true }); return; }
       console.warn('[ZC] gcal sync', a.email, e);
       setL(id, { error: friendly(e) });
       if (!e.auth) {

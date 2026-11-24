@@ -538,7 +538,8 @@ public class MainActivity extends Activity {
     }
 
     // ---------- iconos de la app: un activity-alias por variante ----------
-    static final String[] ICONS = {"pastel", "sakura", "menta", "noche", "cielo", "melocoton", "dot"};
+    static final String[] ICONS = {"pastel", "sakura", "menta", "noche", "cielo", "melocoton", "dot",
+            "dot_blanco", "dot_rojo", "dot_mes", "dot_z", "dot_glyph", "dot_reloj"};
 
     private static boolean iconOn(Context c, PackageManager pm, String n) {
         int st = pm.getComponentEnabledSetting(new ComponentName(c, c.getPackageName() + ".Icon_" + n));

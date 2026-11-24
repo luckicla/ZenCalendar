@@ -82,6 +82,17 @@
   html[data-design="dot"] .rings, html[data-design="dot"] .strip, html[data-design="dot"] .logo.zen { display: none; }
   html[data-design="dot"] .logo.dot { display: block; }
   .logo.dot { display: none; }
+  /* el workspace de verdad (si se ha podido leer su vista previa): su foto o su icono sobre su color */
+  .wsb { --wc: #B9A2FF; display: none; place-items: center; width: 76px; height: 76px; margin: 14px auto 14px; border-radius: 24px; overflow: hidden;
+    background: linear-gradient(140deg, color-mix(in srgb, var(--wc) 78%, #fff), var(--wc)); color: color-mix(in srgb, var(--wc) 30%, #1d1630); box-shadow: 0 8px 24px color-mix(in srgb, var(--wc) 45%, transparent); }
+  .wsb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .wsb svg { width: 46px; height: 46px; }
+  .has-ws .wsb { display: grid; }
+  .has-ws .logo { display: none !important; }
+  .who { margin: -2px 0 10px; color: var(--pencil); font-size: .92rem; }
+  html[data-design="dot"] .wsb { border-radius: 50%; background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--wc); }
+  html[data-design="dot"] .wsb.av { box-shadow: 0 0 0 1.5px var(--wc); }
+  html[data-design="dot"] .wsb svg { stroke-width: 1.4; }
   html[data-design="dot"] .k { font: 400 .78rem/1 "ZenDot", ui-monospace, monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--pencil); }
   html[data-design="dot"] h1 { font: 400 clamp(1.5rem, 1.1rem + 2vw, 2rem)/1.15 "ZenDot", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; margin: 14px 0 12px; }
   html[data-design="dot"] h1::after { content: ''; display: block; width: 8px; height: 8px; margin: 14px auto 0; border-radius: 50%; background: var(--acc); }
@@ -102,9 +113,11 @@
     <div class="rings" aria-hidden="true"><i></i><i></i></div>
     <img class="logo zen" src="../img/logo.svg" alt="" width="64" height="64">
     <svg class="logo dot" viewBox="0 0 24 24" width="64" height="64" aria-hidden="true"><rect x=".5" y=".5" width="23" height="23" rx="7" fill="currentColor" opacity=".06" stroke="currentColor" stroke-opacity=".2" stroke-width=".4"/><g fill="currentColor"><circle cx="9.4" cy="5" r="1.1"/><circle cx="14.6" cy="5" r="1.1"/><circle cx="6.8" cy="9.2" r=".98"/><circle cx="9.4" cy="9.2" r=".98"/><circle cx="12" cy="9.2" r=".98"/><circle cx="14.6" cy="9.2" r=".98"/><circle cx="17.2" cy="9.2" r=".98"/><circle cx="14.6" cy="11.8" r=".98"/><circle cx="12" cy="14.4" r=".98"/><circle cx="9.4" cy="17" r=".98"/><circle cx="6.8" cy="19.6" r=".98"/><circle cx="9.4" cy="19.6" r=".98"/><circle cx="12" cy="19.6" r=".98"/><circle cx="14.6" cy="19.6" r=".98"/></g><circle cx="17.2" cy="19.6" r=".98" fill="#D71921"/></svg>
+    <span class="wsb" id="wsb" aria-hidden="true"></span>
     <div id="ok">
       <p class="k" data-t="kicker">Te han invitado a</p>
-      <h1 data-t="title">un workspace de ZenCalendar</h1>
+      <h1 data-t="title" id="wsName">un workspace de ZenCalendar</h1>
+      <p class="who" id="who" hidden></p>
       <div class="strip" aria-hidden="true"><i></i><i></i><i></i></div>
       <p class="lead" data-t="lead">Un calendario compartido para apuntar planes y tareas juntos. Se guarda para todos.</p>
       <div class="acts">
@@ -184,6 +197,43 @@
   var noapp = /[?&]noapp=1/.test(location.search);
   if (code && !noapp) setTimeout(tryApp, 350);
   if (noapp) { status.textContent = tr('notOpened'); steps.hidden = false; }
+
+  // el nombre, el color y el icono (o la foto) del workspace: se leen de su vista previa (workspaces/{wid}/invite/{clave})
+  // con la API REST de Firestore y la configuración pública de la app (../app/js/core/config.js). Solo la puede leer
+  // quien tiene la clave (firestore.rules). Si algo falla, se queda el texto de siempre.
+  var WHO = { es: ['De {x}', '{n} persona', '{n} personas', 'Te han invitado a «{x}» · ZenCalendar'], ca: ['De {x}', '{n} persona', '{n} persones', "T'han convidat a «{x}» · ZenCalendar"], en: ['From {x}', '{n} person', '{n} people', 'You\'re invited to “{x}” · ZenCalendar'] }[lang];
+  function load(src) { return new Promise(function (ok, ko) { var sc = document.createElement('script'); sc.src = src; sc.onload = ok; sc.onerror = ko; document.head.appendChild(sc); }); }
+  function val(f) { return f ? (f.stringValue != null ? f.stringValue : f.integerValue != null ? +f.integerValue : null) : null; }
+  function showWs(d) {
+    if (!d || !d.name) return;
+    var card = document.getElementById('card'), b = document.getElementById('wsb');
+    var color = /^#[0-9a-f]{6}$/i.test(d.color || '') ? d.color : '#B9A2FF';
+    b.style.setProperty('--wc', color);
+    card.style.setProperty('--wc', color);
+    if (/^data:image\/(webp|jpeg|png);base64,/.test(d.avatar || '')) { var im = document.createElement('img'); im.alt = ''; im.src = d.avatar; b.appendChild(im); b.classList.add('av'); }
+    else if (window.ZC && ZC.ui && ZC.ui.wsIcons) b.innerHTML = ZC.ui.wsIcons.svg(d.icon || 'estrella', 46);
+    document.getElementById('wsName').textContent = d.name;
+    var who = [];
+    if (d.ownerName) who.push(WHO[0].replace('{x}', d.ownerName));
+    if (d.count) who.push((d.count === 1 ? WHO[1] : WHO[2]).replace('{n}', d.count));
+    if (who.length) { var w = document.getElementById('who'); w.textContent = who.join(' · '); w.hidden = false; }
+    document.title = WHO[3].replace('{x}', d.name);
+    card.classList.add('has-ws');
+  }
+  if (m) {
+    load('../app/js/core/config.js').then(function () {
+      var c = (window.ZC && ZC.config) || {};
+      if (!c.firebaseApiKey || !c.firebaseProjectId) return;
+      load('../app/js/ui/ws-icons.js').catch(function () {});
+      var url = 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(c.firebaseProjectId) + '/databases/(default)/documents/workspaces/' + encodeURIComponent(m[1]) + '/invite/' + encodeURIComponent(m[2]) + '?key=' + encodeURIComponent(c.firebaseApiKey);
+      return fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+        if (!j || !j.fields) return;
+        var f = j.fields, d = { name: val(f.name), color: val(f.color), icon: val(f.icon), avatar: val(f.avatar), ownerName: val(f.ownerName), count: val(f.count) };
+        // (los iconos se dibujan cuando llega ws-icons.js; si tarda, un momento después)
+        var tries = 0; (function paint() { if ((window.ZC && ZC.ui && ZC.ui.wsIcons) || d.avatar || tries++ > 20) showWs(d); else setTimeout(paint, 50); })();
+      });
+    }).catch(function () {});
+  }
 
   // Zen / Dot
   var dz = document.getElementById('dz');

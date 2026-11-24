@@ -341,8 +341,11 @@
         const m = await syncOnce();
         if (blobsDirty || (m && m.parts && m.parts.blobs.changedIds.length) || Date.now() - lastBlobPass > 10 * 60000) await syncBlobs();
         backoff = 0;
-        set({ syncing: false, error: null, lastSync: Date.now() });
+        set({ syncing: false, error: null, waitingTap: false, lastSync: Date.now() });
       } catch (e) {
+        // (en la web el token caduca cada hora y Google no deja renovarlo sin un toque: no es un error,
+        //  se espera en silencio al siguiente toque —armGesture— y se sigue)
+        if (e.soft) { set({ syncing: false, error: null, waitingTap: true }); return state(); }
         console.warn('[ZC] sync', e);
         set({ syncing: false, error: friendly(e) });
         if (!e.auth) {

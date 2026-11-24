@@ -52,11 +52,11 @@ const USERS = [
   }
   const seed = p => p.evaluate(async () => {
     const fb = window.__fb;
-    const w = await ZC.ws.create({ name: 'Cenas de los viernes', color: '#FF9CCB', emoji: '🍕', bg: { kind: 'anim', value: 'sakura' } });
+    const w = await ZC.ws.create({ name: 'Cenas de los viernes', color: '#FF9CCB', icon: 'comida', bg: { kind: 'anim', value: 'sakura' } });
     const tok = ZC.ws.parseCode(ZC.ws.inviteLink(w.id)).token;
     await fb.client('u-bea').join(w.id + '.' + tok);
     await fb.client('u-carl').join(w.id + '.' + tok);
-    const w2 = await ZC.ws.create({ name: 'Piso de la calle Mayor número tres, segundo segunda', color: '#7CC8F2', emoji: '🏠' });
+    const w2 = await ZC.ws.create({ name: 'Piso de la calle Mayor número tres, segundo segunda', color: '#7CC8F2', icon: 'casa' });
     await new Promise(r => setTimeout(r, 120));
     window.__w = w.id; window.__w2 = w2.id;
     const d = new Date(), pad = n => String(n).padStart(2, '0'), day = k => { const x = new Date(d); x.setDate(x.getDate() + k); return x.getFullYear() + '-' + pad(x.getMonth() + 1) + '-' + pad(x.getDate()); };
@@ -64,7 +64,8 @@ const USERS = [
     await ZC.store.saveEvent({ title: 'Dentista', start: day(0) + 'T10:00' });
     return w.id;
   });
-  const look = (p, design, scheme) => p.evaluate(([d, s]) => { ZC.ui.dot.pick(d); ZC.ui.look.set({ scheme: s }); }, [design, scheme]);
+  // (look.set guarda un poco después: se espera, que si no al entrar en un workspace se compondría con el aspecto de antes)
+  const look = async (p, design, scheme) => { await p.evaluate(([d, s]) => { ZC.ui.dot.pick(d); ZC.ui.look.set({ scheme: s }); }, [design, scheme]); await p.waitForTimeout(700); };
   const shot = async (p, name) => { if (!SHOTS) return; await p.evaluate(() => document.querySelectorAll('#toasts .toast').forEach(t => t.remove())); await p.screenshot({ path: path.join(OUT, name) }); };
   // nada de la barra de arriba se sale ni se pisa
   const topOk = p => p.evaluate(() => {
@@ -152,13 +153,13 @@ const USERS = [
     await p.locator('.wsm-pop [data-wsact=create]').click(); await p.waitForTimeout(400);
     ok(!(await inside(p, '.wsd')), 'el diálogo de crear no se desborda');
     await p.locator('.wsd input[name=name]').fill('Club de lectura');
-    await p.locator('.wsd [data-emo="📚"]').click();
+    await p.locator('.wsd [data-ico="libro"]').click();
     await p.locator('.wsd [data-col="#86B862"]').click();
     await p.locator('.wsd [data-bgk=anim]').click(); await p.locator('.wsd [data-wsanim=olas]').click();
     await shot(p, 'ws-pc-crear.png');
     await p.locator('.wsd [data-wsd=save]').click(); await p.waitForTimeout(800);
     const cur = await p.evaluate(() => ZC.ws.current());
-    ok(cur && cur.name === 'Club de lectura' && cur.emoji === '📚' && cur.color === '#86B862' && cur.bg.value === 'olas', 'crea el workspace y entra');
+    ok(cur && cur.name === 'Club de lectura' && cur.icon === 'libro' && cur.color === '#86B862' && cur.bg.value === 'olas', 'crea el workspace y entra');
     // invitar
     await p.evaluate(() => ZC.ui.wsui.inviteSheet(ZC.ws.current().id)); await p.waitForTimeout(400);
     ok((await p.locator('.wsi-link input').inputValue()).startsWith('https://luckicla.github.io/ZenCalendar/w/#'), 'el enlace de invitación');
@@ -261,9 +262,220 @@ const USERS = [
     await ctx.close();
   }
 
+  // ---------- 6. foto de perfil, iconos y «Ajustes del workspace» por los tres caminos (PC) ----------
+  const pngFile = async p => ({ name: 'foto.png', mimeType: 'image/png', buffer: Buffer.from(await p.evaluate(() => {
+    const c = document.createElement('canvas'); c.width = 900; c.height = 600; const g = c.getContext('2d');
+    for (let i = 0; i < 60; i++) { g.fillStyle = `hsl(${i * 37} 70% 55%)`; g.fillRect((i * 97) % 900, (i * 53) % 600, 160, 120); }
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(450, 300, 140, 0, 7); g.fill();
+    return c.toDataURL('image/png').split(',')[1];
+  }), 'base64') });
+  const sheetOpen = p => p.locator('.wsd-layer').count().then(n => n > 0);
+  const closeSheet = async p => { await p.keyboard.press('Escape'); await p.waitForTimeout(350); };
+  {
+    console.log('foto, iconos y ajustes del workspace (PC)');
+    const { ctx, p } = await page('ajustes', pc);
+    await seed(p);
+    await p.evaluate(() => ZC.ws.switchTo(window.__w)); await p.waitForTimeout(500);
+    // 1) el engranaje junto al selector
+    ok(await p.locator('#wsGear').isVisible(), 'dentro de un workspace hay un engranaje junto al selector');
+    ok(!(await topOk(p)), 'y la barra cabe: ' + await topOk(p));
+    await p.locator('#wsGear').click(); await p.waitForTimeout(400);
+    ok(await sheetOpen(p) && (await p.locator('.wsd-head h2').textContent()) === 'Ajustes del workspace', 'el engranaje abre «Ajustes del workspace»');
+    await closeSheet(p);
+    // 2) tocar el nombre en el título (y no sale el menú del mes)
+    await p.locator('#periodTitle .ws-nt').click(); await p.waitForTimeout(400);
+    ok(await sheetOpen(p), 'tocar el nombre del título abre los ajustes');
+    ok(await p.locator('.menu.open').count() === 0, 'sin abrir el menú del mes');
+    await closeSheet(p);
+    await p.locator('#periodTitle .ws-month').click(); await p.waitForTimeout(300);
+    ok(await p.locator('.menu.open').count() === 1 && !(await sheetOpen(p)), 'el mes sigue abriendo su menú');
+    await p.keyboard.press('Escape'); await p.waitForTimeout(250);
+    // 3) el menú «Mi calendario ▾»
+    await p.locator('#wsChip').click(); await p.waitForTimeout(300);
+    await p.locator('.wsm-pop [data-wsact=settings]').click(); await p.waitForTimeout(400);
+    ok(await sheetOpen(p), 'la entrada «Ajustes del workspace» del menú los abre');
+    await closeSheet(p);
+    // 4) el workspace en el panel lateral
+    await p.locator('#sideCals .ws-side').click(); await p.waitForTimeout(400);
+    ok(await sheetOpen(p), 'tocar el workspace en el panel lateral los abre');
+    ok(!(await inside(p, '.wsd')), 'la hoja no se desborda');
+    // buscar iconos en tres idiomas
+    await p.locator('.wsd [data-isearch]').fill('viaje'); await p.waitForTimeout(100);
+    ok(await p.locator('.wsd-i').count() === 1 && await p.locator('.wsd-i').getAttribute('data-ico') === 'avion', 'buscar «viaje» da el avión');
+    await p.locator('.wsd [data-isearch]').fill('platja'); await p.waitForTimeout(100);
+    ok(await p.locator('.wsd-i[data-ico=playa]').count() === 1, 'en catalán («platja»)');
+    await p.locator('.wsd [data-isearch]').fill('beach'); await p.waitForTimeout(100);
+    ok(await p.locator('.wsd-i[data-ico=playa]').count() === 1, 'y en inglés («beach»)');
+    await p.locator('.wsd-i[data-ico=playa]').click();
+    await p.locator('.wsd [data-isearch]').fill(''); await p.waitForTimeout(100);
+    ok(await p.locator('.wsd-i').count() === 40, 'sin buscar, los 40 iconos');
+    // tocar una opción de abajo no manda la hoja arriba
+    const sc = p.locator('.wsd-body');
+    await sc.evaluate(el => { el.scrollTop = el.scrollHeight; }); await p.waitForTimeout(100);
+    const y0 = await sc.evaluate(el => el.scrollTop);
+    await p.locator('.wsd [data-col="#7ED6C3"]').scrollIntoViewIfNeeded();
+    const y1 = await sc.evaluate(el => el.scrollTop);
+    await p.locator('.wsd [data-col="#7ED6C3"]').click(); await p.waitForTimeout(200);
+    ok(Math.abs((await p.locator('.wsd-body').evaluate(el => el.scrollTop)) - y1) <= 2 && y0 > 0, 'elegir un color no sube la hoja arriba');
+    await p.locator('.wsd [data-bgk=color]').click(); await p.waitForTimeout(200);
+    const y2 = await p.locator('.wsd-body').evaluate(el => el.scrollTop);
+    ok(y2 > 0, 'cambiar el fondo tampoco (' + y2 + ')');
+    // la foto: archivo → recortar → se ve → guardar
+    await p.locator('.wsd-avrow input[data-avfile]').setInputFiles(await pngFile(p)); await p.waitForTimeout(500);
+    ok(await p.locator('.wsc-vp img').isVisible(), 'sale el recorte cuadrado');
+    const vp = await p.locator('.wsc-vp').boundingBox();
+    await p.locator('.wsc-zoom input').fill('1.6');
+    await p.mouse.move(vp.x + vp.width / 2, vp.y + vp.height / 2); await p.mouse.down(); await p.mouse.move(vp.x + vp.width / 2 + 40, vp.y + vp.height / 2 + 20, { steps: 5 }); await p.mouse.up();
+    await shot(p, 'ws-pc-recortar.png');
+    await p.locator('.wsc [data-c=ok]').click(); await p.waitForTimeout(400);
+    ok(await p.locator('.wsd-prev .ws-badge.has-av img').count() === 1, 'la foto sustituye al icono en la hoja');
+    await shot(p, 'ws-pc-ajustes-ws.png');
+    await p.locator('.wsd [data-wsd=save]').click(); await p.waitForTimeout(900);
+    const av = await p.evaluate(() => { const r = window.__fb.raw('workspaces/' + window.__w + '/assets/avatar'); return r && r.data; });
+    ok(av && av.startsWith('data:image/webp;base64,') && av.length < 82000, 'se guarda en assets/avatar, webp y pequeña (' + (av ? Math.round(av.length / 1024) : 0) + ' K)');
+    ok(await p.evaluate(() => window.__fb.raw('workspaces/' + window.__w).icon) === 'playa', 'y el icono elegido');
+    ok(await p.locator('#periodTitle .ws-tb .ws-badge.has-av img').count() === 1, 'la foto sale en el título');
+    ok(await p.locator('#wsChip .ws-badge.has-av').count() === 1, 'y en el selector');
+    ok(await p.locator('#sideCals .ws-side .ws-badge.has-av').count() === 1, 'y en el panel lateral');
+    await p.locator('#wsChip').click(); await p.waitForTimeout(300);
+    ok(await p.locator('.wsm-pop .wsm-row.on .ws-badge.has-av img').count() === 1, 'y en el menú');
+    ok(await p.locator('.wsm-pop .wsm-row:not(.on) .ws-badge:not(.has-av) svg.wsi-ico').count() >= 1, 'los demás, con su icono');
+    await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+    await p.evaluate(() => ZC.ui.settings.open('ws')); await p.waitForTimeout(400);
+    ok(await p.locator('.set-content .ws-li .ws-badge.has-av').count() === 1, 'y en Ajustes → Workspaces');
+    await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+    // un aviso lleva la foto
+    await p.evaluate(async () => { const c = window.__fb.client('u-bea'); await c.set('workspaces/' + window.__w + '/items/zz9', { id: 'zz9', kind: 'event', title: 'Paella', start: window.__day(1) + 'T14:00', end: window.__day(1) + 'T16:00', createdBy: 'u-bea', updatedBy: 'u-bea', updated: c.F.serverTimestamp() }); });
+    await p.waitForTimeout(900);
+    ok(await p.locator('#toasts .toast .ws-badge.has-av').count() >= 1, 'el aviso «Bea ha añadido…» lleva la foto');
+    // la rueda encima del selector cambia de calendario
+    const before = await p.evaluate(() => (ZC.ws.current() || {}).id || null);
+    await p.locator('#wsChip').hover(); await p.mouse.wheel(0, 120); await p.waitForTimeout(500);
+    ok(await p.evaluate(() => (ZC.ws.current() || {}).id || null) !== before, 'la rueda encima del selector cambia de calendario');
+    // quien no es el dueño: ve lo mismo, solo cambia su aspecto, sale y ve los miembros (y un emoji viejo pasa a la estrella)
+    await p.evaluate(async () => {
+      const c = window.__fb.client('u-bea'), F = c.F;
+      await c.batch([['set', 'workspaces/wsbeaold00001', { name: 'De Bea', color: '#F2C14E', emoji: '🎸', bg: { kind: 'none', value: '' }, owner: 'u-bea', members: { 'u-bea': { name: 'Bea', email: 'bea@example.com', photo: '', joined: 1 } }, memberIds: ['u-bea'], invitedEmails: [], inviteToken: 'TOKENBEAOLD000000001', createdAt: F.serverTimestamp(), updatedAt: F.serverTimestamp() }],
+        ['set', 'workspaces/wsbeaold00001/invite/TOKENBEAOLD000000001', { name: 'De Bea', color: '#F2C14E', emoji: '🎸', bg: { kind: 'none', value: '' }, ownerName: 'Bea', count: 1 }]]);
+      await ZC.ws.join('wsbeaold00001.TOKENBEAOLD000000001');
+    });
+    await p.waitForTimeout(500);
+    ok(await p.evaluate(() => ZC.ws.get('wsbeaold00001').icon) === 'estrella', 'un workspace con emoji de antes sale con la estrella');
+    ok(!(await p.locator('#top').textContent()).includes('🎸'), 'y el emoji no sale en ningún sitio');
+    await p.locator('#wsGear').click(); await p.waitForTimeout(400);
+    ok(await p.locator('.wsd input[name=name]').count() === 0 && await p.locator('.wsd [data-ico]').count() === 0 && await p.locator('.wsd [data-avfile]').count() === 0, 'si no eres el dueño no cambias nombre, icono ni foto');
+    ok(await p.locator('.wsd [data-wsd=leave]').isVisible() && await p.locator('.wsd [data-wsd=look]').isVisible() && await p.locator('.wsd .wsd-m').count() === 2, 'pero sí tu aspecto, salir y ver los miembros');
+    ok(await p.locator('.wsd [data-kick]').count() === 0, 'sin quitar a nadie');
+    await p.locator('.wsd [data-wsd=look]').click(); await p.waitForTimeout(500);
+    ok(await p.evaluate(() => ZC.ui.settings.isOpen() && ZC.ui.settings.current() === 'look'), '«Cambiar mi aspecto» abre Aspecto (solo para ti)');
+    await p.keyboard.press('Escape');
+    await ctx.close();
+  }
+
+  // ---------- 7. móvil: deslizar la foto del selector (como en Gmail) y la hoja inferior ----------
+  for (const [design, scheme] of [['zen', 'light'], ['dot', 'dark']]) {
+    console.log(`móvil: deslizar la foto · ${design} ${scheme}`);
+    const { ctx, p } = await page('swipe-' + design, phone, { scheme });
+    await look(p, design, scheme);
+    await seed(p);
+    await p.evaluate(() => { ZC.ws.switchTo(null); window.__ticks = 0; const h = ZC.ui.haptic; ZC.ui.haptic = k => { if (k === 'tick') window.__ticks++; return h(k); }; });
+    await p.waitForTimeout(400);
+    const cdp = await ctx.newCDPSession(p);
+    const swipe = async (dx, dy) => {
+      const r = await p.locator('#wsChip .wsc-ic').boundingBox(), x = r.x + r.width / 2, y = r.y + r.height / 2;
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+      for (let i = 1; i <= 6; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + dx * i / 6, y: y + dy * i / 6 }] }); await p.waitForTimeout(16); }
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await p.waitForTimeout(450);
+    };
+    const curId = () => p.evaluate(() => (ZC.ws.current() || {}).id || null);
+    const ids = await p.evaluate(() => [null, ...ZC.ws.list().map(w => w.id)]);
+    const date0 = await p.evaluate(() => +ZC.ui.app.state.date);
+    await swipe(-70, 0);
+    ok(await curId() === ids[1], 'deslizar a la izquierda: el siguiente (el primer workspace)');
+    await swipe(0, -60);
+    ok(await curId() === ids[2], 'hacia arriba: el siguiente');
+    await swipe(70, 0);
+    ok(await curId() === ids[1], 'a la derecha: el anterior');
+    await swipe(0, 60);
+    ok(await curId() === null, 'hacia abajo: el anterior (Mi calendario)');
+    ok(await p.evaluate(() => window.__ticks) >= 4, 'vibra en cada cambio');
+    ok(await p.evaluate(() => +ZC.ui.app.state.date) === date0, 'el gesto no cambia el mes de la vista');
+    ok(await p.locator('.layer').count() === 0, 'ni abre el menú');
+    // con el interruptor de Gestos apagado, no hace nada
+    await p.evaluate(async () => { const c = ZC.ui.cal.prefsCal(); await ZC.store.setPrefs({ cal: { ...c, gestures: { ...(c.gestures || {}), wsswipe: false } } }); });
+    await swipe(-70, 0);
+    ok(await curId() === null, 'apagado en Ajustes → Gestos, no cambia');
+    await p.evaluate(() => ZC.ui.settings.open('gestures')); await p.waitForTimeout(400);
+    ok((await p.locator('.set-content').textContent()).includes('Cambiar de calendario deslizando la foto'), 'el interruptor está en Ajustes → Gestos');
+    await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+    // la hoja inferior de ajustes, en 360 px
+    await p.evaluate(() => ZC.ws.switchTo(window.__w)); await p.waitForTimeout(500);
+    ok(!(await topOk(p)), 'la cabecera con el engranaje cabe: ' + await topOk(p));
+    await p.locator('#wsGear').tap(); await p.waitForTimeout(600);
+    ok(await p.locator('.wsd-layer.layer-sheet').count() === 1, 'en el móvil, «Ajustes del workspace» es una hoja inferior');
+    ok(!(await inside(p, '.wsd')), 'que cabe en 360 px');
+    ok(await p.locator('.wsd-avrow label', { hasText: /Hacer una foto/ }).count() === 1, 'con «Hacer una foto» (cámara)');
+    await shot(p, `ws-movil-ajustes-${design}-${scheme}.png`);
+    await closeSheet(p);
+    await ctx.close();
+  }
+
+  // ---------- 8. Dot: el nombre del workspace es el título grande y el mes, pequeño ----------
+  for (const [label, opts] of [['PC', pc], ['móvil', phone]]) {
+    console.log('Dot: el título en un workspace · ' + label);
+    const { ctx, p } = await page('dot-title-' + label, opts);
+    await look(p, 'dot', 'light');
+    await seed(p);
+    const short = await p.evaluate(async () => (await ZC.ws.create({ name: 'Prueba', icon: 'rayo', color: '#FF8A8A' })).id);
+    await p.evaluate(id => ZC.ws.switchTo(id), short); await p.waitForTimeout(600);
+    const m = await p.evaluate(() => {
+      const n = document.querySelector('#periodTitle .ws-dname'), mo = document.querySelector('#periodTitle .ws-dmonth'), dm = document.querySelector('#periodTitle .dm-title');
+      return { name: n && n.getBoundingClientRect().height, month: mo && parseFloat(getComputedStyle(mo).fontSize), monthH: mo && mo.getBoundingClientRect().height, dots: !!document.querySelector('#periodTitle .ws-dm svg'), dmHidden: !dm || getComputedStyle(dm).display === 'none', text: mo && mo.textContent };
+    });
+    ok(m.dots && m.name > m.monthH * 1.25, 'el nombre corto sale grande, con puntos (' + Math.round(m.name) + ' px)');
+    ok(m.dmHidden && /\d{4}|[a-z]/i.test(m.text || ''), 'y el mes pequeño debajo, en lugar de la matriz del mes');
+    ok(!(await topOk(p)), 'la barra cabe: ' + await topOk(p));
+    await shot(p, `ws-dot-titulo-${label === 'PC' ? 'pc' : 'movil'}.png`);
+    await p.evaluate(() => ZC.ws.switchTo(window.__w2)); await p.waitForTimeout(500);
+    const long = await p.evaluate(() => { const x = document.querySelector('#periodTitle .ws-dtx'); return x ? { sw: x.scrollWidth, cw: x.clientWidth, fs: parseFloat(getComputedStyle(x).fontSize) } : null; });
+    ok(long && long.fs >= 11, 'un nombre largo va en ZenDot y se recorta (' + (long && long.fs) + ' px)');
+    ok(!(await topOk(p)), 'sin romper la barra: ' + await topOk(p));
+    await p.locator('#periodTitle .ws-dname').click(); await p.waitForTimeout(500);
+    ok(await sheetOpen(p), 'tocar el nombre abre los ajustes también en Dot');
+    await ctx.close();
+  }
+
+  // ---------- 9. la página del enlace (docs/w/) enseña el workspace de verdad ----------
+  {
+    console.log('página del enlace');
+    const DOCS = path.resolve(__dirname, '../../docs');
+    const ctx = await b.newContext({ locale: 'es-ES', viewport: { width: 400, height: 800 } });
+    await ctx.route(u => !String(u).startsWith('http://127.0.0.1'), r => r.abort());
+    let asked = '';
+    await ctx.route(/firestore\.googleapis\.com/, r => { asked = r.request().url(); const ok2 = asked.includes('/workspaces/wsabc12345/invite/CLAVEBUENA0000000001?key=K123'); r.fulfill({ status: ok2 ? 200 : 403, contentType: 'application/json', body: JSON.stringify(ok2 ? { fields: { name: { stringValue: 'Cenas de los viernes' }, color: { stringValue: '#FF9CCB' }, icon: { stringValue: 'comida' }, ownerName: { stringValue: 'Ana' }, count: { integerValue: '3' }, avatar: { stringValue: '' } } } : { error: { status: 'PERMISSION_DENIED' } }) }); });
+    await ctx.route(/\/__docs\//, r => {
+      const u = new URL(r.request().url()).pathname.replace('/__docs/', '');
+      if (u === 'app/js/core/config.js') return r.fulfill({ contentType: 'text/javascript', body: "window.ZC = window.ZC || {}; ZC.config = { firebaseApiKey: 'K123', firebaseProjectId: 'zc-demo' };" });
+      const f = u.startsWith('app/') ? path.join(WEB, u.slice(4)) : path.join(DOCS, u);
+      try { r.fulfill({ body: fs.readFileSync(f), contentType: T[path.extname(f)] || 'application/octet-stream' }); } catch { r.fulfill({ status: 404, body: '' }); }
+    });
+    const p = await ctx.newPage();
+    p.on('pageerror', e => errs.push('[docs/w] ' + e.message));
+    await p.goto(`http://127.0.0.1:${PORT}/__docs/w/index.html?noapp=1#wsabc12345.CLAVEBUENA0000000001`); await p.waitForTimeout(900);
+    ok((await p.locator('#wsName').textContent()) === 'Cenas de los viernes', 'dice el nombre del workspace');
+    ok((await p.locator('#who').textContent()).includes('De Ana') && (await p.locator('#who').textContent()).includes('3 personas'), 'quién invita y cuántos son');
+    ok(await p.locator('#wsb svg').count() === 1 && await p.locator('.has-ws').count() === 1, 'con su icono sobre su color');
+    ok(/firestore\.googleapis\.com\/v1\/projects\/zc-demo\/databases\/\(default\)\/documents\/workspaces\/wsabc12345\/invite\/CLAVEBUENA/.test(asked), 'lo lee por la API REST con la clave del enlace');
+    await shot(p, 'ws-enlace.png');
+    await p.goto(`http://127.0.0.1:${PORT}/__docs/w/index.html?noapp=1&otra=1#wsabc12345.CLAVEMALA00000000001`); await p.waitForTimeout(900);
+    ok((await p.locator('#wsName').textContent()).includes('workspace de ZenCalendar'), 'con una clave mala se queda el texto de siempre');
+    await ctx.close();
+  }
+
   // ---------- 5. los textos de los workspaces están traducidos ----------
   {
-    const src = fs.readFileSync(path.join(WEB, 'js/ui/ws.js'), 'utf8'), msg = fs.readFileSync(path.join(WEB, 'js/core/ws.js'), 'utf8').split('const MSG = {')[1].split('};')[0];
+    const src = fs.readFileSync(path.join(WEB, 'js/ui/ws.js'), 'utf8') + fs.readFileSync(path.join(WEB, 'js/ui/gestures.js'), 'utf8').split('const GROUPS = [')[1].split('];')[0].replace(/\['\w+', '/g, "t('").replace(/', '/g, "'); t('"), msg = fs.readFileSync(path.join(WEB, 'js/core/ws.js'), 'utf8').split('const MSG = {')[1].split('};')[0];
     const keys = new Set();
     for (const m of src.matchAll(/\bt\('((?:[^'\\]|\\.)*)'/g)) keys.add(m[1]);
     for (const m of msg.matchAll(/^\s+\w+: '([^']+)',?$/gm)) keys.add(m[1]);

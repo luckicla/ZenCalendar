@@ -20,6 +20,12 @@
   const SDK = 'https://www.gstatic.com/firebasejs/' + SDK_V + '/';
   const ITEM_KEYS = ['id', 'kind', 'title', 'notes', 'location', 'color', 'emoji', 'allDay', 'start', 'end', 'rrule', 'exdates',
     'recurrenceOf', 'recurrenceDate', 'reminders', 'checklist', 'done', 'doneAt', 'doneDates', 'alarm', 'alarmTime', 'created'];
+  // los iconos propios de los workspaces (los dibujos, en web/js/ui/ws-icons.js; la lista, también en firestore.rules)
+  const ICONS = ['casa', 'corazon', 'grupo', 'trabajo', 'libro', 'deporte', 'balon', 'avion', 'playa', 'montana', 'coche', 'comida',
+    'copa', 'cafe', 'tarta', 'musica', 'juego', 'pata', 'bebe', 'hoja', 'estrella', 'rayo', 'luna', 'sol', 'regalo', 'dinero', 'carrito',
+    'herramienta', 'salud', 'fiesta', 'camara', 'codigo', 'pincel', 'chat', 'calendario', 'campana', 'bandera', 'ubicacion', 'iglu', 'llave'];
+  const ICON0 = 'estrella';                      // (el de los que no tienen, o tenían un emoji de antes)
+  const AV_MAX = 90000, AV_PX = 256;             // foto de perfil: 256 px, < 60 KB (en base64, < 90 000 letras)
   const COLORS = ['#B9A2FF', '#FF9CCB', '#7CC8F2', '#7ED6C3', '#FFB38A', '#F2C14E', '#C38BEB', '#FF8A8A', '#86B862', '#6AAEF5'];
   const MSG = {
     off: 'Esta versión aún no tiene configurados los workspaces',
@@ -57,6 +63,9 @@
   const itemUnsub = new Map();   // wid → función para dejar de escuchar
   const loaded = new Set();      // workspaces con la primera carga hecha
   const bgCache = new Map();     // wid → { v, url }
+  const avCache = new Map();     // wid → { v, url } (foto de perfil)
+  const creating = new Set();    // workspaces recién creados que el servidor aún no ha confirmado (no se escuchan todavía)
+  const retries = new Map();     // wid → reintentos de escuchar sus eventos tras un «sin permiso»
   let unsubs = [], current = null, listening = false, queued = [], lastCreds = '';
 
   function available() {
@@ -102,6 +111,8 @@
     return [...b].map(x => A[x % A.length]).join('');
   }
   const isColor = c => /^#[0-9a-f]{6}$/i.test(String(c || ''));
+  const normIcon = i => (ICONS.includes(i) ? i : ICON0);
+  const isImg = v => typeof v === 'string' && /^data:image\/(webp|jpeg|png);base64,./.test(v);
   function normBg(bg) {
     bg = bg || {};
     const kind = ['none', 'color', 'image', 'anim'].includes(bg.kind) ? bg.kind : 'none';
@@ -218,7 +229,7 @@
     for (const f of unsubs) try { f(); } catch (e) {}
     for (const f of itemUnsub.values()) try { f(); } catch (e) {}
     unsubs = []; itemUnsub.clear(); itemDocs.clear(); loaded.clear(); listening = false;
-    spaces.clear(); invites.clear(); bgCache.clear();
+    spaces.clear(); invites.clear(); bgCache.clear(); avCache.clear();
     current = null;
     try { S()._wsSet({ cur: null, calendars: [], reset: true }); } catch (e) {}
     if (!keepCache) { local('cache', null); }
@@ -235,9 +246,10 @@
     const col = F().collection(K.db, 'workspaces');
     unsubs.push(F().onSnapshot(F().query(col, F().where('memberIds', 'array-contains', me)), snap => {
       const seenIds = new Set();
-      for (const d of snap.docs) { seenIds.add(d.id); spaces.set(d.id, norm(d.id, d.data())); }
+      for (const d of snap.docs) { seenIds.add(d.id); spaces.set(d.id, norm(d.id, d.data())); avNeed(d.id); }
       for (const wid of [...spaces.keys()]) if (!seenIds.has(wid)) dropSpace(wid, 'gone');
-      for (const wid of spaces.keys()) watchItems(wid);
+      // (uno recién creado se escucha cuando el servidor confirma que existe: antes, las reglas dicen que no)
+      for (const wid of spaces.keys()) if (!creating.has(wid)) watchItems(wid);
       pushCalendars();
       saveCache();
       if (current && !spaces.has(current)) switchTo(null).catch(() => {});
@@ -265,7 +277,7 @@
     const members = Object.keys(d.members || {}).map(k => Object.assign({ uid: k }, d.members[k], { owner: k === d.owner }))
       .sort((a, b) => (b.owner - a.owner) || (tsMs(a.joined) - tsMs(b.joined)));
     return {
-      id, name: d.name || '', color: isColor(d.color) ? d.color : COLORS[0], emoji: d.emoji || '', bg: normBg(d.bg),
+      id, name: d.name || '', color: isColor(d.color) ? d.color : COLORS[0], icon: normIcon(d.icon), avatar: cut(d.avatar || '', 32), _emoji: !!d.emoji, bg: normBg(d.bg),
       owner: d.owner || '', isOwner: !!(uid() && d.owner === uid()), members, memberIds: (d.memberIds || []).slice(),
       invitedEmails: (d.invitedEmails || []).slice(), inviteToken: d.inviteToken || '',
       createdAt: tsMs(d.createdAt), updatedAt: tsMs(d.updatedAt),
@@ -278,7 +290,7 @@
     const was = spaces.get(wid);
     spaces.delete(wid);
     const f = itemUnsub.get(wid); if (f) try { f(); } catch (e) {}
-    itemUnsub.delete(wid); itemDocs.delete(wid); loaded.delete(wid); bgCache.delete(wid);
+    itemUnsub.delete(wid); itemDocs.delete(wid); loaded.delete(wid); bgCache.delete(wid); avCache.delete(wid);
     S()._wsSet({ clear: wid });
     if (was && why === 'gone' && st.loadedList) emit('notice', { kind: 'removed', wid, ws: was, title: was.name });
   }
@@ -290,7 +302,7 @@
     const me = uid();
     const off = F().onSnapshot(F().collection(K.db, 'workspaces', wid, 'items'), snap => {
       const first = !loaded.has(wid);
-      loaded.add(wid);
+      loaded.add(wid); retries.delete(wid);
       const items = [], notes = [];
       const seenAt = (local('seen') || {})[wid] || 0;
       let unreadAdd = 0;
@@ -322,9 +334,16 @@
       emit('items', { wid, first });
       if (notes.length || first) emit('change');
     }, e => {
-      console.warn('[ZC] workspace ' + wid, e && e.code);
+      itemUnsub.delete(wid); itemDocs.delete(wid); loaded.delete(wid);
+      // recién creado o recién entrado, el servidor puede no saber aún que eres miembro: se reintenta en silencio
+      const n = retries.get(wid) || 0;
+      if (e && e.code === 'permission-denied' && n < 3 && spaces.has(wid)) {
+        retries.set(wid, n + 1);
+        setTimeout(() => { if (spaces.has(wid) && listening) watchItems(wid); }, 700 * (n + 1));
+        return;
+      }
       // (te han echado o lo han borrado: la lista de workspaces lo quitará)
-      itemUnsub.delete(wid);
+      if (spaces.has(wid)) console.warn('[ZC] workspace ' + wid, e && e.code);
     });
     itemUnsub.set(wid, off);
   }
@@ -402,7 +421,7 @@
   }
 
   function pushCalendars() {
-    const cals = list().map((w, i) => ({ id: 'ws:' + w.id, name: w.name, color: w.color, emoji: w.emoji, wsId: w.id, order: -100 + i, visible: true, source: 'ws' }));
+    const cals = list().map((w, i) => ({ id: 'ws:' + w.id, name: w.name, color: w.color, icon: w.icon, wsId: w.id, order: -100 + i, visible: true, source: 'ws' }));
     const patch = { calendars: cals };
     if (current && !spaces.has(current) && st.loadedList) patch.cur = null;
     S()._wsSet(patch);
@@ -411,7 +430,12 @@
   // copia pequeñita para pintar al momento al abrir (nombre, color, fondo…), antes de que conteste Firebase
   function saveCache() {
     const sp = {};
-    for (const w of spaces.values()) sp[w.id] = { name: w.name, color: w.color, emoji: w.emoji, bg: w.bg, owner: w.owner, members: w.members.slice(0, 8).map(m => ({ uid: m.uid, name: m.name, photo: m.photo, owner: m.owner })) };
+    for (const w of spaces.values()) {
+      const av = avCache.get(w.id);
+      sp[w.id] = { name: w.name, color: w.color, icon: w.icon, avatar: w.avatar, bg: w.bg, owner: w.owner, members: w.members.slice(0, 8).map(m => ({ uid: m.uid, name: m.name, photo: m.photo, owner: m.owner })) };
+      // (la foto de perfil también, para verla sin conexión y al abrir)
+      if (w.avatar && av && av.v === w.avatar) sp[w.id].av = av.url;
+    }
     local('cache', { uid: uid(), user: st.user, spaces: sp });
   }
   function fromCache() {
@@ -419,7 +443,8 @@
     if (!c || !c.spaces) return;
     for (const id of Object.keys(c.spaces)) {
       const x = c.spaces[id];
-      spaces.set(id, { id, name: x.name, color: x.color, emoji: x.emoji, bg: normBg(x.bg), owner: x.owner, isOwner: x.owner === c.uid, members: x.members || [], memberIds: (x.members || []).map(m => m.uid), invitedEmails: [], inviteToken: '', cached: true });
+      if (x.av && x.avatar && isImg(x.av)) avCache.set(id, { v: x.avatar, url: x.av });
+      spaces.set(id, { id, name: x.name, color: x.color, icon: normIcon(x.icon), avatar: x.avatar || '', bg: normBg(x.bg), owner: x.owner, isOwner: x.owner === c.uid, members: x.members || [], memberIds: (x.members || []).map(m => m.uid), invitedEmails: [], inviteToken: '', cached: true });
     }
     if (c.user) st.user = c.user;
   }
@@ -458,11 +483,13 @@
     const u = st.user || {};
     return { name: cut(u.name || (u.email || '').split('@')[0], 80), email: cut(u.email, 200), photo: cut(u.photo, 1000), joined: Date.now() };
   }
-  const preview = d => ({ name: d.name, color: d.color, emoji: d.emoji || '', bg: { kind: d.bg.kind === 'image' ? 'image' : d.bg.kind, value: d.bg.kind === 'image' ? '' : d.bg.value }, ownerName: cut((d.members[d.owner] || {}).name || '', 80), count: (d.memberIds || []).length });
+  // (la foto de perfil va también aquí, pequeña: la ve quien abre el enlace antes de entrar)
+  const preview = (d, av) => ({ name: d.name, color: d.color, icon: normIcon(d.icon), avatar: d.avatar && isImg(av) ? av : '', bg: { kind: d.bg.kind === 'image' ? 'image' : d.bg.kind, value: d.bg.kind === 'image' ? '' : d.bg.value }, ownerName: cut((d.members[d.owner] || {}).name || '', 80), count: (d.memberIds || []).length });
+  async function avNow(wid) { try { return await avData(wid); } catch (e) { const c = avCache.get(wid); return c ? c.url : null; } }
   function rawOf(wid) { // el workspace con la forma de Firestore (para preview)
     const w = spaces.get(wid);
     const m = {}; for (const x of w.members) m[x.uid] = { name: x.name || '' };
-    return { name: w.name, color: w.color, emoji: w.emoji, bg: w.bg, owner: w.owner, members: m, memberIds: w.memberIds };
+    return { name: w.name, color: w.color, icon: w.icon, avatar: w.avatar, bg: w.bg, owner: w.owner, members: m, memberIds: w.memberIds };
   }
   async function needSession() { if (!K || !uid()) await connect({ interactive: true }); }
 
@@ -475,16 +502,18 @@
     const ref = F().doc(F().collection(K.db, 'workspaces'));
     const wid = ref.id, token = rndToken(24);
     const data = {
-      name, color: isColor(o.color) ? o.color : COLORS[spaces.size % COLORS.length], emoji: cut(o.emoji || '', 16), bg: normBg(o.bg),
+      name, color: isColor(o.color) ? o.color : COLORS[spaces.size % COLORS.length], icon: normIcon(o.icon), avatar: '', bg: normBg(o.bg),
       owner: me, members: { [me]: meMember() }, memberIds: [me], invitedEmails: [], inviteToken: token, createdAt: ts(), updatedAt: ts(),
     };
     const b = F().writeBatch(K.db);
     b.set(ref, data);
     b.set(subRef(wid, 'invite', token), preview(data));
+    creating.add(wid);
     const p = b.commit();
-    // (sin conexión Firestore ya lo tiene en su caché: se ve al momento y se manda al volver internet)
+    // (sin conexión Firestore ya lo tiene en su caché: se ve al momento y se manda al volver internet;
+    //  sus eventos se escuchan cuando el servidor lo confirma, que antes de eso las reglas no dejan leerlos)
+    p.then(() => { creating.delete(wid); if (spaces.has(wid) && listening) watchItems(wid); }, () => { creating.delete(wid); });
     spaces.set(wid, norm(wid, Object.assign({}, data, { createdAt: Date.now(), updatedAt: Date.now() })));
-    watchItems(wid);
     pushCalendars();
     emit('change');
     try { await settle(p, 4000); } catch (e) { throw wsErr(friendly(e)); }
@@ -499,14 +528,17 @@
     const up = { updatedAt: ts() };
     if ('name' in patch) { const n = cut(String(patch.name || '').trim(), 60); if (!n) throw wsErr(MSG.name); up.name = n; }
     if ('color' in patch && isColor(patch.color)) up.color = patch.color;
-    if ('emoji' in patch) up.emoji = cut(patch.emoji || '', 16);
+    if ('icon' in patch) up.icon = normIcon(patch.icon);
     if ('bg' in patch) up.bg = normBg(patch.bg);
+    const next = Object.assign(rawOf(wid), up);
+    // (el emoji de antes se va: ahora es un icono)
+    if (w._emoji) { up.emoji = F().deleteField(); w._emoji = false; }
+    const av = w.avatar ? await avNow(wid) : null;
     const b = F().writeBatch(K.db);
     b.update(wsRef(wid), up);
-    const next = Object.assign(rawOf(wid), up);
-    if (w.inviteToken) b.set(subRef(wid, 'invite', w.inviteToken), preview(next));
+    if (w.inviteToken) b.set(subRef(wid, 'invite', w.inviteToken), preview(next, av));
     const p = b.commit();
-    Object.assign(w, { name: next.name, color: next.color, emoji: next.emoji, bg: normBg(next.bg) });
+    Object.assign(w, { name: next.name, color: next.color, icon: next.icon, bg: normBg(next.bg) });
     pushCalendars(); emit('change');
     await settle(p);
     return get(wid);
@@ -548,7 +580,7 @@
       bgCache.delete(wid);
     }
     b.update(wsRef(wid), { bg, updatedAt: ts() });
-    if (w.inviteToken) b.set(subRef(wid, 'invite', w.inviteToken), preview(Object.assign(rawOf(wid), { bg })));
+    if (w.inviteToken) b.set(subRef(wid, 'invite', w.inviteToken), preview(Object.assign(rawOf(wid), { bg }), w.avatar ? await avNow(wid) : null));
     const p = b.commit();
     w.bg = bg; emit('change');
     await settle(p, 8000);
@@ -581,6 +613,88 @@
     try { return await p; } finally { bgLoading.delete(wid); }
   }
 
+  // ---------- foto de perfil: cuadrada, 256 px, webp < 60 KB, en workspaces/{wid}/assets/avatar ----------
+  /** File/Blob → dataURL cuadrado (recorte centrado; crop = { x, y, size } en píxeles de la foto para otro recorte) */
+  async function squareAvatar(file, crop) {
+    if (typeof file === 'string') return file;
+    const bmp = await createImageBitmap(file);
+    const side = Math.min(bmp.width, bmp.height);
+    const c = crop && crop.size > 0 ? crop : { x: (bmp.width - side) / 2, y: (bmp.height - side) / 2, size: side };
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = AV_PX;
+    const g = cv.getContext('2d');
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(bmp, c.x, c.y, c.size, c.size, 0, 0, AV_PX, AV_PX);
+    if (bmp.close) bmp.close();
+    return compressAvatar(cv);
+  }
+  /** un canvas cuadrado → dataURL webp (o jpeg si no hay webp) de menos de 60 KB */
+  function compressAvatar(cv) {
+    let q = 0.86, url = '';
+    for (let i = 0; i < 7; i++) {
+      url = cv.toDataURL('image/webp', q);
+      if (!/^data:image\/webp/.test(url)) url = cv.toDataURL('image/jpeg', q);
+      if (url.length < 80000) break;
+      q = Math.max(0.3, q - 0.1);
+    }
+    return url;
+  }
+  /** setAvatar(wid, file | dataURL | null, crop?): la pone (o la quita, con null). Solo el dueño. */
+  async function setAvatar(wid, src, crop) {
+    await needSession();
+    const w = spaces.get(wid);
+    if (!w || !w.isOwner) throw wsErr(MSG.perm);
+    const b = F().writeBatch(K.db);
+    let v = '', data = null;
+    if (src) {
+      data = await squareAvatar(src, crop);
+      if (!isImg(data) || data.length >= AV_MAX) throw wsErr(MSG.big);
+      v = String(Date.now());
+      b.set(subRef(wid, 'assets', 'avatar'), { data, updatedAt: ts() });
+      avCache.set(wid, { v, url: data });
+    } else {
+      b.delete(subRef(wid, 'assets', 'avatar'));
+      avCache.delete(wid);
+    }
+    b.update(wsRef(wid), { avatar: v, updatedAt: ts() });
+    w.avatar = v;
+    if (w.inviteToken) b.set(subRef(wid, 'invite', w.inviteToken), preview(rawOf(wid), data));
+    const p = b.commit();
+    pushCalendars(); saveCache(); emit('change');
+    await settle(p, 6000);
+    return get(wid);
+  }
+  /** la foto de perfil (dataURL) o null; si no está bajada, la baja y avisa con 'change' */
+  function avatarURL(wid) {
+    const w = spaces.get(wid), c = avCache.get(wid);
+    if (!w || !w.avatar) return null;
+    if (c && c.v === w.avatar) return c.url;
+    avData(wid).catch(() => {});
+    return c ? c.url : null;
+  }
+  function avNeed(wid) { const w = spaces.get(wid), c = avCache.get(wid); if (w && w.avatar && !(c && c.v === w.avatar)) avData(wid).catch(() => {}); }
+  const avLoading = new Map();
+  async function avData(wid) {
+    const w = spaces.get(wid);
+    if (!w || !w.avatar) return null;
+    const c = avCache.get(wid);
+    if (c && c.v === w.avatar) return c.url;
+    if (!K || !uid()) return c ? c.url : null;
+    if (avLoading.has(wid)) return avLoading.get(wid);
+    const v = w.avatar;
+    const p = (async () => {
+      const s = await F().getDoc(subRef(wid, 'assets', 'avatar'));
+      const d = s.exists() ? s.data() : null;
+      if (!d || !isImg(d.data)) return null;
+      avCache.set(wid, { v, url: d.data });
+      saveCache();
+      emit('change');
+      return d.data;
+    })();
+    avLoading.set(wid, p);
+    try { return await p; } finally { avLoading.delete(wid); }
+  }
+
   // ---------- invitar ----------
   function inviteLink(wid) {
     const w = spaces.get(wid);
@@ -595,7 +709,7 @@
     const b = F().writeBatch(K.db);
     b.update(wsRef(wid), { inviteToken: token, updatedAt: ts() });
     if (old) b.delete(subRef(wid, 'invite', old));
-    b.set(subRef(wid, 'invite', token), preview(rawOf(wid)));
+    b.set(subRef(wid, 'invite', token), preview(rawOf(wid), w.avatar ? await avNow(wid) : null));
     const p = b.commit();
     w.inviteToken = token; emit('change');
     await settle(p);
@@ -631,17 +745,17 @@
     const m = s.match(/(?:[#?&]join=|#|^)([A-Za-z0-9]{8,40})\.([A-Za-z0-9_-]{16,64})\s*$/) || s.match(/([A-Za-z0-9]{8,40})\.([A-Za-z0-9_-]{16,64})/);
     return m ? { wid: m[1], token: m[2] } : null;
   }
-  /** lo que se ve antes de entrar: { wid, name, color, emoji, bg, ownerName, count, member } */
+  /** lo que se ve antes de entrar: { wid, name, color, icon, avatarURL, bg, ownerName, count, member } */
   async function peek(code) {
     const c = parseCode(code);
     if (!c) throw wsErr(MSG.link);
     await needSession();
-    if (spaces.has(c.wid)) { const w = spaces.get(c.wid); return { wid: c.wid, name: w.name, color: w.color, emoji: w.emoji, bg: w.bg, ownerName: ownerName(w), count: w.members.length, member: true }; }
+    if (spaces.has(c.wid)) { const w = spaces.get(c.wid); return { wid: c.wid, name: w.name, color: w.color, icon: w.icon, avatarURL: (w.avatar && await avNow(c.wid)) || '', bg: w.bg, ownerName: ownerName(w), count: w.members.length, member: true }; }
     let s;
     try { s = await F().getDoc(subRef(c.wid, 'invite', c.token)); } catch (e) { throw wsErr(e && /permission|not-found/.test(e.code || '') ? MSG.link : friendly(e)); }
     if (!s.exists()) throw wsErr(MSG.link);
     const d = s.data();
-    return { wid: c.wid, name: d.name, color: d.color, emoji: d.emoji, bg: normBg(d.bg), ownerName: d.ownerName || '', count: d.count || 1, member: false };
+    return { wid: c.wid, name: d.name, color: d.color, icon: normIcon(d.icon), avatarURL: isImg(d.avatar) ? d.avatar : '', bg: normBg(d.bg), ownerName: d.ownerName || '', count: d.count || 1, member: false };
   }
   async function waitFor(wid, ms) {
     const t0 = Date.now();
@@ -704,11 +818,12 @@
     if (who === uid()) throw wsErr(MSG.owner);
     // (y un enlace nuevo, para que no pueda volver a entrar con el de antes)
     const old = w.inviteToken, token = rndToken(24);
+    const av = w.avatar ? await avNow(wid) : null;
     const b = F().writeBatch(K.db);
     b.update(wsRef(wid), { memberIds: F().arrayRemove(who), ['members.' + who]: F().deleteField(), inviteToken: token, updatedAt: ts() });
     if (old) b.delete(subRef(wid, 'invite', old));
     const raw = rawOf(wid); delete raw.members[who]; raw.memberIds = raw.memberIds.filter(x => x !== who);
-    b.set(subRef(wid, 'invite', token), preview(raw));
+    b.set(subRef(wid, 'invite', token), preview(raw, av));
     b.delete(subRef(wid, 'joins', who));
     const p = b.commit();
     w.members = w.members.filter(m => m.uid !== who); w.memberIds = w.memberIds.filter(x => x !== who); w.inviteToken = token;
@@ -722,7 +837,7 @@
     if (!w || !w.isOwner) throw wsErr(MSG.perm);
     const s = await F().getDocs(F().collection(K.db, 'workspaces', wid, 'items'));
     const refs = s.docs.map(d => subRef(wid, 'items', d.id));
-    refs.push(subRef(wid, 'assets', 'bg'));
+    refs.push(subRef(wid, 'assets', 'bg'), subRef(wid, 'assets', 'avatar'));
     if (w.inviteToken) refs.push(subRef(wid, 'invite', w.inviteToken));
     for (const m of w.memberIds) refs.push(subRef(wid, 'joins', m));
     for (let i = 0; i < refs.length; i += 450) {
@@ -806,6 +921,7 @@
 
   ZC.ws = {
     available, state, list, current: cur, get, switchTo, setDim, dim, create, update, setBackground, bgURL, bgData,
+    setAvatar, avatarURL, avatarData: avData, squareAvatar, compressAvatar, ICONS, ICON0, AV_MAX,
     inviteLink, regenerateLink, inviteEmail, uninviteEmail, parseCode, peek, join, acceptInvite, declineInvite,
     leave, removeMember, remove, on, pendingInvites, unread, markSeen, members, user, isOwner,
     connect, signOut, prepare, init, COLORS, MSG, refreshCreds: () => { lastCreds = ''; creds(); },

@@ -10,13 +10,25 @@
 .ws-faces .ws-face + .ws-face { margin-left: calc(var(--fs) * -.32); }
 .ws-badge { --bs: 28px; display: inline-grid; place-items: center; width: var(--bs); height: var(--bs); flex: none; border-radius: calc(var(--bs) * .32);
   background: linear-gradient(140deg, color-mix(in srgb, var(--wc) 78%, #fff), var(--wc)); color: color-mix(in srgb, var(--wc) 30%, #1d1630);
-  font: 800 calc(var(--bs) * .5)/1 var(--font-title); box-shadow: 0 3px 10px color-mix(in srgb, var(--wc) 40%, transparent); line-height: 1; }
+  font: 800 calc(var(--bs) * .5)/1 var(--font-title); box-shadow: 0 3px 10px color-mix(in srgb, var(--wc) 40%, transparent); line-height: 1; overflow: hidden; }
+.ws-badge .wsi-ico { display: block; flex: none; stroke-width: 1.9; }
+.ws-badge.big .wsi-ico { stroke-width: 1.7; }
+/* la foto de perfil del workspace: ocupa todo el distintivo, con un filo de su color */
+.ws-badge.has-av { background: var(--s2); box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--wc) 75%, transparent), 0 3px 10px color-mix(in srgb, var(--wc) 30%, transparent); }
+.ws-badge.has-av img { width: 100%; height: 100%; object-fit: cover; display: block; -webkit-user-drag: none; user-select: none; }
+.toast > .ws-badge { flex: none; }
 
 /* ---------- el selector «Mi calendario ▾» ---------- */
 .ws-chip { --wc: var(--a1); position: relative; display: inline-flex; align-items: center; gap: 7px; height: 38px; max-width: 210px; min-width: 0; flex: 0 1 auto;
   padding: 0 10px 0 5px; margin-left: 4px; border-radius: 999px; font-weight: 700; font-size: .9rem; color: var(--fg);
   background: color-mix(in srgb, var(--wc) 16%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--wc) 45%, transparent);
-  transition: background var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast) var(--spring); touch-action: pan-y; }
+  transition: background var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast) var(--spring); touch-action: none; user-select: none; -webkit-user-select: none; }
+/* deslizar la foto: la de antes se va en el sentido del gesto */
+.wsc-ghost { position: absolute; pointer-events: none; }
+/* el engranaje junto al selector: solo dentro de un workspace */
+.ws-gear { display: none; flex: none; color: var(--mut); }
+html.in-ws .ws-gear { display: grid; }
+.ws-gear:hover { color: var(--fg); }
 .ws-chip:hover { background: color-mix(in srgb, var(--wc) 26%, transparent); }
 .ws-chip:active { transform: scale(.97); }
 .ws-chip:focus-visible { outline: 2px solid var(--a1t); outline-offset: 2px; }
@@ -47,6 +59,9 @@ html.look-swap #viewHost, html.look-swap #side, html.look-swap #bgCanvas, html.l
 .ws-name { display: inline-flex; align-items: baseline; gap: .3em; min-width: 0; max-width: 100%; color: var(--fg);
   font-size: clamp(.98rem, calc(1.42rem - var(--len, 10) * .022rem), 1.25rem); line-height: 1.15; }
 .ws-em { font-style: normal; flex: none; }
+.ws-tb { display: inline-grid; flex: none; align-self: center; margin-right: .1em; }
+.ws-name { cursor: pointer; border-radius: 10px; }
+.ws-name:hover .ws-nt { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--ws-c, var(--a1)) 60%, transparent); text-underline-offset: 3px; }
 .ws-nt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ws-month { flex: none; font: 650 .8rem/1 var(--font-ui); color: var(--mut); white-space: nowrap; }
 .ws-month .yr { margin-left: .3em; font-weight: 500; }
@@ -109,6 +124,38 @@ html.look-swap #viewHost, html.look-swap #side, html.look-swap #bgCanvas, html.l
 .wsd-photo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .wsd-ph { display: grid; place-items: center; width: 112px; height: 70px; border-radius: 14px; background: rgb(var(--fg-rgb) / .06) center / cover no-repeat; color: var(--mut); flex: none; }
 .wsd-note { font-size: .8rem; line-height: 1.4; }
+/* la foto de perfil */
+.wsd-av { position: relative; flex: none; display: grid; }
+.wsd-avbtn { position: absolute; right: -6px; bottom: -6px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--s1); color: var(--fg); box-shadow: 0 2px 8px rgb(var(--sh-rgb) / .25), inset 0 0 0 1px var(--line); cursor: pointer; }
+.wsd-avbtn:hover { background: var(--hover); }
+.wsd-file { display: none; }
+.wsd-avrow { display: flex; flex-wrap: wrap; gap: 8px; }
+.wsd-avrow .btn { cursor: pointer; }
+/* el icono: buscar y elegir */
+.wsd-isearch { position: relative; display: block; }
+.wsd-isearch > .ic { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--mut); pointer-events: none; }
+.wsd-isearch .in { width: 100%; padding-left: 38px; }
+.wsd-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); gap: 6px; max-height: 196px; overflow: auto; padding: 2px; overscroll-behavior: contain; }
+.wsd-i { display: grid; place-items: center; height: 42px; border-radius: 13px; background: rgb(var(--fg-rgb) / .05); color: var(--fg); transition: transform var(--t-fast) var(--spring), background var(--t-fast); }
+.wsd-i:hover { background: var(--hover); }
+.wsd-i.on { background: color-mix(in srgb, var(--wc) 32%, transparent); box-shadow: inset 0 0 0 2px var(--wc); transform: scale(1.05); }
+.wsd-inone { font-size: .86rem; padding: 8px 2px; }
+.wsd-only { display: flex; gap: 8px; align-items: flex-start; font-size: .88rem; line-height: 1.45; margin: 0; }
+.wsd-only .ic { flex: none; margin-top: 2px; color: var(--a1t); }
+.wsd-look { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 16px; background: rgb(var(--fg-rgb) / .04); font-size: .86rem; line-height: 1.45; }
+.wsd-lookb { display: flex; flex-wrap: wrap; gap: 8px; }
+/* recortar la foto */
+.wsc-panel { width: min(400px, 100%); }
+.wsc { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.wsc h2 { font: 800 1.15rem/1.2 var(--font-title); }
+.wsc p { margin: 0; font-size: .86rem; }
+.wsc-vp { position: relative; width: var(--v); height: var(--v); border-radius: 22px; overflow: hidden; background: #000; touch-action: none; cursor: grab; flex: none; }
+.wsc-vp:active { cursor: grabbing; }
+.wsc-vp img { position: absolute; left: 0; top: 0; max-width: none; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+.wsc-frame { position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 2px rgb(255 255 255 / .85); pointer-events: none; }
+.wsc-zoom { display: flex; align-items: center; gap: 10px; width: min(var(--v, 280px), 100%); color: var(--mut); }
+.wsc-zoom input { flex: 1; min-width: 0; accent-color: var(--a1); }
+.wsc .dlg-acts { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
 .wsd-mem { display: flex; flex-direction: column; gap: 2px; }
 .wsd-m { display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-radius: 12px; min-width: 0; }
 .wsd-m.pend { opacity: .75; }
@@ -159,7 +206,10 @@ html.look-swap #viewHost, html.look-swap #side, html.look-swap #bgCanvas, html.l
 .wsj .dlg-acts { width: 100%; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
 
 /* ---------- panel lateral, tareas, editor y detalle ---------- */
-.ws-side { display: flex; align-items: center; gap: 10px; padding: 10px; margin: 2px 4px 8px; border-radius: 18px; background: color-mix(in srgb, var(--wc) 16%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--wc) 34%, transparent); min-width: 0; }
+.ws-side { display: flex; align-items: center; gap: 10px; padding: 10px; margin: 2px 4px 8px; width: calc(100% - 8px); text-align: left; color: var(--fg); font: inherit; cursor: pointer; transition: background var(--t-fast); border-radius: 18px; background: color-mix(in srgb, var(--wc) 16%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--wc) 34%, transparent); min-width: 0; }
+.ws-side:hover { background: color-mix(in srgb, var(--wc) 24%, transparent); }
+.ws-side:focus-visible { outline: 2px solid var(--a1t); outline-offset: 2px; }
+.ws-side-go { flex: none; color: var(--mut); }
 .ws-side-t { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
 .ws-side-t b { font-weight: 750; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ws-side-t small { display: flex; align-items: center; gap: 6px; color: var(--mut); font-size: .78rem; }
@@ -210,12 +260,31 @@ html.look-swap #viewHost, html.look-swap #side, html.look-swap #bgCanvas, html.l
   html.in-ws #app::before { content: ''; position: fixed; z-index: 6; left: 0; right: 0; top: 0; height: calc(var(--zc-safe-top, env(safe-area-inset-top, 0px)) + 3px); background: var(--ws-c); opacity: .85; pointer-events: none; }
   .wsi-btns { gap: 6px; }
   .wsd-body { padding: 4px 16px 16px; }
+  .ws-gear { width: 32px; height: 32px; margin: 0 -2px; }
+  .ws-gear .ic { width: 18px; height: 18px; }
+  /* (en el móvil el distintivo ya está en el selector: en el título, solo el nombre) */
+  .ws-name .ws-tb, html[data-design="dot"] .ws-dname .ws-badge { display: none; }
+  .ws-gear { width: 30px; margin: 0 -2px; }
+  /* (dentro de un workspace, con el engranaje al lado, la flechita del selector sobra: así cabe el nombre) */
+  html.in-ws .ws-chip .wsc-chev { display: none; }
+  .wsd-icons { grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); max-height: 180px; }
 }
 
 /* ---------- Dot ---------- */
 html[data-design="dot"] .ws-chip { border-radius: 999px; background: color-mix(in srgb, var(--s1) var(--o-bar), transparent); box-shadow: inset 0 0 0 1px var(--hair); font: 400 .74rem/1 var(--zd); letter-spacing: .08em; text-transform: uppercase; height: 42px; padding-right: 12px; }
 html[data-design="dot"] .ws-chip.is-ws { box-shadow: inset 0 0 0 1.5px var(--wc); }
 html[data-design="dot"] .ws-badge { border-radius: 50%; background: transparent; color: var(--fg); box-shadow: inset 0 0 0 1.5px var(--wc); font-family: var(--font-ui); }
+/* en Dot, los iconos: línea finísima en pequeño y hechos de puntos en grande (como la matriz de dot.js) */
+html[data-design="dot"] .ws-badge .wsi-ico { stroke-width: 1.3; }
+html[data-design="dot"] .ws-badge.big .wsi-ico { stroke-width: 1.9; stroke-dasharray: 0 2.7; }
+html[data-design="dot"] .ws-badge.has-av { box-shadow: 0 0 0 1.5px var(--wc); }
+html[data-design="dot"] .wsd-i .wsi-ico { stroke-width: 1.3; }
+html[data-design="dot"] .wsd-i { background: transparent; box-shadow: inset 0 0 0 1px var(--hair); border-radius: 50%; }
+html[data-design="dot"] .wsd-i.on { background: transparent; box-shadow: inset 0 0 0 1.5px var(--fg); }
+html[data-design="dot"] .wsd-look { background: transparent; box-shadow: inset 0 0 0 1px var(--hair); }
+html[data-design="dot"] .wsc-vp { border-radius: 50%; }
+html[data-design="dot"] .wsc h2 { font: 400 .9rem/1 var(--zd); letter-spacing: .1em; text-transform: uppercase; }
+html[data-design="dot"] .toast:has(> .ws-badge)::before { display: none; }
 html[data-design="dot"] .wsc-me { background: transparent; box-shadow: inset 0 0 0 1px var(--hair); color: var(--fg); }
 html[data-design="dot"] .wsc-dot { background: var(--a1); animation: none; }
 html[data-design="dot"] .ws-face { box-shadow: 0 0 0 1.5px var(--bg); background: var(--s2); color: var(--fg); font-family: var(--zd); font-weight: 400; }
@@ -231,15 +300,27 @@ html[data-design="dot"] .wsj::before { background: radial-gradient(circle at 50%
 html[data-design="dot"].in-ws #top { box-shadow: none; }
 html[data-design="dot"].in-ws #main { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--ws-c) 70%, transparent); }
 html[data-design="dot"] #periodTitle.ws-title { flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px; }
-html[data-design="dot"] .ws-dname { display: block; max-width: 100%; font: 400 .72rem/1 var(--zd); letter-spacing: .1em; text-transform: uppercase; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 2px; border-left: 3px solid var(--ws-c); padding-left: 7px; }
-html[data-design="dot"] #periodTitle.ws-title .dm-title .dm { max-height: 34px; width: auto; }
+/* Dot dentro de un workspace: el nombre es el título grande (puntos o ZenDot) y el mes va pequeño debajo */
+html[data-design="dot"] #periodTitle.ws-title .dm-title { display: none; }
+.ws-dtitle { display: none; }
+html[data-design="dot"] .ws-dtitle { display: flex; flex-direction: column; justify-content: center; gap: 5px; min-width: 0; max-width: 100%; }
+html[data-design="dot"] .ws-dname { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; color: var(--fg); cursor: pointer; }
+html[data-design="dot"] .ws-dm { display: block; min-width: 0; line-height: 0; }
+html[data-design="dot"] .ws-dm .dm { display: block; max-width: 100%; height: auto; max-height: 30px; }
+html[data-design="dot"] .ws-dtx { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 clamp(.86rem, calc(1.3rem - var(--len, 10) * .02rem), 1.15rem)/1.1 var(--zd); letter-spacing: .06em; text-transform: uppercase; }
+html[data-design="dot"] .ws-dmonth { display: block; font: 400 .66rem/1 var(--zd); letter-spacing: .12em; text-transform: uppercase; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 2px; }
 html[data-design="dot"] #periodTitle.ws-title > .ic { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); }
 html[data-design="dot"] #periodTitle.ws-title { position: relative; padding-right: 24px; }
 @media (max-width: 759px) {
   html[data-design="dot"] .ws-chip { width: 40px; height: 40px; padding: 0; justify-content: center; background: transparent; box-shadow: none; }
   html[data-design="dot"] .ws-chip .wsc-chev { display: none; }
-  html[data-design="dot"] #periodTitle.ws-title .dm-title .dm { max-height: 26px; }
-  html[data-design="dot"] .ws-dname { font-size: .64rem; }
+  html[data-design="dot"] #top #wsGear { width: 28px; height: 36px; margin: 0 -2px; }
+  html[data-design="dot"].in-ws .ws-chip { width: 34px; }
+  html[data-design="dot"] #periodTitle.ws-title { min-width: 90px; }
+  html[data-design="dot"] .ws-dm .dm { max-height: 24px; }
+  html[data-design="dot"] .ws-dname { gap: 6px; }
+  html[data-design="dot"] .ws-dtx { font-size: clamp(.78rem, calc(1.05rem - var(--len, 10) * .018rem), .98rem); }
+  html[data-design="dot"] .ws-dmonth { font-size: .6rem; }
 }
 
 /* (los botones de .menu estiran todos sus span: aquí no) */

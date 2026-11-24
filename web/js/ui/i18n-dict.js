@@ -1255,6 +1255,8 @@
   // diseño «Dot» (dot.js)
   Object.assign(D.en, {
     'Noche': 'Night',   // (nombre de un icono)
+    // nombres de los iconos Dot
+    'Dot blanco': 'Dot white', 'Dot rojo': 'Dot red', 'Dot mes': 'Dot month', 'Dot Z': 'Dot Z', 'Dot reloj': 'Dot clock',
     'Diseño': 'Design',
     'Pastel, vidrio y fondos que flotan': 'Pastel, glass and floating backgrounds',
     'Monocromo, puntos y un solo rojo. Inspirado en el estilo de Nothing OS.': 'Monochrome, dots and a single red. Inspired by the Nothing OS style.',
@@ -1293,6 +1295,7 @@
   });
   Object.assign(D.ca, {
     'Noche': 'Nit',
+    'Dot blanco': 'Dot blanc', 'Dot rojo': 'Dot vermell', 'Dot mes': 'Dot mes', 'Dot Z': 'Dot Z', 'Dot reloj': 'Dot rellotge',
     'Diseño': 'Disseny',
     'Pastel, vidrio y fondos que flotan': 'Pastel, vidre i fons que suren',
     'Monocromo, puntos y un solo rojo. Inspirado en el estilo de Nothing OS.': 'Monocrom, punts i un sol vermell. Inspirat en l’estil de Nothing OS.',

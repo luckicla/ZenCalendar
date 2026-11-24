@@ -146,6 +146,85 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Dot: fondo blanco y puntos negros -->
+        <activity-alias
+            android:name=".Icon_dot_blanco"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_zc_dot_blanco"
+            android:roundIcon="@mipmap/ic_zc_dot_blanco">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <!-- Dot: fondo rojo y puntos blancos -->
+        <activity-alias
+            android:name=".Icon_dot_rojo"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_zc_dot_rojo"
+            android:roundIcon="@mipmap/ic_zc_dot_rojo">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <!-- Dot: un mes de 7×5 puntos con hoy en rojo -->
+        <activity-alias
+            android:name=".Icon_dot_mes"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_zc_dot_mes"
+            android:roundIcon="@mipmap/ic_zc_dot_mes">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <!-- Dot: una «Z» grande en una pantalla de puntos -->
+        <activity-alias
+            android:name=".Icon_dot_z"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_zc_dot_z"
+            android:roundIcon="@mipmap/ic_zc_dot_z">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <!-- Dot: tiras de luz sobre un panel gris -->
+        <activity-alias
+            android:name=".Icon_dot_glyph"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_zc_dot_glyph"
+            android:roundIcon="@mipmap/ic_zc_dot_glyph">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <!-- Dot: «24» en cifras de puntos bajo una cabecera roja -->
+        <activity-alias
+            android:name=".Icon_dot_reloj"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_zc_dot_reloj"
+            android:roundIcon="@mipmap/ic_zc_dot_reloj">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- los avisos: suenan aunque la app esté cerrada, y vuelven tras reiniciar -->
         <receiver android:name=".AlarmReceiver" android:exported="false" />
         <!-- la alarma en pantalla completa (AlarmReceiver.showAlarm → setFullScreenIntent) -->

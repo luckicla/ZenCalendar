@@ -507,3 +507,15 @@ Núcleo en `web/js/core/ws.js` (se carga después de `gcal.js`); `web/js/core/ws
 - `notify({ title, body, tag, data })` → solo en la web (Notification / service worker).
 - Web: `app/?join=<código>` (o `#join=`) → `onOpen({ action: 'join', code })`. La interfaz atiende también
   `{ action: 'workspace', wid }`.
+
+### Workspaces 1.4.3: iconos, foto de perfil y ajustes
+- `ZC.ws`: cada workspace trae `icon` (id de `ZC.ws.ICONS`; nunca `emoji`) y `avatar` (versión, '' = sin foto).
+  `await setAvatar(wid, file | dataURL | null, crop?)` (solo el dueño; recorta en cuadrado, 256 px, webp < 60 KB),
+  `avatarURL(wid)` (dataURL o null; si no está bajada la baja y avisa con `change`), `avatarData(wid)`, `compressAvatar(canvas)`.
+  `create`/`update` aceptan `icon`. La foto queda en la copia sin conexión (`ws.cache`).
+- Al crear, los eventos del workspace se escuchan cuando el servidor confirma la escritura; un `permission-denied` al escuchar
+  se reintenta en silencio hasta 3 veces.
+- Interfaz (`UI.wsui`): «Ajustes del workspace» (`editDialog(wid)`) desde el engranaje `#wsGear`, el nombre del título, el menú
+  y el panel lateral; deslizar o la rueda sobre el selector cambia de calendario (interruptor `prefs.cal.gestures.wsswipe`).
+- Android y Windows siguen leyendo `emoji` para el título de sus avisos: con la 1.4.3 deja de existir (sale solo el nombre).
+

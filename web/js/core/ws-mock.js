@@ -15,6 +15,7 @@
 //   fb.offline = true   → las escrituras se quedan pendientes (como sin conexión) hasta volver a false
 //   fb.raw(path)        → el documento tal cual está en el «servidor» (sin reglas)
 //   fb.log              → [{ op, path, uid, ok, why }] lo que se ha pedido
+//   fb.listening()      → las rutas que se están escuchando (onSnapshot) ahora mismo
 (function (root) {
   const ZC = root.ZC = root.ZC || {};
 
@@ -101,10 +102,14 @@
     const onlyKeys = (d, ks) => isObj(d) && Object.keys(d).every(k => ks.includes(k));
     const setEq = (a, b) => { const A = new Set(a), B = new Set(b); return A.size === B.size && [...A].every(x => B.has(x)); };
     const affected = (a, b) => { a = a || {}; b = b || {}; const ks = new Set([...Object.keys(a), ...Object.keys(b)]); return [...ks].filter(k => !has(a, k) || !has(b, k) || !eq(a[k], b[k])); };
+    const ICONS = ['casa', 'corazon', 'grupo', 'trabajo', 'libro', 'deporte', 'balon', 'avion', 'playa', 'montana', 'coche', 'comida', 'copa', 'cafe', 'tarta', 'musica', 'juego', 'pata', 'bebe', 'hoja', 'estrella', 'rayo', 'luna', 'sol', 'regalo', 'dinero', 'carrito', 'herramienta', 'salud', 'fiesta', 'camara', 'codigo', 'pincel', 'chat', 'calendario', 'campana', 'bandera', 'ubicacion', 'iglu', 'llave', ''];
+    const validIcon = v => ICONS.includes(v);
+    const isImage = v => typeof v === 'string' && /^data:image\/(webp|jpeg|png);base64,.+$/s.test(v);
     const validMember = m => onlyKeys(m, ['name', 'email', 'photo', 'joined']) && str(g(m, 'name', ''), 80) && str(g(m, 'email', ''), 200) && str(g(m, 'photo', ''), 1000);
     function validWs(d) {
-      return onlyKeys(d, ['name', 'color', 'emoji', 'bg', 'owner', 'members', 'memberIds', 'invitedEmails', 'inviteToken', 'createdAt', 'updatedAt'])
-        && typeof d.name === 'string' && d.name.length > 0 && d.name.length <= 60 && isColor(d.color) && str(d.emoji, 16)
+      return onlyKeys(d, ['name', 'color', 'emoji', 'icon', 'avatar', 'bg', 'owner', 'members', 'memberIds', 'invitedEmails', 'inviteToken', 'createdAt', 'updatedAt'])
+        && typeof d.name === 'string' && d.name.length > 0 && d.name.length <= 60 && isColor(d.color) && str(g(d, 'emoji', ''), 16)
+        && validIcon(g(d, 'icon', '')) && str(g(d, 'avatar', ''), 32)
         && onlyKeys(d.bg, ['kind', 'value']) && ['none', 'color', 'image', 'anim'].includes(d.bg.kind) && str(g(d.bg, 'value', ''), 64)
         && typeof d.owner === 'string' && Array.isArray(d.memberIds) && d.memberIds.length <= 50
         && isObj(d.members) && setEq(Object.keys(d.members), d.memberIds)
@@ -138,7 +143,7 @@
           const hasOnly = (list, ks) => list.every(k => ks.includes(k));
           const ownerEdit = () => R.owner === uid && Q.memberIds.includes(uid)
             && Q.memberIds.every(x => R.memberIds.includes(x))
-            && hasOnly(changed, ['name', 'color', 'emoji', 'bg', 'invitedEmails', 'inviteToken', 'members', 'memberIds', 'updatedAt'])
+            && hasOnly(changed, ['name', 'color', 'emoji', 'icon', 'avatar', 'bg', 'invitedEmails', 'inviteToken', 'members', 'memberIds', 'updatedAt'])
             && mch.every(k => removed.includes(k) || k === uid) && validMember(Q.members[uid]);
           const leaving = () => R.owner !== uid && R.memberIds.includes(uid) && hasOnly(changed, ['members', 'memberIds', 'updatedAt'])
             && setEq(Q.memberIds, R.memberIds.filter(x => x !== uid)) && hasOnly(mch, [uid]) && !has(Q.members, uid);
@@ -170,12 +175,12 @@
         }
         if (sub === 'assets' && p.length === 4) {
           if (op === 'read') return isMember();
-          if (op === 'create' || op === 'update') return isOwner() && id === 'bg' && onlyKeys(Q, ['data', 'updatedAt']) && typeof Q.data === 'string' && Q.data.length < 900000 && /^data:image\/(webp|jpeg|png);base64,.+$/s.test(Q.data) && isTime(Q.updatedAt);
+          if (op === 'create' || op === 'update') return isOwner() && ['bg', 'avatar'].includes(id) && onlyKeys(Q, ['data', 'updatedAt']) && typeof Q.data === 'string' && Q.data.length < (id === 'bg' ? 900000 : 90000) && isImage(Q.data) && isTime(Q.updatedAt);
           if (op === 'delete') return isOwner();
         }
         if (sub === 'invite' && p.length === 4) {
-          if (op === 'read') return signed && C.exists(wsP) && id === wsD().inviteToken;
-          if (op === 'create' || op === 'update') { const A = C.getAfter(wsP); return signed && !!A && A.owner === uid && id === A.inviteToken && onlyKeys(Q, ['name', 'color', 'emoji', 'bg', 'ownerName', 'count']) && str(Q.name, 60) && isColor(Q.color) && str(Q.emoji, 16) && str(Q.ownerName, 80) && Number.isInteger(Q.count) && isObj(Q.bg); }
+          if (op === 'read') return C.exists(wsP) && id === wsD().inviteToken;   // (sin sesión también: la página del enlace)
+          if (op === 'create' || op === 'update') { const A = C.getAfter(wsP); return signed && !!A && A.owner === uid && id === A.inviteToken && onlyKeys(Q, ['name', 'color', 'emoji', 'icon', 'avatar', 'bg', 'ownerName', 'count']) && str(Q.name, 60) && isColor(Q.color) && str(g(Q, 'emoji', ''), 16) && validIcon(g(Q, 'icon', '')) && (g(Q, 'avatar', '') === '' || (isImage(Q.avatar) && Q.avatar.length < 90000)) && str(Q.ownerName, 80) && Number.isInteger(Q.count) && isObj(Q.bg); }
           if (op === 'delete') return isOwner();
         }
         if (sub === 'joins' && p.length === 4) {
@@ -412,6 +417,7 @@
       sdk, client, allow,
       raw: p => clone(getD(p)),
       paths: () => [...docs.keys()],
+      listening: () => [...listeners].filter(l => !l.dead).map(l => l.path),
       addUser(u) { users.set(u.uid, Object.assign({ token: 'tok-' + u.uid, photo: '', verified: true }, u)); },
     });
   }

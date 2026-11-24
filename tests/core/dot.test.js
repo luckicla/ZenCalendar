@@ -66,7 +66,12 @@ const ROOT = path.join(__dirname, '..', '..');
     assert.ok(dot, 'falta el icono dot');
     assert.strictEqual(dot.design, 'dot');
     assert.strictEqual(dot.src, 'img/icons/dot.png');
-    assert.ok(ZC.platform.appIcons.filter(x => x.id !== 'dot').every(x => x.design === 'zen'));
+    const fam = x => /^dot($|_)/.test(x.id);
+    assert.ok(ZC.platform.appIcons.filter(x => !fam(x)).every(x => x.design === 'zen'));
+    // los demás iconos Dot (dot_blanco, dot_rojo…): también son del diseño Dot
+    const more = ZC.platform.appIcons.filter(x => fam(x) && x.id !== 'dot');
+    assert.ok(more.length >= 6, 'faltan los iconos Dot nuevos');
+    assert.ok(more.every(x => x.design === 'dot' && /^[a-z][a-z_]*$/.test(x.id)), 'ids de recurso de Android válidos y design dot');
   });
   await t('appIcons: cada icono tiene su PNG, su .ico y su activity-alias', () => {
     const manifest = fs.readFileSync(path.join(ROOT, 'android/app/src/main/AndroidManifest.xml'), 'utf8');

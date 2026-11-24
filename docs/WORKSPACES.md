@@ -23,6 +23,13 @@ push de pago ni Cloud Functions, plan Spark gratuito, sin Firebase Storage porqu
 - `workspaces/{wid}`: `{ name, color: '#hex', emoji, bg: { kind: 'none'|'color'|'image'|'anim', value }, owner: uid,
   members: { uid: { name, email, photo, joined } }, memberIds: [uid…], invitedEmails: [email…], inviteToken, createdAt, updatedAt }`
 - `workspaces/{wid}/assets/bg`: `{ data: 'data:image/webp;base64,…' }` (foto de fondo comprimida a ~1600 px y < 600 KB).
+- (1.4.3) `icon: '<id>'` en lugar de `emoji`: uno de los 40 iconos propios (`ZC.ws.ICONS`, dibujos en `web/js/ui/ws-icons.js`,
+  la lista también en `firestore.rules`). Un workspace con `emoji` de antes sale con `estrella` y el emoji se quita al guardarlo.
+- (1.4.3) Foto de perfil: `avatar: '<versión>'` en el workspace y `workspaces/{wid}/assets/avatar` = `{ data: 'data:image/webp;base64,…', updatedAt }`
+  (cuadrada, 256 px, < 60 KB; las reglas: < 90 000 letras, solo el dueño escribe, los miembros leen). También va en
+  `invite/{token}.avatar` para la pantalla «Te han invitado a…» y la página del enlace. Sustituye al icono en todas partes.
+- (1.4.3) `invite/{token}` se puede leer sin sesión (solo con la clave): la página `docs/w/` lo lee por la API REST de Firestore
+  con `../app/js/core/config.js` para enseñar nombre, color, icono o foto y quién invita.
 - `workspaces/{wid}/items/{id}`: el mismo formato de evento/tarea del contrato (sin `calendarId`; `attachments` no, de momento)
   + `createdBy`, `updatedBy`, `assignee: uid|null` (tareas para alguien), `updated` (serverTimestamp), `deleted` (lápida).
 - `workspaces/{wid}/joins/{uid}`: lo crea quien entra con el enlace `{ token, name, email, photo }`; las reglas comprueban

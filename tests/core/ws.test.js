@@ -80,7 +80,7 @@ async function pair() {
   // ---------- crear y modo workspace ----------
   await t('crear un workspace: calendario virtual ws:<wid>, documento y vista previa del enlace', async () => {
     const { A, fb } = await pair();
-    const w = await A.ws.create({ name: 'Cenas de los viernes', color: '#FF9CCB', emoji: '🍕', bg: { kind: 'anim', value: 'sakura' } });
+    const w = await A.ws.create({ name: 'Cenas de los viernes', color: '#FF9CCB', icon: 'comida', bg: { kind: 'anim', value: 'sakura' } });
     await wait();
     assert.ok(w.id && w.isOwner);
     const raw = fb.raw('workspaces/' + w.id);
@@ -322,6 +322,113 @@ async function pair() {
     assert.equal(fb.raw('workspaces/' + w.id + '/assets/bg'), null);
   });
 
+  await t('icono propio: se guarda el id; uno raro o el emoji de antes pasan a «estrella»; las reglas solo dejan los de la lista', async () => {
+    const { A, B, fb } = await pair();
+    const w = await A.ws.create({ name: 'Con icono', color: '#7ED6C3', icon: 'casa' });
+    await wait();
+    assert.equal(fb.raw('workspaces/' + w.id).icon, 'casa');
+    assert.ok(!('emoji' in fb.raw('workspaces/' + w.id)), 'ya no se guarda emoji');
+    assert.equal(fb.raw('workspaces/' + w.id + '/invite/' + fb.raw('workspaces/' + w.id).inviteToken).icon, 'casa');
+    assert.equal(A.ws.ICONS.length, 40);
+    await A.ws.update(w.id, { icon: 'no-existe' }); await wait();
+    assert.equal(A.ws.get(w.id).icon, 'estrella');
+    const ana = fb.client('u-ana');
+    await denied(ana.update('workspaces/' + w.id, { icon: '<svg>', updatedAt: ana.F.serverTimestamp() }), 'un icono que no está en la lista no vale');
+    // un workspace de la 1.4.0 con emoji: sale con la estrella y, al guardarlo, el emoji se va
+    await ana.update('workspaces/' + w.id, { emoji: '🍕', updatedAt: ana.F.serverTimestamp() });
+    await ana.batch([['update', 'workspaces/' + w.id, { icon: ana.F.deleteField(), updatedAt: ana.F.serverTimestamp() }]]);
+    await wait(60);
+    assert.equal(A.ws.get(w.id).icon, 'estrella');
+    await A.ws.update(w.id, { icon: 'pata' }); await wait();
+    const raw = fb.raw('workspaces/' + w.id);
+    assert.equal(raw.icon, 'pata'); assert.ok(!('emoji' in raw), 'el emoji viejo se quita al guardar');
+    void B;
+  });
+
+  await t('foto de perfil: solo el dueño la pone y la quita; tamaño máximo; los miembros la ven al momento; los de fuera no', async () => {
+    const { A, B, fb } = await pair();
+    const w = await A.ws.create({ name: 'Con cara', color: '#FF9CCB', icon: 'grupo' });
+    await B.ws.join(A.ws.inviteLink(w.id)); await wait();
+    const img = 'data:image/webp;base64,UklGRhYAAABXRUJQVlA4IAoAAAAwAQCdASoBAAEAAkA0JaQAA3AA/vuUAAA=';
+    let changes = 0; B.ws.on('change', () => changes++);
+    await A.ws.setAvatar(w.id, img); await wait(80);
+    const raw = fb.raw('workspaces/' + w.id);
+    assert.ok(raw.avatar, 'el workspace apunta a la versión de la foto');
+    assert.equal(fb.raw('workspaces/' + w.id + '/assets/avatar').data, img);
+    assert.equal(fb.raw('workspaces/' + w.id + '/invite/' + raw.inviteToken).avatar, img, 'la ve quien abre el enlace');
+    assert.equal(A.ws.avatarURL(w.id), img);
+    assert.equal(await B.ws.avatarData(w.id), img, 'Bea la ve');
+    assert.equal(B.ws.avatarURL(w.id), img);
+    assert.ok(changes > 0, 'y se le repinta');
+    // queda en la copia sin conexión
+    assert.equal(JSON.parse(B.store.local('ws.cache') ? JSON.stringify(B.store.local('ws.cache')) : '{}').spaces[w.id].av, img);
+    // Bea (miembro) no la cambia ni la quita
+    let e = null; try { await B.ws.setAvatar(w.id, img); } catch (x) { e = x; }
+    assert.ok(e && /permiso/.test(e.message));
+    const bea = fb.client('u-bea');
+    await denied(bea.set('workspaces/' + w.id + '/assets/avatar', { data: img, updatedAt: bea.F.serverTimestamp() }), 'Bea no pone foto');
+    await denied(bea.del('workspaces/' + w.id + '/assets/avatar'), 'Bea no la borra');
+    await denied(bea.update('workspaces/' + w.id, { avatar: '123', updatedAt: bea.F.serverTimestamp() }), 'Bea no toca la versión');
+    // tamaño máximo (también el dueño) y solo imágenes
+    const ana = fb.client('u-ana');
+    const big = 'data:image/webp;base64,' + 'A'.repeat(95000);
+    await denied(ana.set('workspaces/' + w.id + '/assets/avatar', { data: big, updatedAt: ana.F.serverTimestamp() }), 'demasiado grande');
+    await denied(ana.set('workspaces/' + w.id + '/assets/avatar', { data: 'hola', updatedAt: ana.F.serverTimestamp() }), 'solo imágenes');
+    await denied(ana.set('workspaces/' + w.id + '/assets/otra', { data: img, updatedAt: ana.F.serverTimestamp() }), 'solo bg y avatar');
+    e = null; try { await A.ws.setAvatar(w.id, big); } catch (x) { e = x; }
+    assert.ok(e && /demasiado grande/.test(e.message), 'el núcleo lo dice antes de mandarlo');
+    // los de fuera no la leen
+    const carl = fb.client('u-carl');
+    await denied(carl.get('workspaces/' + w.id + '/assets/avatar'), 'Carl no la lee');
+    // quitarla
+    await A.ws.setAvatar(w.id, null); await wait(60);
+    assert.equal(fb.raw('workspaces/' + w.id + '/assets/avatar'), null);
+    assert.equal(fb.raw('workspaces/' + w.id).avatar, '');
+    assert.equal(B.ws.avatarURL(w.id), null, 'a Bea también se le quita');
+    // al borrar el workspace se va con él
+    await A.ws.setAvatar(w.id, img); await wait();
+    await A.ws.remove(w.id); await wait();
+    assert.ok(!fb.paths().some(p => p.startsWith('workspaces/' + w.id)), 'no queda nada');
+  });
+
+  await t('crear: los eventos del workspace se escuchan cuando el servidor lo confirma (antes, las reglas dirían que no)', async () => {
+    const { A, B, fb } = await pair();
+    const warns = [];
+    const orig = console.warn; console.warn = (...a) => { warns.push(a.join(' ')); };
+    try {
+      fb.offline = true;
+      const pw = A.ws.create({ name: 'Recién hecho', icon: 'fiesta' });
+      await wait(60);
+      const w = A.ws.list().find(x => x.name === 'Recién hecho');
+      assert.ok(w, 'se ve al momento');
+      assert.ok(!fb.listening().includes('workspaces/' + w.id + '/items'), 'sin confirmar, sus eventos aún no se escuchan');
+      fb.offline = false;
+      await pw; await wait(80);
+      assert.ok(fb.listening().includes('workspaces/' + w.id + '/items'), 'confirmado, sí');
+      await B.ws.join(A.ws.inviteLink(w.id)); await wait(60);
+      const bea = fb.client('u-bea');
+      await bea.set('workspaces/' + w.id + '/items/x1', { id: 'x1', kind: 'event', title: 'Pizza', start: day(1) + 'T21:00', end: day(1) + 'T22:00', createdBy: 'u-bea', updatedBy: 'u-bea', updated: bea.F.serverTimestamp() });
+      await wait(80);
+      assert.ok(A.store.get('x1'), 'y llega lo de los demás');
+    } finally { console.warn = orig; }
+    assert.ok(!warns.some(x => /permission-denied/.test(x)), 'sin «permission-denied» en la consola: ' + warns.join(' | '));
+  });
+
+  await t('la vista previa del enlace se lee sin sesión solo con la clave buena (página docs/w/)', async () => {
+    const { A, fb } = await pair();
+    const w = await A.ws.create({ name: 'Viaje', icon: 'avion', color: '#7CC8F2' });
+    await wait();
+    const tok = fb.raw('workspaces/' + w.id).inviteToken;
+    const anon = fb.client(null);
+    const d = await anon.get('workspaces/' + w.id + '/invite/' + tok);
+    assert.equal(d.name, 'Viaje'); assert.equal(d.icon, 'avion');
+    await denied(anon.get('workspaces/' + w.id + '/invite/OTRACLAVEQUENOVALE00'), 'con otra clave no');
+    await denied(anon.get('workspaces/' + w.id), 'el workspace en sí, no');
+    await denied(anon.items(w.id), 'ni sus eventos');
+    await A.ws.regenerateLink(w.id); await wait();
+    await denied(anon.get('workspaces/' + w.id + '/invite/' + tok), 'la clave vieja deja de valer');
+  });
+
   await t('sin conexión: se ve al momento y se manda al volver internet', async () => {
     const { A, B, fb } = await pair();
     const w = await A.ws.create({ name: 'Offline', color: '#86B862' });
@@ -383,7 +490,13 @@ async function pair() {
       assert.ok(rules.includes(s), 'falta ' + s + ' en firestore.rules');
     assert.ok(!/allow (read|write): if true/.test(rules), 'nada abierto a todos');
     const mock = fs.readFileSync(path.join(__dirname, '../../web/js/core/ws-mock.js'), 'utf8');
-    for (const s of ['ownerEdit', 'leaving', 'joining', 'declining', 'validItem']) assert.ok(mock.includes(s));
+    for (const s of ['ownerEdit', 'leaving', 'joining', 'declining', 'validItem', 'validIcon', 'isImage']) assert.ok(mock.includes(s));
+    // la misma lista de iconos en el núcleo, las reglas y el simulador
+    const core = fs.readFileSync(path.join(__dirname, '../../web/js/core/ws.js'), 'utf8');
+    const ids = core.split('const ICONS = [')[1].split('];')[0].match(/'[a-z]+'/g);
+    assert.equal(ids.length, 40);
+    for (const id of ids) { assert.ok(rules.includes(id), id + ' en firestore.rules'); assert.ok(mock.includes(id), id + ' en ws-mock.js'); }
+    assert.ok(rules.includes("name in ['bg', 'avatar']") && rules.includes('90000'), 'la foto de perfil en las reglas');
   });
 
   report(__filename);

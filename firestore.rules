@@ -6,11 +6,12 @@ rules_version = '2';
 // Quién puede qué:
 //  - Un workspace solo lo ven sus miembros (y quien tiene su correo en la lista de invitados).
 //  - Todos los miembros añaden, cambian y borran eventos y tareas (los borrados son «lápidas»).
-//  - Solo el dueño cambia el nombre, el color, el emoji y el fondo, invita por correo, cambia el enlace,
+//  - Solo el dueño cambia el nombre, el color, el icono, la foto de perfil y el fondo, invita por correo, cambia el enlace,
 //    echa a alguien y borra el workspace. Cada uno puede salirse cuando quiera.
 //  - Para entrar con un enlace hay que saber su clave (inviteToken): quien entra deja en joins/{su uid}
 //    la clave y, en la misma escritura, se añade a members/memberIds. Cambiar la clave invalida los enlaces viejos.
-//  - Nadie puede listar los workspaces de otros ni leer nada sin haber iniciado sesión con Google.
+//  - Nadie puede listar los workspaces de otros ni leer nada sin haber iniciado sesión con Google, salvo la vista
+//    previa de un enlace (invite/{clave}), que solo puede leer quien tiene la clave.
 // web/js/core/ws-mock.js repite estas reglas para las pruebas: si cambias algo aquí, cámbialo también allí.
 
 service cloud.firestore {
@@ -28,6 +29,9 @@ service cloud.firestore {
 
     function isColor(v) { return v is string && v.matches('^#[0-9a-fA-F]{6}$'); }
     function shortText(v, n) { return v is string && v.size() <= n; }
+    // los iconos propios (web/js/core/ws.js → ICONS); '' = ninguno. «emoji» es de la 1.4.0 y solo se puede quitar.
+    function validIcon(v) { return v in ['casa', 'corazon', 'grupo', 'trabajo', 'libro', 'deporte', 'balon', 'avion', 'playa', 'montana', 'coche', 'comida', 'copa', 'cafe', 'tarta', 'musica', 'juego', 'pata', 'bebe', 'hoja', 'estrella', 'rayo', 'luna', 'sol', 'regalo', 'dinero', 'carrito', 'herramienta', 'salud', 'fiesta', 'camara', 'codigo', 'pincel', 'chat', 'calendario', 'campana', 'bandera', 'ubicacion', 'iglu', 'llave', '']; }
+    function isImage(v) { return v is string && v.matches('data:image/(webp|jpeg|png);base64,.+'); }
 
     function validMember(m) {
       return m is map && m.keys().hasOnly(['name', 'email', 'photo', 'joined'])
@@ -35,10 +39,12 @@ service cloud.firestore {
     }
 
     function validWs(d) {
-      return d.keys().hasOnly(['name', 'color', 'emoji', 'bg', 'owner', 'members', 'memberIds', 'invitedEmails', 'inviteToken', 'createdAt', 'updatedAt'])
+      return d.keys().hasOnly(['name', 'color', 'emoji', 'icon', 'avatar', 'bg', 'owner', 'members', 'memberIds', 'invitedEmails', 'inviteToken', 'createdAt', 'updatedAt'])
         && d.name is string && d.name.size() > 0 && d.name.size() <= 60
         && isColor(d.color)
-        && shortText(d.emoji, 16)
+        && shortText(d.get('emoji', ''), 16)
+        && validIcon(d.get('icon', ''))
+        && shortText(d.get('avatar', ''), 32)
         && d.bg is map && d.bg.keys().hasOnly(['kind', 'value']) && d.bg.kind in ['none', 'color', 'image', 'anim'] && shortText(d.bg.get('value', ''), 64)
         && d.owner is string
         && d.memberIds is list && d.memberIds.size() <= 50
@@ -69,12 +75,12 @@ service cloud.firestore {
       function removed() { return resource.data.memberIds.toSet().difference(request.resource.data.memberIds.toSet()); }
       function joinPath() { return /databases/$(database)/documents/workspaces/$(wid)/joins/$(me()); }
 
-      // el dueño: nombre, color, emoji, fondo, invitados, enlace, sus datos y echar (nunca añadir a nadie a mano)
+      // el dueño: nombre, color, icono, foto de perfil, fondo, invitados, enlace, sus datos y echar (nunca añadir a nadie a mano)
       function ownerEdit() {
         return resource.data.owner == me()
           && me() in request.resource.data.memberIds
           && request.resource.data.memberIds.toSet().difference(resource.data.memberIds.toSet()).size() == 0
-          && changed().hasOnly(['name', 'color', 'emoji', 'bg', 'invitedEmails', 'inviteToken', 'members', 'memberIds', 'updatedAt'])
+          && changed().hasOnly(['name', 'color', 'emoji', 'icon', 'avatar', 'bg', 'invitedEmails', 'inviteToken', 'members', 'memberIds', 'updatedAt'])
           && membersChanged().difference(removed().union([me()].toSet())).size() == 0
           && validMember(request.resource.data.members[me()]);
       }
@@ -127,24 +133,29 @@ service cloud.firestore {
         allow delete: if isOwner(wid);
       }
 
-      // la foto de fondo (comprimida, < 900 KB)
+      // la foto de fondo (bg, comprimida, < 900 KB) y la de perfil (avatar, 256 px, < 90 000 letras ≈ 60 KB)
       match /assets/{name} {
         allow read: if isMember(wid);
-        allow create, update: if isOwner(wid) && name == 'bg'
+        allow create, update: if isOwner(wid) && name in ['bg', 'avatar']
           && request.resource.data.keys().hasOnly(['data', 'updatedAt'])
-          && request.resource.data.data is string && request.resource.data.data.size() < 900000
-          && request.resource.data.data.matches('data:image/(webp|jpeg|png);base64,.+')
+          && request.resource.data.data is string
+          && request.resource.data.data.size() < (name == 'bg' ? 900000 : 90000)
+          && isImage(request.resource.data.data)
           && request.resource.data.updatedAt == request.time;
         allow delete: if isOwner(wid);
       }
 
-      // lo que ve quien abre un enlace antes de entrar (nombre, color…): solo con la clave buena
+      // lo que ve quien abre un enlace antes de entrar (nombre, color, icono o foto, quién invita): solo con la clave buena.
+      // Sin sesión también, para la página del enlace (docs/w/, por la API REST): el documento se llama como la clave,
+      // así que solo lo lee quien la tiene; nadie puede listarlos (solo get) y una clave vieja ya no vale.
       match /invite/{tok} {
-        allow get: if signedIn() && exists(wsPath(wid)) && tok == ws(wid).inviteToken;
+        allow get: if exists(wsPath(wid)) && tok == ws(wid).inviteToken;
         allow create, update: if signedIn() && getAfter(wsPath(wid)).data.owner == me() && tok == getAfter(wsPath(wid)).data.inviteToken
-          && request.resource.data.keys().hasOnly(['name', 'color', 'emoji', 'bg', 'ownerName', 'count'])
+          && request.resource.data.keys().hasOnly(['name', 'color', 'emoji', 'icon', 'avatar', 'bg', 'ownerName', 'count'])
           && shortText(request.resource.data.name, 60) && isColor(request.resource.data.color)
-          && shortText(request.resource.data.emoji, 16) && shortText(request.resource.data.ownerName, 80)
+          && shortText(request.resource.data.get('emoji', ''), 16) && validIcon(request.resource.data.get('icon', ''))
+          && (request.resource.data.get('avatar', '') == '' || (isImage(request.resource.data.avatar) && request.resource.data.avatar.size() < 90000))
+          && shortText(request.resource.data.ownerName, 80)
           && request.resource.data.count is int && request.resource.data.bg is map;
         allow delete: if isOwner(wid);
       }

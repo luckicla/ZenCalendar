@@ -58,9 +58,10 @@
 
   // ---------- avisos ----------
   let toastBox;
-  function toast(msg, { undo, icon, ms = 3800, action } = {}) {
+  // art: HTML propio en lugar del icono (por ejemplo, la foto o el icono de un workspace)
+  function toast(msg, { undo, icon, ms = 3800, action, art } = {}) {
     if (!toastBox) { toastBox = h('<div id="toasts" role="status" aria-live="polite"></div>'); document.body.appendChild(toastBox); }
-    const el = h(`<div class="toast">${icon ? UI.icon(icon, 18) : ''}<span>${esc(msg)}</span></div>`);
+    const el = h(`<div class="toast">${art || (icon ? UI.icon(icon, 18) : '')}<span>${esc(msg)}</span></div>`);
     const kill = () => { el.classList.add('out'); setTimeout(() => el.remove(), 260); };
     const act = (label, fn) => { const b = h(`<button class="toast-act">${esc(label)}</button>`); b.onclick = () => { kill(); fn(); }; el.appendChild(b); };
     if (undo) act(t('Deshacer'), undo);
