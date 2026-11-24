@@ -143,6 +143,7 @@
       '- rrule: {"freq":"daily|weekly|monthly|yearly","interval":1,"byDay":["MO","WE"],"until":"YYYY-MM-DD"|null,"count":null}.',
       '- Sin duración: 1 hora. Con día pero sin hora: todo el día. reminders = minutos antes (todo el día: antes de las 9:00).',
       '- Solo ids de la lista. Cambiar algo que se repite afecta a toda la serie.',
+      '- Varias cosas en un mensaje: si en el mismo mensaje piden apuntar varias («el 3 hay examen con Pérez y el día siguiente con Gómez», una lista, una por línea), una acción create por cada una, sin juntarlas ni dejarte ninguna. «El día siguiente», «dos días después» o «el otro» cuentan desde la anterior; si una no repite qué es («y el jueves con Gómez»), usa el mismo título base («Examen con Gómez»). Sin hora dicha: la de la anterior o todo el día. En "reply" di cuántas vas a apuntar.',
       '- Borrar en bloque: si piden quitar varias cosas («quita todo lo de mañana», «borra las reuniones de esta semana», «vacía el viernes»), una acción delete por cada evento o tarea de la lista que encaje, sin inventar ninguno. Si una serie solo cae una vez en lo que piden, "mode":"one" con esa "date"; si la serie entera está dentro, "mode":"all". En "reply" di cuántas cosas vas a borrar. Si no encaja nada, dilo sin acciones.',
       '- Alarmas: "alarm":true hace que el evento suene como un despertador a su hora de inicio, aunque el móvil esté en silencio (todo el día: a las 09:00 o a "alarmTime":"HH:mm"). Ponla directamente cuando el usuario quiere que algo le despierte o le suene sí o sí. «Despiértame a las 7» = evento «Despertarse» a las 07:00 (de mañana, o de hoy si aún no han dado), de 15 minutos, "alarm":true y "reminders":[].',
       '- Recomendar alarma: si algo parece importante y es a una hora concreta (cita médica, vuelo, tren, examen, entrevista, juicio, levantarse temprano…) y el usuario no la ha pedido, no la pongas en el evento: añade {"type":"update","ref":<índice del create>,"changes":{"alarm":true},"suggest":true,"why":"motivo muy corto"} (o con "id" si el evento ya existe). Sin pasarse: solo para lo importante, nunca para todo.',
@@ -638,6 +639,94 @@
     return parts.length ? S.ok + parts.join('; ') + '.' : '';
   }
 
+  // ---- varias cosas en un solo mensaje (integrado) ----
+  // Parte el mensaje por líneas, «;», frases y «y/and/i» + una fecha nueva; cada trozo se entiende con
+  // ZC.nlp. «el día siguiente», «dos días después», «the next day», «l'endemà» van desde el plan anterior,
+  // y un trozo sin «qué» («y el viernes con este otro») hereda la palabra principal del anterior.
+  const NUMW = { un: 1, una: 1, uno: 1, one: 1, dos: 2, two: 2, tres: 3, three: 3, cuatro: 4, four: 4, cinco: 5, five: 5 };
+  const REL_NEXT = /\b(?:(?:el|al)\s+d[ií]a\s+siguiente|el\s+siguiente\s+d[ií]a|the\s+(?:next|following)\s+day|the\s+day\s+after|l['’]endem[aà]|el\s+dia\s+seg[uü]ent)\b/i;
+  const REL_AFTER = /\b(un|una|uno|dos|tres|cuatro|cinco|one|two|three|four|five|\d{1,2})\s+d[ií]as?\s+(?:despu[eé]s|m[aá]s\s+tarde|later|after(?:wards)?|despr[eé]s)\b/i;
+  const HAS_TIME = /\b(?:a\s+las?|a\s+les?|at|sobre\s+las?|hacia\s+las?)\s+\d|\b\d{1,2}[:.h]\d{2}\b|\b\d{1,2}\s*(?:am|pm|h)\b|\b(?:mediod[ií]a|medianoche|noon|midnight)\b|\bde\s+la\s+(?:ma[nñ]ana|tarde|noche)\b/i;
+  const WEEKDAY = /\b(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|dilluns|dimarts|dimecres|dijous|divendres|dissabte|diumenge)\b/i;
+  const EXPLICIT_DATE = /\b\d{1,2}\s*(?:de\s+)?(?:ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic|jan|apr|aug|dec|gen|des)[a-z]*\b|\b\d{1,2}\/\d{1,2}\b|\b(?:el|the|on)\s+\d{1,2}\b/i;
+  const FILLER = /^(?:y\s+|i\s+|and\s+)?(?:hay|habr[aá]|tengo|tendr[eé]|tienes|tenemos|es|ser[aá]|there(?:'s|\s+is|\s+will\s+be)|i\s+have|i(?:'ve|\s+have)\s+got|hi\s+ha|tinc|tindr[eé])\s+/i;
+  function splitPlans(t) {
+    let parts = t.split(/\n+|;\s*|(?<=[.!])\s+(?=\S)/).map(x => x.trim()).filter(Boolean);
+    // «… y el viernes …», «…, el 5 …», «… and on Monday …», «… i dilluns …» (solo si detrás viene algo de fecha)
+    const DATEISH = '(?:el|la|los|las|al|on|the|this|next|el\\s+pr[oó]ximo|este|esta|ma[nñ]ana|pasado|tomorrow|dem[aà]|d[ií]a|day|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|dilluns|dimarts|dimecres|dijous|divendres|dissabte|diumenge|\\d{1,2}\\b|(?:un|una|dos|tres|cuatro|cinco|one|two|three)\\s+d[ií]as?)';
+    const re = new RegExp('\\s*(?:,\\s*(?:y\\s+|and\\s+|i\\s+)?|\\s+(?:y|and|i)\\s+)(?=' + DATEISH + ')', 'i');
+    const out = [];
+    for (const part of parts) {
+      const bits = part.split(re).map(x => x.trim()).filter(Boolean);
+      out.push(...bits);
+    }
+    return out;
+  }
+  function multiPlans(t) {
+    const u = U(), S = say();
+    const segs = splitPlans(t);
+    if (segs.length < 2) return null;
+    const plans = [];
+    let prev = null;
+    for (const seg0 of segs) {
+      let seg = seg0, anchor = null;
+      if (prev && REL_NEXT.test(seg)) { anchor = u.addDays(u.parse(prev.start.slice(0, 10)), 1); seg = seg.replace(REL_NEXT, ' '); }
+      const ma = prev && REL_AFTER.exec(seg);
+      if (ma) { const n = NUMW[ma[1].toLowerCase()] || +ma[1] || 1; anchor = u.addDays(u.parse(prev.start.slice(0, 10)), n); seg = seg.replace(REL_AFTER, ' '); }
+      seg = seg.replace(/\s{2,}/g, ' ').trim();
+      const saysTime = HAS_TIME.test(seg), saysWho = /^(?:(?:y|and|i)\s+)?(?:con|with|amb)\b/i.test(seg.replace(FILLER, ''));
+      let p = ZC.nlp.parse(seg, { lang: sayLang }) || null;
+      // sin hora dicha en este trozo: la del plan anterior (si la tenía) o todo el día; nunca la de ahora
+      if (p && p.start && !anchor && !saysTime && !p.allDay) {
+        const day = p.start.slice(0, 10);
+        if (prev && !prev.allDay) { const dur = u.parse(prev.end) - u.parse(prev.start); p.start = day + prev.start.slice(10); p.end = u.toLocal(new Date(u.parse(p.start).getTime() + (dur > 0 ? dur : 3600000)), false); }
+        else { p.start = day; p.end = day; p.allDay = true; }
+      }
+      // en una lista, «el jueves» detrás de «el martes» es el de después, no el de esta semana
+      if (p && p.start && prev && !anchor && WEEKDAY.test(seg) && !EXPLICIT_DATE.test(seg) && p.start.slice(0, 10) < prev.start.slice(0, 10)) {
+        const add = d => d && (d.length > 10 ? u.toLocal(u.addDays(u.parse(d), 7), false) : u.ymd(u.addDays(u.parse(d), 7)));
+        p.start = add(p.start); p.end = add(p.end || p.start);
+      }
+      if (anchor) {
+        // la fecha es la del plan anterior + N días; la hora, si la dice este trozo
+        const pp = p || {}, hasTime = saysTime && pp.start && !pp.allDay && /T\d\d:\d\d/.test(pp.start);
+        const day = u.ymd(anchor);
+        let start, end, allDay = !hasTime && !!prev.allDay;
+        if (hasTime) { start = day + pp.start.slice(10); const dur = pp.end ? (u.parse(pp.end) - u.parse(pp.start)) : 3600000; end = u.toLocal(new Date(u.parse(start).getTime() + dur), false); }
+        else if (!prev.allDay) { const hm = prev.start.slice(10); start = day + hm; const dur = u.parse(prev.end) - u.parse(prev.start); end = u.toLocal(new Date(u.parse(start).getTime() + (dur > 0 ? dur : 3600000)), false); }
+        else { start = day; end = day; allDay = true; }
+        p = Object.assign({}, pp, { start, end, allDay, confidence: Math.max(pp.confidence || 0, 0.7) });
+      }
+      if (!p || !p.start || (p.confidence || 0) < 0.5) {
+        // un trozo sin fecha no es un plan: si ya hay alguno, se pega al anterior como nota
+        if (plans.length && seg) { const last = plans[plans.length - 1]; last.notes = (last.notes ? last.notes + ' ' : '') + seg; continue; }
+        return null;
+      }
+      let title = (p.title || '').replace(FILLER, '').trim();
+      // «con este otro», «otro», vacío → hereda lo principal del anterior («Examen» de «Examen con X profe»)
+      if (prev && (saysWho || !title || /^(?:con|with|amb|otr[oa]s?|another|other|un\s+altre|una\s+altra)\b/i.test(title))) {
+        const base = (prev.title || '').split(/\s+(?:con|with|amb|de|en|at|in|a)\s+/i)[0].trim();
+        const conW = { es: 'con', en: 'with', ca: 'amb' }[sayLang] || 'con';
+        if (/^(?:otr[oa]s?|another|other|un\s+altre|una\s+altra)$/i.test(title) || !title) title = base;
+        else if (/^(?:con|with|amb)\b/i.test(title)) title = (base + ' ' + title).trim();
+        else if (saysWho) title = (base + ' ' + conW + ' ' + title).trim();
+        else title = (base + ' ' + title).trim();
+      }
+      if (title) title = title.charAt(0).toUpperCase() + title.slice(1);
+      const ev = { kind: p.kind || 'event', title: title || (p.kind === 'task' ? 'Tarea' : 'Evento'), start: p.start, end: p.end || p.start, allDay: !!p.allDay, location: p.location || '', rrule: p.rrule || null };
+      if (p.reminders) ev.reminders = p.reminders;
+      if (p.calendarId && ZC.store.calendar(p.calendarId)) ev.calendarId = p.calendarId;
+      if (p.emoji) ev.emoji = p.emoji;
+      if (p.alarm) ev.alarm = true;
+      ev._sugg = !!(p.alarmSuggested && !p.alarm);
+      plans.push(ev); prev = ev;
+    }
+    if (plans.length < 2) return null;
+    const actions = [];
+    plans.forEach((ev, i) => { const sugg = ev._sugg; delete ev._sugg; if (ev.notes) ev.notes = ev.notes.trim(); actions.push({ type: 'create', event: ev, cid: 'c' + i }); if (sugg) actions.push({ type: 'update', ref: actions.length - 1, refId: 'c' + i, changes: { alarm: true }, suggest: true, why: S.alarmWhy }); });
+    return { reply: describeActions(actions), actions, confidence: 0.75 };
+  }
+
   // ---------- proveedor «integrado» ----------
   function bestMatch(text, onlyTasks) {
     const u = U();
@@ -781,6 +870,9 @@
       if (!occ.length) return { reply: S.free.replace('%d', day), actions: [] };
       return { reply: S.day.replace('%d', day) + occ.map(o => (o.allDay ? '' : u.hm(o.start) + ' ') + o.ev.title).join(', ') + '.', actions: [] };
     }
+    // varias cosas en un mensaje («el 3 hay examen con Pérez y el día siguiente con Gómez»): una por plan
+    const many = multiPlans(t);
+    if (many) return many;
     const p = ZC.nlp.parse(t, { lang: sayLang });
     if (!p || (!p.title && p.confidence < 0.5)) return { reply: S.what, actions: [] };
     const ev = { kind: p.kind, title: p.title || (p.kind === 'task' ? 'Tarea' : 'Evento'), start: p.start, end: p.end, allDay: p.allDay, location: p.location || '', rrule: p.rrule };
