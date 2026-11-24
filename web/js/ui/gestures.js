@@ -325,6 +325,8 @@
     if (!on('rows') || !isTouch(e)) return false;
     const row = e.target.closest('.ag-card, .v-tasks .task-row, #sideTasks .task-row');
     if (!row || e.target.closest('.sw-act')) return false;
+    // (los de solo lectura no se deslizan: no se pueden completar, mover ni borrar)
+    if (UI.gacc) { const o = occFromEl(row); if (o && UI.gacc.readOnly(o.ev)) return false; }
     if (openRow && openRow !== row) closeOpenRow();
     Object.assign(R, { on: false, x: e.clientX, y: e.clientY, row, t: performance.now(), base: row === openRow ? parseFloat(row.dataset.swx || 0) : 0 });
     return true;
@@ -494,6 +496,10 @@
   const COLORS = ['#B9A2FF', '#FF9CCB', '#7CC8F2', '#7ED6C3', '#FFB38A', '#F2C14E', '#C38BEB', '#FF8A8A', '#86B862', '#9AA0B5'];
   function eventMenu(o, x, y) {
     const ev = o.ev;
+    if (UI.gacc && UI.gacc.readOnly(ev)) {
+      UI.menu(null, [{ title: C().titleOf(ev) }, { label: t('Ver detalles'), icon: 'eye', act: () => UI.editor.detail(o) }, { label: t('Abrir en Google Calendar'), icon: 'external', act: () => UI.gacc.openURL(UI.gacc.googleURL(ev)) }], { x, y }).classList.add('ctx-menu');
+      return;
+    }
     const items = [
       { title: C().titleOf(ev) },
       { label: t('Ver detalles'), icon: 'eye', act: () => UI.editor.detail(o) },

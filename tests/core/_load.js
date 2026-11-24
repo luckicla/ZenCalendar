@@ -28,6 +28,7 @@ function load(files, extra) {
 let pass = 0, fail = 0;
 const fails = [];
 async function t(name, fn) {
+  if (process.env.ZC_TRACE) console.log('  · ' + name);
   try { await fn(); pass++; }
   catch (e) { fail++; fails.push(name); console.log('  ✗ ' + name + '\n     ' + (e && e.message)); }
 }

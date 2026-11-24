@@ -39,7 +39,8 @@
   // ---------- borrador ----------
   function draftFrom(o) {
     const cal = C.prefsCal(), cals = ZC.store.calendars();
-    const defCal = (cals.find(c => c.visible !== false) || cals[0] || { id: 'personal' }).id;
+    const okCal = c => !(UI.gacc && UI.gacc.readOnlyCal(c));
+    const defCal = (cals.find(c => c.visible !== false && okCal(c) && !(UI.gacc && UI.gacc.isGoogle(c))) || cals.find(c => c.visible !== false && okCal(c)) || cals[0] || { id: 'personal' }).id;
     if (o.ev) {
       const ev = JSON.parse(JSON.stringify(o.ev));
       if (o.occ && ev.rrule) { ev.start = toLocal(o.occ.start, ev.allDay); ev.end = toLocal(ev.allDay ? C.lastDay(o.occ) : o.occ.end, ev.allDay); }
@@ -65,6 +66,8 @@
 
   // ---------- editor ----------
   function open(o = {}) {
+    // un evento de un calendario de solo lectura se abre para verlo, no para editarlo
+    if (o.ev && UI.gacc && UI.gacc.readOnly(o.ev)) return detail(o.occ || C.occOf(o.ev));
     const isNew = !o.ev;
     const D = draftFrom(o);
     const orig = o.ev ? JSON.parse(JSON.stringify(o.ev)) : null;
@@ -109,7 +112,7 @@
             <div class="ed-custom" ${preset === 'custom' ? '' : 'hidden'}>${customHTML()}</div>
           </div>
           <div class="ed-sec">
-            <div class="ed-row top"><span class="ed-ic">${UI.icon('calendar', 20)}</span><div class="ed-cals">${cals.map(c => `<button type="button" class="chip cal-chip ${c.id === D.calendarId ? 'on' : ''}" data-cal="${esc(c.id)}" style="--cc:${esc(c.color)}"><i class="dot" style="background:${esc(c.color)}"></i>${esc(c.name)}</button>`).join('')}</div></div>
+            <div class="ed-row top"><span class="ed-ic">${UI.icon('calendar', 20)}</span>${calChips(cals)}</div>
             <div class="ed-row"><span class="ed-ic">${UI.icon('palette', 20)}</span><div class="ed-colors"><button type="button" class="cdot sm ${!D.color ? 'on' : ''}" data-color="" style="--c:${esc(cal.color || '#B9A2FF')}" title="${t('Color del calendario')}"><span>A</span></button>${EV_COLORS.map(c => `<button type="button" class="cdot sm ${D.color && D.color.toLowerCase() === c.toLowerCase() ? 'on' : ''}" data-color="${c}" style="--c:${c}" aria-label="${c}"></button>`).join('')}</div></div>
             <div class="ed-row top"><span class="ed-ic">${UI.icon('bell', 20)}</span><div class="ed-rems">${D.reminders.slice().sort((a, b) => a - b).map(m => `<span class="chip">${esc(remLabel(m))}<button type="button" class="x" data-rem="${m}" aria-label="${t('Quitar aviso')}">${UI.icon('x', 14)}</button></span>`).join('')}<button type="button" class="chip add" data-act="addrem">${UI.icon('plus', 15)}${t('Aviso')}</button></div></div>
             <div class="ed-row top ed-alarm ${D.alarm ? 'on' : ''}"><span class="ed-ic">${UI.icon('alarm', 20)}</span><div class="ed-al">
@@ -136,6 +139,16 @@
       autosize(body.querySelector('.ed-tin'));
       requestAnimationFrame(() => body.querySelectorAll('.seg').forEach(UI.paintSeg));
       if (nlpHint) showNlp(nlpHint);
+    }
+    // calendarios agrupados por cuenta (los de solo lectura no se pueden elegir)
+    function calChips(cals) {
+      const GA = UI.gacc;
+      const chip = c => `<button type="button" class="chip cal-chip ${c.id === D.calendarId ? 'on' : ''}" data-cal="${esc(c.id)}" style="--cc:${esc(c.color)}"><i class="dot" style="background:${esc(c.color)}"></i>${esc(c.name)}</button>`;
+      if (!GA) return `<div class="ed-cals">${cals.map(chip).join('')}</div>`;
+      const pick = cals.filter(c => !GA.readOnlyCal(c) || c.id === D.calendarId);
+      const grps = GA.groups(pick).filter(g => g.cals.length);
+      if (grps.length <= 1 && !(grps[0] && grps[0].label && grps[0].id !== 'local')) return `<div class="ed-cals">${(grps[0] ? grps[0].cals : pick).map(chip).join('')}</div>`;
+      return `<div class="ed-cals grouped">${grps.map(g => `<div class="ed-cg"><span class="ed-cgl">${g.id === 'local' ? UI.icon('calendar', 13) : UI.icon('user', 13)}${esc(g.label)}</span><div class="ed-cgc">${g.cals.map(chip).join('')}</div></div>`).join('')}</div>`;
     }
     // sugerencia de «añadir rápido» o del título: «¿Le pongo alarma?»
     function alarmTip() {
@@ -402,13 +415,14 @@
     const color = ev.color || cal.color || '#B9A2FF';
     const task = ev.kind === 'task';
     const rems = (ev.reminders || []).slice().sort((a, b) => a - b);
+    const GA = UI.gacc, ro = !!(GA && GA.readOnly(ev)), goo = !!(GA && (GA.isGoogle(cal) || ev.source === 'google'));
     const html = `
       <div class="dt" style="--c:${esc(color)}">
         <div class="dt-hero">
           <div class="dt-acts">
-            <button class="ibtn" data-act="edit" aria-label="${t('Editar')}" title="${t('Editar')}">${UI.icon('edit', 19)}</button>
-            <button class="ibtn" data-act="dup" aria-label="${t('Duplicar')}" title="${t('Duplicar')}">${UI.icon('copy', 19)}</button>
-            <button class="ibtn" data-act="delete" aria-label="${t('Borrar')}" title="${t('Borrar')}">${UI.icon('trash', 19)}</button>
+            ${ro ? `<span class="dt-ro">${UI.icon('lock', 15)}${t('Solo lectura')}</span>` : `<button class="ibtn" data-act="edit" aria-label="${t('Editar')}" title="${t('Editar')}">${UI.icon('edit', 19)}</button>`}
+            <button class="ibtn" data-act="dup" aria-label="${t('Duplicar')}" title="${ro ? t('Hacer una copia en ZenCalendar') : t('Duplicar')}">${UI.icon('copy', 19)}</button>
+            ${ro ? '' : `<button class="ibtn" data-act="delete" aria-label="${t('Borrar')}" title="${t('Borrar')}">${UI.icon('trash', 19)}</button>`}
             <span style="flex:1"></span>
             <button class="ibtn" data-act="close" aria-label="${t('Cerrar')}">${UI.icon('x', 20)}</button>
           </div>
@@ -418,13 +432,14 @@
           <div class="dt-tags"><span class="chip"><i class="dot" style="background:${esc(cal.color || color)}"></i>${esc(cal.name || '')}</span>${ev.rrule ? `<span class="chip">${UI.icon('repeat', 14)}${esc(describe(ev.rrule, ev.start))}</span>` : ''}${task ? `<span class="chip">${UI.icon('tasks', 14)}${t('Tarea')}</span>` : ''}${ev.alarm ? `<span class="chip al">${UI.icon('alarm', 14)}${t('Alarma')}</span>` : ''}</div>
         </div>
         <div class="dt-body">
-          ${task ? `<button class="btn ${o.done ? 'soft' : 'pri'} block dt-done" data-act="done">${UI.icon('check', 18)}${o.done ? t('Marcar como pendiente') : t('Marcar como hecha')}</button>` : ''}
+          ${task && !ro ? `<button class="btn ${o.done ? 'soft' : 'pri'} block dt-done" data-act="done">${UI.icon('check', 18)}${o.done ? t('Marcar como pendiente') : t('Marcar como hecha')}</button>` : ''}
           ${ev.location ? `<div class="dt-row">${UI.icon('pin', 19)}<div><b>${esc(ev.location)}</b><button class="link" data-act="maps">${t('Abrir en Google Maps')}</button></div></div>` : ''}
           ${ev.alarm ? `<div class="dt-row dt-alarm">${UI.icon('alarm', 19)}<div><b>${esc(C.alarmText(ev))}</b><small class="mut">${t('Suena como un despertador, aunque el móvil esté en silencio.')}</small></div></div>` : ''}
           ${rems.length ? `<div class="dt-row">${UI.icon('bell', 19)}<div>${rems.map(m => `<span class="chip">${esc(ev.allDay && m === 0 ? t('El mismo día (9:00)') : C.remText(m))}</span>`).join(' ')}</div></div>` : ''}
           ${ev.notes ? `<div class="dt-row">${UI.icon('notes', 19)}<div class="dt-notes">${linkify(ev.notes)}</div></div>` : ''}
           ${(ev.checklist || []).length ? `<div class="dt-row">${UI.icon('list', 19)}<div class="dt-check">${ev.checklist.map(c => `<div class="ck-item ${c.done ? 'done' : ''}" data-ck="${esc(c.id)}"><span class="tick ${c.done ? 'on' : ''}" role="checkbox" aria-checked="${!!c.done}" tabindex="0">${UI.icon('check', 14)}</span><span>${esc(c.text)}</span></div>`).join('')}<small class="mut">${ev.checklist.filter(c => c.done).length}/${ev.checklist.length}</small></div></div>` : ''}
           ${(ev.attachments || []).length ? `<div class="dt-imgs">${ev.attachments.map((a, i) => `<button class="dt-img" data-i="${i}" aria-label="${esc(a.name || t('Imagen'))}"><img alt=""></button>`).join('')}</div>` : ''}
+          ${goo ? `<button class="btn soft block dt-gcal" data-act="gcal">${UI.icon('external', 18)}${t('Abrir en Google Calendar')}</button>` : ''}
         </div>
       </div>`;
     const L = UI.openLayer({ kind: 'modal', panelCls: 'dt-panel', html, label: ev.title });
@@ -434,6 +449,7 @@
       if (ext && ZC.platform && ZC.platform.kind !== 'web') { e.preventDefault(); ZC.platform.openExternal(ext.dataset.ext); return; }
       const img = e.target.closest('.dt-img'); if (img) { UI.lightbox(ev.attachments.map(a => a.id), +img.dataset.i); return; }
       const ck = e.target.closest('.ck-item');
+      if (ck && ro) { GA.roToast(); return; }
       if (ck) {
         const list = JSON.parse(JSON.stringify(ev.checklist)); const it = list.find(x => x.id === ck.dataset.ck);
         if (it) { it.done = !it.done; ck.classList.toggle('done', it.done); ck.querySelector('.tick').classList.toggle('on', it.done); if (it.done) { const r = ck.querySelector('.tick').getBoundingClientRect(); UI.confetti(r.left + 10, r.top + 10, 8); } ev.checklist = list; await ZC.store.saveEvent({ id: ev.id, checklist: list }); const sm = L.body.querySelector('.dt-check small'); if (sm) sm.textContent = list.filter(c => c.done).length + '/' + list.length; }
@@ -443,9 +459,10 @@
       const act = b.dataset.act;
       if (act === 'close') L.close();
       if (act === 'edit') { L.close(); setTimeout(() => open({ ev, occ: o }), UI.anim() ? 120 : 0); }
-      if (act === 'dup') { const copy = JSON.parse(JSON.stringify(ev)); delete copy.id; delete copy.created; delete copy.updated; delete copy.recurrenceOf; delete copy.recurrenceDate; delete copy.doneDates; copy.done = false; copy.doneAt = null; const saved = await ZC.store.saveEvent(copy); L.close(); UI.toast(t('Duplicado'), { icon: 'copy', undo: () => ZC.store.deleteEvent(saved.id, { mode: 'all' }) }); }
+      if (act === 'dup') { const copy = JSON.parse(JSON.stringify(ev)); if (goo) { ['source', 'etag', 'gUpdated', 'htmlLink', 'readOnly', 'accountId', 'gid'].forEach(k => delete copy[k]); if (ro) copy.calendarId = draftFrom({}).calendarId; } delete copy.id; delete copy.created; delete copy.updated; delete copy.recurrenceOf; delete copy.recurrenceDate; delete copy.doneDates; copy.done = false; copy.doneAt = null; const saved = await ZC.store.saveEvent(copy); L.close(); UI.toast(t('Duplicado'), { icon: 'copy', undo: () => ZC.store.deleteEvent(saved.id, { mode: 'all' }) }); }
       if (act === 'delete') { if (await C.deleteOccurrence(o)) L.close(); }
       if (act === 'maps') openMaps(ev.location);
+      if (act === 'gcal') GA.openURL(GA.googleURL(ev));
       if (act === 'done') { await C.toggleTask(o, o.done ? null : b); L.close(); }
     });
     return L;

@@ -572,6 +572,14 @@ function setupIPC() {
       showWindow();
       return r;
     }
+    // Google Calendar (varias cuentas): 'add' | 'token' con cfg.account | 'remove' | 'accounts'
+    if (cmd === 'add') {
+      const r = await google.calAdd(cfg || {});
+      showWindow();
+      return r;
+    }
+    if (cmd === 'remove') return google.calRemove(cfg || {});
+    if (cmd === 'accounts') return google.calAccounts();
     if (cmd === 'token') return google.token(cfg);
     if (cmd === 'disconnect') return google.disconnect();
     if (cmd === 'status') return { connected: google.connected() };

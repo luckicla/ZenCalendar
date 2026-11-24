@@ -3,7 +3,7 @@
 //
 //   await ZC.core.init();
 // abre la base de datos, carga la caché, prepara la plataforma, programa los
-// avisos y arranca la sincronización si ya estaba conectado a Google. A partir
+// avisos y arranca la sincronización si ya estaba conectado a Google (Drive y Google Calendar). A partir
 // de ahí ZC.store.* responde al momento. Nunca deja la app en blanco: si algo
 // de lo de después de la base de datos falla, se apunta en la consola y sigue.
 (function (root) {
@@ -18,6 +18,7 @@
         ['platform', () => ZC.platform.init()],
         ['reminders', () => ZC.reminders.init()],
         ['drive', () => ZC.drive.init()],
+        ['gcal', () => ZC.gcal && ZC.gcal.init()],
       ];
       for (const [name, fn] of steps) {
         try { await fn(); } catch (e) { console.error('[ZC] falló el arranque de ' + name, e); }

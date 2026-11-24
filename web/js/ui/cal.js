@@ -188,8 +188,11 @@
     const used = new Set(); for (const e of ZC.store.events()) for (const a of (e.attachments || [])) used.add(a.id);
     for (const id of new Set(ids)) if (!used.has(id)) await ZC.store.deleteBlob(id).catch(() => {});
   }
+  // (eventos de calendarios de Google de solo lectura: ni mover, ni borrar, ni completar)
+  const ro = ev => !!(UI.gacc && UI.gacc.readOnly(ev));
   async function moveOccurrence(o, newStart, newEnd) {
     const ev = o.ev;
+    if (ro(ev)) { UI.gacc.roToast(); UI.app && UI.app.render(); return; }
     const changes = { start: toLocal(newStart, ev.allDay), end: toLocal(newEnd, ev.allDay) };
     if (ev.kind === 'task') changes.end = changes.start;
     const mode = await askSeries(o, 'move');
@@ -207,6 +210,7 @@
   }
   async function deleteOccurrence(o) {
     const ev = o.ev;
+    if (ro(ev)) { UI.gacc.roToast(); return false; }
     const mode = await askSeries(o, 'delete');
     if (!mode) return false;
     const snap = snapshotSeries(ev);
@@ -222,6 +226,7 @@
     } catch (e) { console.error(e); UI.toast(t('No se ha podido borrar')); return false; }
   }
   async function toggleTask(o, el) {
+    if (ro(o.ev)) { UI.gacc.roToast(); return; }
     const wasDone = o.done != null ? o.done : o.ev.done;
     try {
       if (el && !wasDone) { const r = el.getBoundingClientRect(); UI.confetti(r.left + r.width / 2, r.top + r.height / 2); el.classList.add('on', 'pop'); }

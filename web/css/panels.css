@@ -529,3 +529,75 @@ select.in.sm { padding-right: 32px; background-position: right 9px center; }
 @media (max-width: 760px) { .ai-grp-list { max-height: 42vh; } }
 .ai-log.still .ai-act, .ai-log.still .ai-grp, .ai-log.still .ai-sug, .ai-log.still .msg, .ai-log.still .bub { animation: none !important; }
 .nr.al > .ic { color: var(--a2t); }
+
+/* ---------- Cuentas de Google (Drive + Google Calendar) ---------- */
+.drive-tag { font-size: .74rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; color: var(--mut); margin-top: 4px; }
+.drive.on > p, .drive.on > h2, .drive.on > .drive-art { display: none; }
+.drive.on .drive-tag { margin-top: 0; }
+.scard:has(.drive.on) { padding-top: 18px; padding-bottom: 18px; }
+.gcal-card { gap: 10px; }
+.ga-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.ga-list:empty { display: none; }
+.gacc { border-radius: var(--r-m, 16px); background: rgb(var(--fg-rgb) / .045); overflow: hidden; }
+.gacc.err { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, #ff7a90 55%, transparent); }
+.ga-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; text-align: left; border-radius: inherit; }
+.ga-head:hover { background: var(--hover); }
+.ga-av { width: 38px; height: 38px; border-radius: 50%; flex: none; object-fit: cover; }
+.ga-av.av { display: grid; place-items: center; background: var(--c, var(--a1)); color: #fff; font: 800 1.02rem var(--font-title); }
+.ga-av.av.ghost { background: transparent; color: var(--fg); box-shadow: inset 0 0 0 1.5px rgb(var(--fg-rgb) / .25); }
+.ga-tx { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.ga-tx b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .95rem; }
+.ga-tx small, .ga-st { font-size: .8rem; color: var(--mut); display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
+.ga-st.err { color: #c93b62; }
+.ga-st.busy { color: var(--a1t); }
+.ga-st .spin { width: 12px; height: 12px; }
+.ga-n { font-size: .78rem; font-weight: 700; color: var(--mut); font-variant-numeric: tabular-nums; }
+.ga-chev { color: var(--mut); transition: transform var(--t-fast); flex: none; }
+.gacc.open .ga-chev { transform: rotate(180deg); }
+.ga-fix { padding: 0 12px 10px 62px; }
+.ga-body { padding: 2px 8px 10px; border-top: 1px solid var(--line); }
+.ga-cals { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; padding: 6px 0; }
+.ga-cal { display: flex; align-items: center; gap: 11px; width: 100%; min-height: 40px; padding: 0 8px; border-radius: 12px; text-align: left; font-size: .92rem; font-weight: 550; }
+.ga-cal:hover { background: var(--hover); }
+.ga-cal .cbox { width: 20px; height: 20px; border-radius: 7px; flex: none; display: grid; place-items: center; background: var(--c); transition: background var(--t-fast); }
+.ga-cal .cbox .ic { width: 14px; height: 14px; stroke-width: 3; color: rgb(40 30 60 / .75); }
+.ga-cal.off .cbox { background: transparent; box-shadow: inset 0 0 0 2px var(--c); }
+.ga-cal.off .cbox .ic { opacity: 0; }
+.ga-cal.off .nm { color: var(--mut); }
+.ga-cal .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ga-ro { display: inline-flex; align-items: center; gap: 4px; font-size: .74rem; font-weight: 650; color: var(--mut); white-space: nowrap; flex: none; }
+.ga-ro .ic { width: 12px; height: 12px; }
+.ga-none { font-size: .86rem; padding: 6px 8px; }
+.ga-acts { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 4px 0; }
+.ga-add { justify-self: start; margin-top: 2px; }
+.ga-warn { display: flex; gap: 7px; align-items: flex-start; font-size: .8rem; line-height: 1.4; color: var(--mut); margin: 0; text-align: left; }
+.ga-warn .ic { width: 14px; height: 14px; flex: none; margin-top: 2px; }
+.ga-short { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border-radius: var(--r-m, 16px); text-align: left; font-size: .9rem; background: color-mix(in srgb, var(--a1) 13%, transparent); color: var(--fg); }
+.ga-short > .ic:first-child { color: var(--a1t); flex: none; }
+.ga-short > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ga-short:hover { background: color-mix(in srgb, var(--a1) 20%, transparent); }
+.ga-sug { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--r-m, 16px); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--a1) 45%, transparent); }
+/* editor: calendarios por cuenta */
+.ed-cals.grouped { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.ed-cg { display: grid; gap: 5px; min-width: 0; }
+.ed-cgl { display: inline-flex; align-items: center; gap: 5px; font-size: .74rem; font-weight: 700; color: var(--mut); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ed-cgl .ic { width: 13px; height: 13px; flex: none; }
+.ed-cgc { display: flex; flex-wrap: wrap; gap: 6px; }
+/* detalle: solo lectura */
+.dt-ro { display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; height: 34px; margin: 3px 4px 3px 6px; border-radius: 999px; font-size: .82rem; font-weight: 700; color: var(--fg); background: color-mix(in srgb, var(--s1) 70%, transparent); }
+.dt-ro .ic { width: 15px; height: 15px; }
+.dt-gcal { margin-top: 4px; }
+/* bienvenida: «¿Traer también tus calendarios?» */
+.wl-gcal { width: min(440px, 100%); display: grid; gap: 8px; }
+.wl-gsw { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-m, 16px); background: rgb(var(--fg-rgb) / .05); text-align: left; cursor: pointer; }
+.wl-gtx { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 10px; }
+.wl-gtx > .ic { color: var(--a1t); flex: none; margin-top: 1px; }
+.wl-gtx b { display: block; font-size: .93rem; }
+.wl-gtx small { display: block; color: var(--mut); font-size: .8rem; line-height: 1.35; margin-top: 2px; }
+.wl-card .ga-warn { max-width: 440px; }
+@media (max-width: 520px) {
+  .ga-fix { padding-left: 12px; }
+  .ga-acts .btn { flex: 1; }
+  .ga-sug { flex-wrap: wrap; }
+  .ga-sug .btn { flex-basis: 100%; }
+}

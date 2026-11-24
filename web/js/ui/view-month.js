@@ -152,6 +152,7 @@
       const ev = e.target.closest('.mv-ev');
       const cell = e.target.closest('.mc-day') || (e.target.closest('.mv-bars') && null);
       if (!ev && !cell) return;
+      if (ev && ev._o && UI.gacc && UI.gacc.readOnly(ev._o.ev)) return;
       const touch = e.pointerType !== 'mouse';
       press = { x: e.clientX, y: e.clientY, ev, cell, touch, id: e.pointerId, t: setTimeout(() => {
         if (!press) return;

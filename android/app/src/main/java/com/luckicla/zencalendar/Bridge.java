@@ -105,6 +105,11 @@ final class Bridge {
         a.runOnUiThread(() -> GoogleAuth.authorize(a, id, interactive, scopes));
     }
 
+    // Google Calendar: token de una cuenta concreta (email vacío = elegir cuenta) → { token, email }
+    @JavascriptInterface public void googleAccount(String id, String email, boolean interactive, String scopes) {
+        a.runOnUiThread(() -> GoogleAuth.account(a, id, email, interactive, scopes));
+    }
+
     @JavascriptInterface public void googleClear(String token) {
         if (token != null && !token.isEmpty()) GoogleAuth.clear(a, token);
     }

@@ -206,3 +206,14 @@ html.boot #bnav, html.boot .fab { animation: bootNav calc(700ms * var(--spd)) va
 @media (min-width: 1100px) { #app:not(.side-off) .fab { display: none; } }
 /* (móviles de 360-380 px: el mes entero antes que la flechita, que el título sigue abriendo el menú) */
 @media (max-width: 380px) { #periodTitle > .ic { display: none; } #periodTitle { padding-right: 6px; } }
+
+/* calendarios agrupados por cuenta (Google Calendar) */
+.cal-grp + .cal-grp { margin-top: 6px; }
+.cal-gh { display: flex; align-items: center; gap: 6px; width: 100%; height: 28px; padding: 0 8px; border-radius: 10px; font-size: .78rem; font-weight: 700; color: var(--mut); text-align: left; }
+.cal-gh:hover { background: var(--hover); color: var(--fg); }
+.cal-gh span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-gh .cg-chev { width: 15px; height: 15px; flex: none; transition: transform var(--t-fast); }
+.cal-grp.shut .cg-chev { transform: rotate(-90deg); }
+.cg-err { width: 8px; height: 8px; border-radius: 50%; background: #ff6b81; flex: none; }
+.cal-row .cal-ro { color: var(--mut); display: grid; place-items: center; flex: none; }
+.cal-row .cal-ro .ic { width: 13px; height: 13px; }

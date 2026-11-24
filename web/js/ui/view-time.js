@@ -140,6 +140,8 @@
       if (P) clearTimeout(P.timer);
       const col = e.target.closest('.tg-col'); if (!col) return;
       const evb = e.target.closest('.tg-ev');
+      // (un evento de solo lectura no se arrastra: el toque abre su detalle)
+      if (evb && evb._o && UI.gacc && UI.gacc.readOnly(evb._o.ev)) return;
       const touch = e.pointerType !== 'mouse';
       const mode = evb ? (e.target.closest('.rz') ? 'resize' : 'move') : 'create';
       P = { mode, col, evb, touch, x: e.clientX, y: e.clientY, id: e.pointerId, active: false };

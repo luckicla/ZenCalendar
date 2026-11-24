@@ -422,3 +422,114 @@ La API del núcleo ya está (versión 1.2.0, ver `docs/IA-ALARMAS.md` y `docs/CO
   `tests/ui/out/ai-alarm-*.png`. Siguen pasando `interact, regress, gestures, updates, dot, welcome, fab` y `QUICK=1 overlap.js` (0 problemas).
 - Para backend (no corre prisa): «cita importante con el médico el jueves a las 10» deja «importante» en el título
   («Cita importante con el médico»). Estaría mejor quitarlo, igual que se quitan las palabras de fecha.
+
+## Google Calendar → para front (de back)
+
+`ZC.gcal` ya responde (`web/js/core/gcal.js`). **Añade `<script src="js/core/gcal.js"></script>` justo después de `drive.js`**
+en `index.html` (en `widget.html` no hace falta: el widget no sincroniza; los eventos de Google le llegan por el store).
+Todo en `docs/CONTRATO.md` → «Google Calendar con varias cuentas (1.3.0)». Lo corto:
+
+- `available()` · `accounts()` → `[{ id, email, name, photo, color, calendars: [{ gid, id, name, color, primary, accessRole, readOnly, enabled }], connected, lastSync, error, reauth, syncing, isDrive }]`.
+  `connected: false` = la cuenta está conectada en **otro** dispositivo (llega por Drive): enseña «Conectar aquí» → `reconnect(id)`.
+  `reauth: true` = hay que volver a iniciar sesión (con `error` en texto para enseñar) → botón «Volver a conectar» → `reconnect(id)`.
+- `await addAccount()` (selector de cuentas de Google) · `await addAccount({ email })` (esa cuenta: p. ej. la de Drive →
+  «Usar también tus calendarios de <email>», sin volver a elegir) · `await reconnect(id)` · `await removeAccount(id)` ·
+  `await setCalendarEnabled(id, gid, on)` · `await sync(id?)` · `on('state', fn(accounts))` · `prepare()` (web: llama al abrir
+  la pantalla de cuentas, para que la ventanita de Google no la bloquee el navegador).
+  `addAccount`/`reconnect` lanzan `Error` con `message` ya en texto (cancelado, sin permiso, «Has elegido otra cuenta»…).
+- En el store: los calendarios de Google son calendarios normales con `source: 'google'`, `accountId`, `gid`, `email`,
+  `readOnly`, `primary` (id `'g:<cuenta>:<gid>'`, `order` ≥ 100). Los eventos llevan `source: 'google'`, `accountId`, `gid`,
+  `readOnly`, `htmlLink` («Abrir en Google Calendar»), `gEventId`. **No parseéis los id** (`'g:…'`): usad esos campos.
+  Para crear en Google basta con `saveEvent({ calendarId: 'g:…', … })`: el id lo pone el store y se sube solo.
+  Mover un evento entre calendarios (de ZenCalendar a Google, entre cuentas…) también funciona con `saveEvent`; al pasar de
+  ZenCalendar a Google (o al revés) el evento cambia de id (si tenéis el editor abierto, cerradlo tras guardar).
+  `deleteCalendar('g:…')` no borra nada en Google: desactiva ese calendario.
+- **Modo simulado** para probar sin Google: `const g = await ZC.gcal._mock()` (cuentas de ejemplo: ana@ y equipo@ conectadas,
+  con calendario de solo lectura y festivos/cumpleaños desactivados; «Añadir cuenta» da nueva@) o
+  `await ZC.gcal._mock([{ email, name, photo, connected, authError, calendars: [{ name, color, accessRole, primary, events: [{ title, start, end, rrule }] }] }], { delay: 400 })`.
+  Carga solo `js/core/gcal-mock.js`. Para simular cosas: `g.setAuthError(email)` (+ `ZC.gcal.sync()` → `reauth`/`error`),
+  `g.offline = true`, `g.delay = 800` (para ver «sincronizando»), `g.addEvent(email, gid, { title, start })` (+ `sync()`),
+  `g.denyAdd(email)` (el usuario no da permiso), `g.pick(email)`. Llamadlo después de `ZC.core.init()`.
+- Extras: en la web, si la sesión de una cuenta caduca, sale `reauth: true` con `error` «La sesión de Google ha caducado: toca
+  la app para seguir» y el siguiente toque en la página la renueva sola (una cuenta por toque); no hace falta botón, pero
+  «Volver a conectar» también vale. Si al dar permiso no se marca la casilla de Calendar, `addAccount` falla con
+  «Hace falta marcar el permiso de Google Calendar». Si Google rechaza un evento, la cuenta trae `error` («Google no aceptó
+  «X»: …») y el evento se queda aquí con `gError`.
+
+## Google Calendar: hecho por back
+
+- **`web/js/core/gcal.js`** (nuevo): `ZC.gcal` completo según `docs/GOOGLE-CALENDAR.md` y `docs/CONTRATO.md` → «Google Calendar
+  con varias cuentas (1.3.0)»: cuentas en `prefs.gcal` (viajan por Drive sin tokens, se juntan cuenta a cuenta), calendarios
+  de Google como calendarios del store, sync en las dos direcciones con la API REST v3 por `ZC.net.fetch` (syncToken por
+  calendario, 410 → lista completa, `If-Match` + 412 con fusión campo a campo, gana Google en el choque), recurrencias con
+  excepciones en los dos sentidos (y las que ZenCalendar no sabe repetir, como apariciones sueltas), avisos, colores,
+  `extendedProperties.private` (alarma, emoji, lista, tarea, imágenes), mover entre calendarios/cuentas, solo lectura,
+  reintentos (401/429/5xx), sin conexión. Sync al abrir, al volver, cada 5 min y 2 s tras cada cambio.
+- **`web/js/core/gcal-mock.js`** (nuevo): Google Calendar simulado (para `ZC.gcal._mock()` y las pruebas).
+- **`store.js`**: ids y ficha de Google en los eventos nuevos de un calendario de Google (y nunca heredada al duplicar o en
+  «solo esta»), lápidas de Google con lo justo para borrar en Google, `snapshot({ drive: true })`/`driveOnly()` (nada de Google
+  a Drive ni a `exportJSON`), `deleteCalendar('g:…')` = desactivar, fusión de `prefs.gcal` por cuenta, `_gwrite`/`_rawEvents`.
+  **`drive.js`**: sube y baja solo lo que no es de Google. **`core.js`**: arranca `ZC.gcal`.
+- **Windows** (`desktop/google.js`, `main.js`, `preload.js`): `google('add' | 'token' con account | 'remove' | 'accounts')`, un
+  refresh token por cuenta cifrado con `safeStorage` en `google-calendar.bin` (Drive sigue igual en `google.bin`), correo
+  sacado del `id_token`.
+- **Android** (`GoogleAuth.java`, `Bridge.java`, `MainActivity.java`): `ZCAndroid.googleAccount(id, email, interactive, scopes)`;
+  sin correo, selector de cuentas del sistema (`AccountManager.newChooseAccountIntent`, sin permisos nuevos) y luego
+  `AuthorizationClient` con `setAccount`. Compila contra los stubs (`/tmp/zdot/jc/stubs`, añadidos `android.accounts.*` y
+  `AuthorizationRequest.Builder.setAccount`).
+- **Docs**: `docs/CONTRATO.md` (sección nueva) y `docs/GOOGLE-SETUP.md` (permiso de Calendar, «no verificada», límite de 100
+  cuentas, paso 7 con lo que pide la verificación y el texto de la justificación).
+- **Pruebas**: `node tests/core/run.js` → todo bien (nuevas `gcal.test.js`, 27: conversiones, alta, festivos desactivados,
+  nada a Drive, incremental, 410, crear/editar/borrar en los dos sentidos, «solo esta» y quitar repetición, excepciones de
+  Google, series complejas, 412 con fusión y con borrado, solo lectura, activar/desactivar, mover entre calendarios y cuentas,
+  varias cuentas con una caducada, quitar cuenta, otro dispositivo por Drive, altas a la vez en dos dispositivos, sin
+  conexión, 503/400, permiso denegado, paginación; y `desktop-google.test.js`, 3, con un Electron de mentira).
+  `node tests/ui/interact.js` sigue bien. Probado también en Chrome de verdad con `_mock()` (IndexedDB, carga de `gcal-mock.js`).
+
+### Google Calendar: por probar con una cuenta de verdad
+- Que la pantalla de permiso deja marcar Calendar con la app sin verificar en las tres plataformas (web, Windows con el
+  cliente de escritorio, Android) y que `addAccount()` enseña de verdad el selector (web `select_account`, Windows
+  `select_account consent`, Android el selector del sistema + `setAccount`). En Android, que el `setAccount` con una
+  cuenta que no es la de Drive da su propio token (y que `GoogleAuthUtil.clearToken` no estropea el de Drive).
+- El permiso incremental con la cuenta de Drive (`addAccount({ email })`) en la web y que quitar esa cuenta de Calendar no
+  corta Drive (no se revoca a propósito).
+- Detalles de la API real que el simulado imita «a ojo»: `instances?originalStart=` con hora en UTC (`…Z`), el `UNTIL` en UTC
+  y el `EXDATE;TZID=` al cambiar una regla, `events.move` con cuerpo `{}` (Android hace los `POST` por `HttpURLConnection`),
+  el `PATCH` con `X-HTTP-Method-Override` de Android junto con `If-Match`, y el 412/410 tras un borrado en Google.
+- Calendarios con muchos eventos (años de historial): tiempo de la primera sync y tamaño en IndexedDB.
+- Eventos de Google con zona distinta a la del dispositivo y series que cruzan el cambio de hora.
+
+## Google Calendar: hecho por front
+
+- **`web/js/ui/gacc.js`** (nuevo, después de `settings.js`): todo lo de las cuentas de Google en la interfaz, colgado de `UI.gacc`.
+  Si `ZC.gcal` no existe o `available()` es false, no enseña nada y el resto sigue igual (probado).
+  `web/index.html` carga `js/core/gcal.js` justo después de `drive.js` (en `widget.html` no hace falta).
+- **Ajustes → «Cuentas de Google»** (antes «Google Drive»; el id de la sección sigue siendo `drive`): arriba la cuenta
+  principal de Drive (más compacta cuando está conectada). Debajo, «Google Calendar»: las cuentas del otro dispositivo
+  (`connected: false`) con «Conectar» (→ `reconnect(id)`), el atajo «Usar también tus calendarios de <email>» si la de Drive
+  no está (→ `addAccount({ email })`), cada cuenta desplegable (foto o inicial, estado, «x/y» calendarios, casillas →
+  `setCalendarEnabled`, «Solo lectura», «Sincronizar ahora», «Quitar cuenta» con confirmación). Con `reauth`, «Volver a
+  conectar». Luego el botón **«Añadir cuenta de Google»** y la línea del aviso de «app no verificada». Llama a
+  `ZC.gcal.prepare()` al abrir. Los cambios que llegan solos (`on('state')`) repintan sin perder el desplazamiento.
+- **Panel lateral**: calendarios en grupos plegables («ZenCalendar», «ana@…», «taller@…»; se recuerda en
+  `store.local('side.fold')`), candado en los de solo lectura, punto rojo si la cuenta tiene error. Los desactivados no salen.
+  El menú «⋯» de un calendario de Google: ocultar/mostrar, solo este, exportar, abrir en Google Calendar y «Cuentas de Google»
+  (nombre, color y borrar se cambian en Google).
+- **Editor**: los calendarios agrupados por cuenta; los de solo lectura no salen. Por defecto, uno de ZenCalendar.
+- **Solo lectura** (`ev.readOnly` o calendario `readOnly`): abrir para editar → detalle en modo ver («Solo lectura», sin
+  editar/borrar/completar, «Hacer una copia en ZenCalendar», «Abrir en Google Calendar» con `htmlLink`). No se arrastran en Mes/
+  Semana/Día, no se deslizan en Agenda/Tareas, menú contextual reducido, y `cal.moveOccurrence/deleteOccurrence/toggleTask`
+  los rechazan con un aviso. Todo evento de Google lleva «Abrir en Google Calendar» en el detalle.
+- **Bienvenida, paso 2**: debajo de «Conectar con Google», el interruptor «¿Traer también tus calendarios de Google?»
+  (activado) con la línea del aviso. Al conectar Drive, si está activado, `addAccount({ email })` con la misma cuenta.
+- **Aviso en el otro dispositivo**: «En tu otro dispositivo tienes conectada X. ¿La conectas aquí?» con «Conectar» (un toque),
+  una vez por cuenta en cada dispositivo (`store.local('gcal.hinted')`); además sigue en Ajustes.
+- Textos en ES/CA/EN (`i18n-dict.js`, bloque «Google Calendar con varias cuentas»), estilos en `panels.css`, `app.css` y `dot.css`.
+- **Pruebas**: `node tests/ui/gcal.js` (puerto 8951): con un `ZC.gcal` simulado (varias cuentas, error, solo lectura, cuenta del
+  otro dispositivo) en Zen/Dot, claro/oscuro, ES/CA/EN, móvil 360 px y PC; sin `ZC.gcal` y con `available()` false; y contra el
+  núcleo de verdad con `ZC.gcal._mock()` (añadir cuenta, sesión caducada → volver a conectar, solo lectura, crear en Google desde el
+  editor). Capturas en `tests/ui/out/gcal-*.png`. Pasan `interact gestures updates dot welcome fab week ai-alarm` y
+  `QUICK=1 overlap` (0 problemas).
+- **Aviso**: `regress.js` falla hoy en «serie semanal arrastrada a otro día con «Todos»» **también sin estos cambios**: la prueba
+  usa la semana del 23-11-2026, que es la de hoy, y al arrastrar no coge el evento. Con el reloj fijado al 10-11-2026
+  (`page.clock.install`) pasa entera. Conviene fijar el reloj en esa prueba.

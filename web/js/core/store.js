@@ -207,6 +207,16 @@
       created: now, updated: 0, deleted: false,
     };
     const e = Object.assign({}, base, p);
+    // algo nuevo nunca hereda la «ficha» de Google de otro (al duplicar, al copiar una aparición…)
+    if (!e.calendarId) e.calendarId = 'personal';
+    if (!prev) {
+      for (const k of G_FIELDS) delete e[k];
+      if (isGoogleId(e.calendarId)) {
+        const g = googleNew(e.calendarId);
+        if (p && p.id) delete g.id; // (si viene con id, se respeta)
+        Object.assign(e, g);
+      }
+    }
     e.id = String(e.id || u.uid());
     e.kind = e.kind === 'task' ? 'task' : 'event';
     e.title = String(e.title == null ? '' : e.title);
@@ -245,7 +255,49 @@
     return e;
   }
 
-  const tomb = (x, now) => ({ id: x.id, deleted: true, updated: Math.max(now || Date.now(), (x.updated || 0) + 1) });
+  // lápida. Las de Google (id 'g:…') guardan lo justo para poder borrarlo también en Google Calendar
+  const tomb = (x, now) => {
+    const t = { id: x.id, deleted: true, updated: Math.max(now || Date.now(), (x.updated || 0) + 1) };
+    if (isGoogleId(x.id)) for (const k of ['calendarId', 'source', 'accountId', 'gid', 'gEventId', 'etag', 'gSynced']) if (x[k] != null) t[k] = x[k];
+    return t;
+  };
+
+  // ---------- Google Calendar (lo usa ZC.gcal) ----------
+  // Lo de Google lleva id 'g:…' (eventos y calendarios) y NO viaja por Drive: cada
+  // dispositivo lo baja de Google. Estos campos son la «ficha» de Google de un evento.
+  const G_FIELDS = ['source', 'accountId', 'gid', 'gEventId', 'etag', 'gUpdated', 'htmlLink', 'gBase', 'gSynced', 'gSeries', 'gInstEx', 'gError', 'readOnly'];
+  const isGoogleId = id => typeof id === 'string' && id.slice(0, 2) === 'g:';
+  function stripGoogle(o) {
+    for (const k of G_FIELDS) delete o[k];
+    if (isGoogleId(o.id)) delete o.id;
+    return o;
+  }
+  // id y ficha para algo nuevo en un calendario de Google ('g:<cuenta>:<calendario>:z<uuid>')
+  function googleNew(calendarId) {
+    const c = calMap.get(calendarId);
+    if (!c || c.deleted || !c.accountId) return {};
+    return {
+      id: 'g:' + c.accountId + ':' + (c.gkey || 'c') + ':z' + U().uid().replace(/[^0-9a-z]/gi, '').toLowerCase(),
+      source: 'google', accountId: c.accountId, gid: c.gid,
+    };
+  }
+  // ¿va a Drive? (lo de Google no; tampoco un evento suelto en un calendario de Google)
+  const forDrive = x => !!x && !isGoogleId(x.id) && !isGoogleId(x.calendarId);
+
+  /** ZC.gcal escribe aquí lo que baja de Google: { events, calendars, purgeEvents, purgeCalendars } (ids) */
+  async function gwrite(w) {
+    w = w || {};
+    const evs = w.events || [], cals = w.calendars || [], pe = w.purgeEvents || [], pc = w.purgeCalendars || [];
+    if (cals.length) { for (const c of cals) calMap.set(c.id, c); await db.put('calendars', cals); }
+    if (pc.length) { for (const id of pc) calMap.delete(id); await db.del('calendars', pc); }
+    if (evs.length) { for (const e of evs) evMap.set(e.id, e); await db.put('events', evs); }
+    if (pe.length) { for (const id of pe) evMap.delete(id); await db.del('events', pe); }
+    if (cals.length || pc.length) changed('calendars', 'sync');
+    if (evs.length || pe.length || cals.length || pc.length) changed('events', 'sync');
+  }
+  // todo, también las lápidas (para ZC.gcal)
+  const rawEvents = () => [...evMap.values()];
+  const rawEvent = id => evMap.get(id) || null;
 
   async function putEvents(list, source) {
     for (const e of list) evMap.set(e.id, e);
@@ -331,9 +383,12 @@
       end = u.toLocal(new Date(s.getTime() + (e0 - s0)), false);
     }
     const copy = Object.assign({}, ev, { start, end }, changes || {}, {
-      id: u.uid(), rrule: null, exdates: [], recurrenceOf: id, recurrenceDate: dkey, created: Date.now(), updated: 0,
+      id: undefined, rrule: null, exdates: [], recurrenceOf: id, recurrenceDate: dkey, created: Date.now(), updated: 0,
       doneDates: undefined,
     });
+    stripGoogle(copy);
+    if (isGoogleId(copy.calendarId)) Object.assign(copy, googleNew(copy.calendarId));
+    if (!copy.id) copy.id = u.uid();
     if (ev.kind === 'task' && !(changes && 'done' in changes)) copy.done = (ev.doneDates || []).includes(dkey);
     const saved = normEvent(copy, null);
     const series = Object.assign({}, ev, { exdates: [...new Set([...(ev.exdates || []), dkey])].sort(), updated: Math.max(Date.now(), ev.updated + 1) });
@@ -381,6 +436,12 @@
   async function deleteCalendar(id) {
     const c = calMap.get(id);
     if (!c || c.deleted) return;
+    if (isGoogleId(id)) {
+      // un calendario de Google no se borra desde aquí: se deja de traer (y se quita lo bajado)
+      if (ZC.gcal && ZC.gcal.setCalendarEnabled && c.accountId) return ZC.gcal.setCalendarEnabled(c.accountId, c.gid, false);
+      const ids = [...evMap.values()].filter(e => e.calendarId === id).map(e => e.id);
+      return gwrite({ purgeEvents: ids, purgeCalendars: [id] });
+    }
     const now = Date.now();
     const t = tomb(c, now);
     calMap.set(id, t);
@@ -552,21 +613,22 @@
   function exportJSON() {
     return {
       app: 'ZenCalendar', format: 1, version: (ZC.config && ZC.config.version) || '', exported: Date.now(),
-      events: U().clone(events()), calendars: U().clone(calendars()), prefs: getPrefs(),
+      // (lo de Google Calendar no: está en Google)
+      events: U().clone(events().filter(forDrive)), calendars: U().clone(calendars().filter(forDrive)), prefs: getPrefs(),
     };
   }
 
   async function importJSON(obj, opts) {
     opts = opts || {};
     if (!obj || typeof obj !== 'object') throw new Error('El archivo no es una copia de ZenCalendar');
-    const evs = Array.isArray(obj.events) ? obj.events.filter(e => e && e.id) : [];
-    const cals = Array.isArray(obj.calendars) ? obj.calendars.filter(c => c && c.id) : [];
+    const evs = Array.isArray(obj.events) ? obj.events.filter(e => e && e.id && forDrive(e)) : [];
+    const cals = Array.isArray(obj.calendars) ? obj.calendars.filter(c => c && c.id && forDrive(c)) : [];
     if (!evs.length && !cals.length && !obj.prefs) throw new Error('El archivo no tiene eventos');
     const now = Date.now();
     if (opts.merge === false) {
       // sustituir: lo de aquí que no viene en la copia se borra (y se borrará en los demás dispositivos)
       const inE = new Set(evs.map(e => e.id)), inC = new Set(cals.map(c => c.id));
-      const snap = snapshot();
+      const snap = snapshot({ drive: true });
       for (const e of snap.events) if (!e.deleted && !inE.has(e.id)) evs.push(tomb(e, now));
       for (const c of snap.calendars) if (!c.deleted && !inC.has(c.id)) cals.push(tomb(c, now));
       for (const x of evs.concat(cals)) x.updated = Math.max(now, x.updated || 0);
@@ -635,12 +697,31 @@
         if (ta > tb) remoteChanged = true;
         continue;
       }
+      if (k === 'gcal' && inA && inB) {
+        // las cuentas de Google Calendar: cada una por su cuenta (si dos dispositivos añaden una a la vez, se quedan las dos)
+        const g = mergeGcal(a[k], b[k]);
+        out[k] = g; out._stamps[k] = Math.max(ta, tb);
+        const jg = stable(g);
+        if (jg !== ja || tb > ta) localChanged = true;
+        if (jg !== jb || ta > tb) remoteChanged = true;
+        continue;
+      }
       const takeB = tb > ta || (tb === ta && jb > ja);
       if (takeB) { out[k] = b[k]; out._stamps[k] = tb; localChanged = true; }
       else { out[k] = a[k]; out._stamps[k] = ta; remoteChanged = true; }
     }
     out._updated = Math.max(a._updated || 0, b._updated || 0);
     return { prefs: out, localChanged, remoteChanged };
+  }
+
+  function mergeGcal(a, b) {
+    const A = (a && a.accounts) || {}, B = (b && b.accounts) || {};
+    const accounts = {};
+    for (const id of new Set([...Object.keys(A), ...Object.keys(B)])) {
+      const x = A[id], y = B[id];
+      accounts[id] = !x ? y : !y ? x : winner(x, y);
+    }
+    return Object.assign({}, a, b, { accounts });
   }
 
   /**
@@ -666,16 +747,26 @@
     };
   }
 
-  // copia completa de aquí, con lápidas (lo que se sube a Drive)
-  function snapshot() {
+  // copia completa de aquí, con lápidas (lo que se sube a Drive: con { drive: true }, sin lo de Google)
+  function snapshot(opts) {
     const blobs = {};
     for (const m of blobMeta.values()) { const y = Object.assign({}, m); delete y.id; blobs[m.id] = y; }
+    const only = opts && opts.drive ? forDrive : () => true;
     return {
-      events: [...evMap.values()],
-      calendars: [...calMap.values()],
+      events: [...evMap.values()].filter(only),
+      calendars: [...calMap.values()].filter(only),
       prefs: U().clone(prefsRaw),
       blobs,
     };
+  }
+
+  // quita de una copia lo de Google (lo que llega de Drive nunca lo trae, pero por si acaso)
+  function driveOnly(data) {
+    if (!data) return data;
+    return Object.assign({}, data, {
+      events: (data.events || []).filter(forDrive),
+      calendars: (data.calendars || []).filter(forDrive),
+    });
   }
 
   // junta lo que llega (de Drive o de una copia) con lo de aquí y guarda lo que gana
@@ -729,6 +820,8 @@
     putBlob, getBlob, blobURL, deleteBlob, blobInfo, on, exportJSON, importJSON,
     // para la sincronización y las pruebas
     merge, snapshot, applyRemote, hasBlobData, stable, normEvent,
+    // Google Calendar
+    driveOnly, isGoogleId, stripGoogle, _gwrite: gwrite, _rawEvents: rawEvents, _rawEvent: rawEvent,
     get persistent() { return !!(db && db.persistent); },
     get ready() { return !!db; },
     DEFAULT_PREFS,

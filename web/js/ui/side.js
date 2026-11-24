@@ -51,8 +51,16 @@
   function cals() {
     const box = document.getElementById('sideCals'); if (!box) return;
     const list = ZC.store.calendars();
+    const GA = UI.gacc;
+    const grps = GA ? GA.groups(list) : [{ id: 'local', label: '', cals: list }];
+    const fold = new Set(ZC.store.local('side.fold') || []);
+    const rowH = c => {
+      const ro = GA && GA.readOnlyCal(c);
+      return `<div class="cal-row ${c.visible === false ? 'off' : ''}" style="--c:${esc(c.color)}" data-cal="${esc(c.id)}" role="button" tabindex="0" aria-pressed="${c.visible !== false}"><span class="cbox">${UI.icon('check', 14)}</span><span class="nm">${esc(c.name)}</span>${ro ? `<span class="cal-ro" title="${esc(t('Solo lectura'))}">${UI.icon('lock', 13)}</span>` : ''}<button class="ibtn sm more" data-calmenu="${esc(c.id)}" aria-label="${esc(t('Opciones de {x}', { x: c.name }))}">${UI.icon('more', 18)}</button></div>`;
+    };
     box.innerHTML = `<header><h3>${t('Calendarios')}</h3><button class="ibtn sm" data-act="newcal" aria-label="${t('Nuevo calendario')}" title="${t('Nuevo calendario')}">${UI.icon('plus', 18)}</button></header>` +
-      list.map(c => `<div class="cal-row ${c.visible === false ? 'off' : ''}" style="--c:${esc(c.color)}" data-cal="${esc(c.id)}" role="button" tabindex="0" aria-pressed="${c.visible !== false}"><span class="cbox">${UI.icon('check', 14)}</span><span class="nm">${esc(c.name)}</span><button class="ibtn sm more" data-calmenu="${esc(c.id)}" aria-label="${esc(t('Opciones de {x}', { x: c.name }))}">${UI.icon('more', 18)}</button></div>`).join('');
+      (grps.length === 1 && !grps[0].label ? grps[0].cals.map(rowH).join('')
+        : grps.map(g => { const shut = fold.has(g.id); return `<div class="cal-grp ${shut ? 'shut' : ''}" data-grp="${esc(g.id)}"><button class="cal-gh" data-fold="${esc(g.id)}" aria-expanded="${!shut}">${UI.icon('chevD', 15, 'cg-chev')}<span>${esc(g.label)}</span>${g.acc && g.acc.error ? `<i class="cg-err" title="${esc(t('No se ha podido sincronizar'))}"></i>` : ''}</button><div class="cal-gb" ${shut ? 'hidden' : ''}>${g.cals.map(rowH).join('')}</div></div>`; }).join(''));
   }
   function tasks() {
     const box = document.getElementById('sideTasks'); if (!box) return;
@@ -87,6 +95,8 @@
     if (mm) { miniMonth = C.addMonths(miniMonth, +mm.dataset.mm); mini(); return; }
     const md = e.target.closest('[data-md]');
     if (md) { const d = C.parse(md.dataset.md); const v = UI.app.state.view; UI.app.go({ date: d, sel: d, view: ['tasks', 'year'].includes(v) ? 'day' : v }); UI.app.closeSide(); return; }
+    const fd = e.target.closest('[data-fold]');
+    if (fd) { const f = new Set(ZC.store.local('side.fold') || []), id = fd.dataset.fold; f.has(id) ? f.delete(id) : f.add(id); ZC.store.local('side.fold', [...f]); UI.haptic('tick'); cals(); return; }
     const menuB = e.target.closest('[data-calmenu]');
     if (menuB) { e.stopPropagation(); calMenu(menuB.dataset.calmenu, menuB); return; }
     const row = e.target.closest('[data-cal]');
@@ -119,6 +129,19 @@
   }
   function calMenu(id, anchor) {
     const c = ZC.store.calendar(id); if (!c) return;
+    // los de Google: se ocultan aquí, pero el nombre, el color y borrarlo se cambian en Google Calendar
+    if (UI.gacc && UI.gacc.isGoogle(c)) {
+      UI.menu(anchor, [
+        { title: c.name },
+        { label: c.visible === false ? t('Mostrar') : t('Ocultar'), icon: c.visible === false ? 'eye' : 'eyeOff', act: () => ZC.store.saveCalendar({ ...c, visible: c.visible === false }) },
+        { label: t('Mostrar solo este'), icon: 'eye', act: () => ZC.store.calendars().forEach(x => ZC.store.saveCalendar({ ...x, visible: x.id === c.id })) },
+        { label: t('Exportar .ics'), icon: 'download', act: () => UI.data.exportICS(c.id) },
+        '-',
+        { label: t('Abrir en Google Calendar'), icon: 'external', act: () => UI.gacc.openURL('https://calendar.google.com/calendar/r') },
+        { label: t('Cuentas de Google'), icon: 'settings', act: () => { UI.app.closeSide(); UI.settings.open('drive'); } },
+      ], { align: 'end' });
+      return;
+    }
     UI.menu(anchor, [
       { title: c.name },
       { label: t('Renombrar'), icon: 'edit', act: async () => { const n = await UI.prompt(t('Renombrar calendario'), c.name); if (n) ZC.store.saveCalendar({ ...c, name: n }); } },
@@ -128,7 +151,7 @@
       { label: t('Exportar .ics'), icon: 'download', act: () => UI.data.exportICS(c.id) },
       '-',
       { label: t('Borrar calendario'), icon: 'trash', danger: true, act: async () => {
-        if (ZC.store.calendars().length <= 1) { UI.toast(t('Tiene que quedar al menos un calendario')); return; }
+        if (ZC.store.calendars().filter(x => !(UI.gacc && UI.gacc.isGoogle(x))).length <= 1) { UI.toast(t('Tiene que quedar al menos un calendario')); return; }
         const n = ZC.store.events().filter(e => e.calendarId === c.id).length;
         const ok = await UI.confirm(t('¿Borrar «{x}»?', { x: c.name }), n ? ZC.i18n.tn(n, 'También se borrará {n} evento suyo.', 'También se borrarán sus {n} eventos.') : t('No tiene eventos.'), { ok: t('Borrar'), danger: true, icon: 'trash' });
         if (ok) { await ZC.store.deleteCalendar(c.id); UI.toast(t('Calendario borrado'), { icon: 'trash' }); }

@@ -759,3 +759,22 @@ html[data-design="dot"] .ai-sug { border-radius: 18px; box-shadow: inset 0 0 0 1
 html[data-design="dot"] .ai-sug.on { background: transparent; box-shadow: inset 0 0 0 1.5px var(--fg); }
 html[data-design="dot"] .ai-sug .ai-act-tx small { font: 400 .58rem var(--zd); letter-spacing: .1em; text-transform: uppercase; }
 html[data-design="dot"] .nr.al > .ic { color: var(--a1t); }
+
+/* Dot · cuentas de Google */
+html[data-design="dot"] .gacc { background: transparent; box-shadow: inset 0 0 0 1px var(--hair2); border-radius: 22px; }
+html[data-design="dot"] .gacc.err { box-shadow: inset 0 0 0 1px var(--a1); }
+html[data-design="dot"] .ga-body { border-top: 1px solid var(--hair); }
+html[data-design="dot"] .ga-av.av { background: var(--fg); color: var(--bg); font-family: "ZenDot", ui-monospace, monospace; font-weight: 400; }
+html[data-design="dot"] .ga-av.av.ghost { background: transparent; color: var(--fg); box-shadow: inset 0 0 0 1px var(--hair2); }
+html[data-design="dot"] .ga-st.err { color: var(--a1t); }
+html[data-design="dot"] .ga-n, html[data-design="dot"] .drive-tag, html[data-design="dot"] .cal-gh, html[data-design="dot"] .ed-cgl { font-family: "ZenDot", ui-monospace, monospace; font-weight: 400; letter-spacing: .08em; text-transform: uppercase; }
+html[data-design="dot"] .cal-gh, html[data-design="dot"] .ed-cgl { font-size: .66rem; text-transform: none; }
+html[data-design="dot"] .ga-cal .cbox { border-radius: 50%; width: 18px; height: 18px; }
+html[data-design="dot"] .ga-cal .cbox .ic { color: var(--bg); stroke-width: 2.6; width: 12px; height: 12px; }
+html[data-design="dot"] .ga-short { background: transparent; box-shadow: inset 0 0 0 1px var(--hair2); border-radius: 22px; }
+html[data-design="dot"] .ga-short > .ic:first-child { color: var(--a1t); }
+html[data-design="dot"] .ga-sug { box-shadow: inset 0 0 0 1px var(--a1); border-radius: 22px; }
+html[data-design="dot"] .wl-gsw { background: transparent; box-shadow: inset 0 0 0 1px var(--hair2); border-radius: 22px; }
+html[data-design="dot"] .wl-gtx > .ic { color: var(--fg); }
+html[data-design="dot"] .dt-ro { background: transparent; box-shadow: inset 0 0 0 1px var(--hair2); }
+html[data-design="dot"] .cg-err { background: var(--a1); }

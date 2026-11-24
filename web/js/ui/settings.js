@@ -19,7 +19,7 @@
     ['widgets', 'Widgets', 'widget', 'Pantalla de inicio y escritorio'],
     ['notif', 'Notificaciones', 'bell', 'Permiso y próximos avisos'],
     ['ai', 'Asistente', 'sparkles', 'Qué inteligencia usa y cómo'],
-    ['drive', 'Google Drive', 'cloud', 'Sincronizar tus dispositivos'],
+    ['drive', 'Cuentas de Google', 'cloud', 'Drive y Google Calendar'],
     ['data', 'Datos', 'database', 'Importar, exportar y copias'],
     ['about', 'Acerca de', 'info', 'Versión, atajos y créditos'],
   ];
@@ -194,17 +194,19 @@
   function driveSection() {
     let av = false, s = {};
     try { av = ZC.drive.available(); s = ZC.drive.state() || {}; } catch {}
-    const G = '<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+    const G = UI.gacc ? UI.gacc.LOGO : '';
+    const gc = UI.gacc ? UI.gacc.section() : '';
     let body;
-    if (!av) body = `<p class="note warn">${UI.icon('info', 15)}${t('Esta versión aún no tiene configurado el acceso a Google, así que la sincronización no está disponible. Tus datos se guardan igualmente en este dispositivo y puedes hacer copias en «Datos».')}</p><button type="button" class="btn lg gbtn" disabled>${G}${t('Falta configurar Google')}</button>`;
+    if (!av) body = gc ? `<p class="note">${UI.icon('info', 15)}${t('La sincronización con Drive no está disponible en esta versión. Tus datos se guardan en este dispositivo.')}</p>` : `<p class="note warn">${UI.icon('info', 15)}${t('Esta versión aún no tiene configurado el acceso a Google, así que la sincronización no está disponible. Tus datos se guardan igualmente en este dispositivo y puedes hacer copias en «Datos».')}</p><button type="button" class="btn lg gbtn" disabled>${G}${t('Falta configurar Google')}</button>`;
     else if (s.connected) {
       const ini = (s.name || s.email || '?').trim().charAt(0).toUpperCase();
       body = `<div class="acct">${s.photo ? `<img src="${esc(s.photo)}" alt="" referrerpolicy="no-referrer">` : `<span class="av">${esc(ini)}</span>`}<div><b>${esc(s.name || t('Tu cuenta'))}</b><small>${esc(s.email || '')}</small></div></div>
         <div class="sync-st ${s.syncing ? 'busy' : ''} ${s.error ? 'err' : ''}">${s.syncing ? `<span class="spin"></span>${t('Sincronizando…')}` : s.error ? `${UI.icon('info', 16)}${esc(s.error)}` : `${UI.icon('check', 16)}${s.lastSync ? t('Sincronizado {x}', { x: ZC.i18n.D.rel(s.lastSync) }) : t('Conectado')}`}</div>
         <div class="wid-btns"><button type="button" class="btn soft" data-act="dsync" ${s.syncing ? 'disabled' : ''}>${UI.icon('refresh', 18)}${s.error ? t('Reintentar') : t('Sincronizar ahora')}</button><button type="button" class="btn ghost" data-act="ddisc">${UI.icon('logout', 18)}${t('Desconectar')}</button></div>`;
     } else body = `${s.error ? `<p class="note warn">${UI.icon('info', 15)}${esc(s.error)}</p>` : ''}<button type="button" class="btn lg gbtn" data-act="dconn" ${s.syncing ? 'disabled' : ''}>${s.syncing ? '<span class="spin"></span>' : G}${s.syncing ? t('Conectando…') : t('Conectar con Google')}</button><small class="mut">${t('Solo te pedirá permiso para una carpeta privada de la app.')}</small>`;
-    return card(`<div class="drive"><div class="drive-art">${UI.icon('cloudSync', 40)}</div><h2>${t('Sincroniza con tu Google Drive')}</h2><p>${t('Tus calendarios iguales en el móvil y en el PC. Se guardan en una carpeta oculta de tu propio Drive: nadie más los ve y no hay servidores de por medio.')}</p>${body}</div>`)
-      + card(h3(t('Cómo funciona')) + `<ul class="howto"><li>${t('Se sincroniza solo: al abrir, al cambiar algo y cada pocos minutos.')}</li><li>${t('Si cambias lo mismo en dos sitios, gana lo más reciente.')}</li><li>${t('Las imágenes de los eventos también viajan.')}</li><li>${t('Las claves del asistente nunca salen de tu dispositivo.')}</li></ul>`);
+    return card(`<div class="drive ${s.connected ? 'on' : ''}"><div class="drive-art">${UI.icon('cloudSync', 40)}</div><span class="drive-tag">${t('Cuenta principal · Google Drive')}</span><h2>${t('Sincroniza con tu Google Drive')}</h2><p>${t('Tus calendarios iguales en el móvil y en el PC. Se guardan en una carpeta oculta de tu propio Drive: nadie más los ve y no hay servidores de por medio.')}</p>${body}</div>`)
+      + gc
+      + card(h3(t('Cómo funciona')) + `<ul class="howto"><li>${t('Se sincroniza solo: al abrir, al cambiar algo y cada pocos minutos.')}</li><li>${t('Si cambias lo mismo en dos sitios, gana lo más reciente.')}</li><li>${t('Las imágenes de los eventos también viajan.')}</li>${gc ? `<li>${t('Los eventos de Google Calendar se quedan en Google: cada dispositivo los baja de allí.')}</li>` : ''}<li>${t('Las claves del asistente nunca salen de tu dispositivo.')}</li></ul>`);
   }
 
   // ---------- pintar ----------
@@ -221,7 +223,20 @@
     box.querySelectorAll('.bgc-th').forEach(el => { try { const cv = UI.bg.thumb(el.dataset.bg, 132, 84); el.appendChild(cv); } catch (e) { console.warn(e); } });
     if (id === 'ai') aiExtras();
     // (en la web baja ya el script de Google: así la ventanita sale al instante al pulsar «Conectar»)
-    if (id === 'drive') { try { ZC.drive.prepare && ZC.drive.prepare(); } catch {} }
+    if (id === 'drive') { try { ZC.drive.prepare && ZC.drive.prepare(); } catch {} try { UI.gacc && UI.gacc.prepare(); } catch {} }
+    refresh();
+  }
+  // vuelve a pintar la sección sin animación y sin perder por dónde ibas (cambios que llegan solos: sincronizar…)
+  function repaintKeep() {
+    const box = L.body.querySelector('.set-content'), sec = box.querySelector('.set-sec');
+    if (!sec || sec.dataset.sec !== cur) { paintSection(cur); return; }
+    const y = box.scrollTop, f = document.activeElement, fk = f && box.contains(f) ? (f.dataset.ga ? `[data-ga="${f.dataset.ga}"]` + (f.dataset.gid ? `[data-gid="${CSS.escape(f.dataset.gid)}"]` : '') : f.dataset.act ? `[data-act="${f.dataset.act}"]` : '') : '';
+    const fb = fk && f.closest('[data-gacc]') ? `[data-gacc="${CSS.escape(f.closest('[data-gacc]').dataset.gacc)}"] ` : '';
+    const tmp = document.createElement('div'); tmp.innerHTML = S[cur]();
+    [...sec.children].forEach((el, i) => { if (i) el.remove(); });
+    sec.append(...tmp.children);
+    box.scrollTop = y;
+    if (fk) { const n = box.querySelector(fb + fk); if (n) n.focus({ preventScroll: true }); }
     refresh();
   }
   async function aiExtras() {
@@ -296,6 +311,7 @@
       const pin = e.target.closest('[data-pin]'); if (pin) { try { ZC.platform.desktopWidgetPin(pin.dataset.pin); } catch {} pin.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === pin)); UI.paintSeg(pin.parentElement); return; }
       const dr = e.target.closest('[data-defrem]');
       if (dr) { const m = +dr.dataset.defrem, curR = new Set(CL().defaultReminders || []); curR.has(m) ? curR.delete(m) : curR.add(m); set('cal.defaultReminders', [...curR].sort((a, b) => a - b)); return; }
+      if (UI.gacc && UI.gacc.click(e)) return;
       const a = e.target.closest('[data-act]'); if (!a) return;
       const act = a.dataset.act, P = ZC.platform || {};
       switch (act) {
@@ -395,5 +411,5 @@
     g.splice(after && g.includes(after) ? g.indexOf(after) + 1 : g.length, 0, id);
   }
   // dot.js cambia algunas secciones cuando el diseño es «Dot» (y pone el selector de diseño arriba de Aspecto)
-  UI.settings = { sections: S, parts: { row, seg, sw, rng, h3, card }, current: () => cur, addSection, open, refresh: () => refresh(true), isOpen: () => !!(L && !L.closed), onDrive: () => { if (L && !L.closed && cur === 'drive') paintSection('drive'); } };
+  UI.settings = { sections: S, parts: { row, seg, sw, rng, h3, card }, current: () => cur, addSection, open, refresh: () => refresh(true), isOpen: () => !!(L && !L.closed), onDrive: () => { if (L && !L.closed && cur === 'drive') repaintKeep(); } };
 })();

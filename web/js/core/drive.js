@@ -256,13 +256,13 @@
       const files = (await listFiles("name='" + fileName() + "' and trashed=false"))
         .sort((a, b) => String(b.modifiedTime).localeCompare(String(a.modifiedTime)));
       let main = files[0] || null;
-      let remote = main ? await download(main.id) : null;
+      let remote = main ? S.driveOnly(await download(main.id)) : null;
       for (const extra of files.slice(1)) {
-        const other = await download(extra.id);
+        const other = S.driveOnly(await download(extra.id));
         if (other) remote = S.merge(remote || {}, other).data;
       }
-      // 2) junto con lo de aquí
-      const m = S.merge(S.snapshot(), remote || {});
+      // 2) junto con lo de aquí (lo de Google Calendar no va a Drive: cada dispositivo lo baja de Google)
+      const m = S.merge(S.snapshot({ drive: true }), remote || {});
       if (m.localChanged) await S.applyRemote(m.data, 'sync');
       // 3) subir solo si hace falta
       if (m.remoteChanged || !main || files.length > 1) {
@@ -271,7 +271,7 @@
           if (String(now.version) !== String(main.version)) continue; // alguien subió mientras: otra vuelta
         }
         // (lo de aquí puede haber cambiado mientras: se sube lo último)
-        const data = S.merge(S.snapshot(), m.data).data;
+        const data = S.merge(S.snapshot({ drive: true }), m.data).data;
         const res = await upload(main && main.id, fileName(), fileBody(data), 'application/json');
         for (const extra of files.slice(1)) await remove(extra.id).catch(() => {});
         if (!main) main = res;

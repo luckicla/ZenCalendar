@@ -38,7 +38,8 @@ contextBridge.exposeInMainWorld('zcDesktop', {
   // (desde el widget) abrir algo en la ventana principal
   openMain: o => ipcRenderer.send('zc:open-main', o),
   onAction: cb => listen('zc:action', cb),
-  // Google: 'connect' | 'token' | 'disconnect' | 'status'
+  // Google: Drive → 'connect' | 'token' | 'disconnect' | 'status'
+  //         Google Calendar → 'add' (cfg.loginHint) | 'token' (cfg.account) | 'remove' ({ account, revoke }) | 'accounts'
   google: (cmd, cfg) => ipcRenderer.invoke('zc:google', cmd, cfg),
   // actualizaciones: 'check' | 'install' | 'state'
   update: cmd => ipcRenderer.invoke('zc:update', cmd),

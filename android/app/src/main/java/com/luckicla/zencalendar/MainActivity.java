@@ -281,6 +281,10 @@ public class MainActivity extends Activity {
             photoUri = null;
         } else if (req == GoogleAuth.REQ) {
             GoogleAuth.onResult(this, res, data);
+        } else if (req == GoogleAuth.REQ_PICK) {
+            GoogleAuth.onPickResult(this, res, data);
+        } else if (req == GoogleAuth.REQ_CAL) {
+            GoogleAuth.onCalResult(this, res, data);
         }
     }
 

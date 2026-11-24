@@ -6,7 +6,7 @@
   const PICK = ['zen', 'cristal', 'algodon', 'sakura', 'brisa', 'noche'];
 
   function open() {
-    let step = 0;
+    let step = 0, bring = true;
     const L = UI.openLayer({ kind: 'full', cls: 'welcome', panelCls: 'wl-panel', dismissable: false, label: t('Bienvenida'), html: '<div class="wl"></div>' });
     const box = L.body.querySelector('.wl');
     function paint() {
@@ -27,12 +27,20 @@
           <div class="wl-acts"><span></span><button class="btn pri lg" data-go="1">${t('Siguiente')}</button></div></div>`;
       } else if (step === 1) {
         let av = false, s = {}; try { av = ZC.drive.available(); s = ZC.drive.state() || {}; if (av && ZC.drive.prepare) ZC.drive.prepare(); } catch {}
+        try { UI.gacc && UI.gacc.prepare(); } catch {}
+        const GA = UI.gacc, gc = !!(GA && GA.has());
+        const lc = x => String(x || '').toLowerCase();
+        const calsIn = gc && s.connected && GA.accounts().some(a => !s.email || lc(a.email) === lc(s.email));
+        // «¿Traer también tus calendarios de Google?»: un interruptor, activado
+        const calRow = gc && !calsIn ? `<div class="wl-gcal"><label class="wl-gsw"><span class="wl-gtx">${UI.icon('calendar', 20)}<span><b>${t('¿Traer también tus calendarios de Google?')}</b><small>${t('Los verás aquí y lo que cambies se cambia en los dos sitios.')}</small></span></span><button type="button" class="sw" role="switch" data-a="bring" aria-checked="${bring}" aria-label="${t('¿Traer también tus calendarios de Google?')}"></button></label>${bring ? GA.warnLine() : ''}</div>` : '';
         html = `<div class="wl-card" data-step="1">
           <div class="wl-art">${UI.icon('cloudSync', 46)}</div>
           <h1>${t('¿Lo quieres en todos tus dispositivos?')}</h1>
           <p class="lead">${t('Conecta tu Google Drive y tu calendario estará igual en el móvil y en el PC. Se guarda en una carpeta privada de tu Drive, sin servidores de nadie.')}</p>
           ${s.connected ? `<div class="sync-st">${UI.icon('check', 16)}${t('Conectado como {x}', { x: esc(s.email || s.name || '') })}</div>`
-            : av ? `<button class="btn lg gbtn" data-a="conn" ${s.syncing ? 'disabled' : ''}>${s.syncing ? '<span class="spin"></span>' : '<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>'}${t('Conectar con Google')}</button>`
+              + (calsIn ? `<div class="sync-st">${UI.icon('calendar', 16)}${t('Tus calendarios de Google ya están aquí')}</div>` : gc ? `<button class="btn soft" data-a="cals">${UI.icon('calendar', 18)}${t('Traer también mis calendarios')}</button>${GA.warnLine()}` : '')
+            : av ? `<button class="btn lg gbtn" data-a="conn" ${s.syncing ? 'disabled' : ''}>${s.syncing ? '<span class="spin"></span>' : (GA ? GA.LOGO : '')}${t('Conectar con Google')}</button>${calRow}`
+            : gc ? `<button class="btn lg gbtn" data-a="cals">${GA.LOGO}${t('Traer mis calendarios de Google')}</button>${GA.warnLine()}`
             : `<p class="note">${UI.icon('info', 15)}${t('Esta versión aún no tiene configurado Google. No pasa nada: todo se guarda en este dispositivo.')}</p>`}
           <div class="wl-acts"><button class="btn ghost" data-go="0">${t('Atrás')}</button><button class="btn ${s.connected ? 'pri' : 'soft'} lg" data-go="2">${s.connected ? t('Siguiente') : t('Seguir sin conectar')}</button></div></div>`;
       } else {
@@ -58,7 +66,16 @@
       const sc = e.target.closest('#wlScheme [data-v]'); if (sc) { UI.look.set({ scheme: sc.dataset.v }); paint(); return; }
       const g = e.target.closest('[data-go]'); if (g) { step = +g.dataset.go; paint(); return; }
       const a = e.target.closest('[data-a]'); if (!a) return;
-      if (a.dataset.a === 'conn') { a.disabled = true; a.innerHTML = `<span class="spin"></span>${t('Conectando…')}`; try { await ZC.drive.connect(); } catch (err) { UI.toast(t('No se ha podido conectar: {x}', { x: err.message || err })); } paint(); }
+      if (a.dataset.a === 'bring') { bring = !bring; UI.haptic('tick'); paint(); return; }
+      if (a.dataset.a === 'conn') {
+        a.disabled = true; a.innerHTML = `<span class="spin"></span>${t('Conectando…')}`;
+        let ok = false;
+        try { await ZC.drive.connect(); ok = true; } catch (err) { UI.toast(t('No se ha podido conectar: {x}', { x: err.message || err })); }
+        // misma cuenta: Google solo pide el permiso del calendario
+        if (ok && bring && UI.gacc && UI.gacc.has()) await UI.gacc.useMain();
+        paint();
+      }
+      if (a.dataset.a === 'cals') { a.disabled = true; if (UI.gacc) await UI.gacc.useMain(); paint(); }
       if (a.dataset.a === 'done') {
         ZC.store.local('welcomed', true);
         const r = a.getBoundingClientRect(); UI.confetti(r.left + r.width / 2, r.top + r.height / 2, 30);
@@ -68,6 +85,8 @@
       }
     });
     paint();
+    cur = { L, repaint: () => { if (!L.closed && step === 1) paint(); } };
   }
-  UI.welcome = { open };
+  let cur = null;
+  UI.welcome = { open, refresh: () => cur && cur.repaint() };
 })();

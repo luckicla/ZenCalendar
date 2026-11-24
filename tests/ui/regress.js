@@ -19,6 +19,8 @@ const ok = (c, m) => { console.log((c ? '  ok  ' : '  FALLO ') + m); if (!c) fai
   const ctx = await b.newContext({ viewport: { width: 1366, height: 800 }, locale: 'es-ES', timezoneId: 'Europe/Madrid' });
   await ctx.route(u => !String(u).startsWith('http://127.0.0.1'), r => r.abort());
   const p = await ctx.newPage();
+  // (fechas fijas: los casos usan noviembre de 2026 y no deben depender de qué día es hoy)
+  await p.clock.install({ time: new Date('2026-11-10T09:00:00') });
   p.on('pageerror', e => errs.push(e.message));
   p.on('dialog', d => { errs.push('diálogo inesperado: ' + d.message()); d.dismiss(); });
   await p.goto(base); await p.waitForSelector('html.ready'); await p.waitForTimeout(500);
