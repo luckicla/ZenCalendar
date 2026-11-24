@@ -89,6 +89,7 @@ En GitHub: **luckicla/zencalendar → Settings → Secrets and variables → Act
 | `GOOGLE_WEB_CLIENT_ID` | el ID del cliente **web** |
 | `GOOGLE_DESKTOP_CLIENT_ID` | el ID del cliente de **escritorio** |
 | `GOOGLE_DESKTOP_CLIENT_SECRET` | el secreto del cliente de **escritorio** |
+| `GOOGLE_ANDROID_ENABLED` | `1` cuando ya hayas creado el cliente de **Android** (paquete + SHA-1). Si pones `GOOGLE_WEB_CLIENT_ID` no hace falta: se da por hecho. Hasta entonces, la app de Android no enseña el botón «Conectar con Google» (Google la rechazaría) |
 
 Los workflows (`build.yml` y `pages.yml`) los escriben en `web/js/core/config.js` al compilar (con `tools/setconfig.js`). En el repo `config.js` se queda vacío, que así no hay nada de esto en el código.
 

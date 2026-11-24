@@ -23,6 +23,8 @@ import android.view.WindowInsetsController;
 import android.webkit.ConsoleMessage;
 import android.webkit.PermissionRequest;
 import android.webkit.RenderProcessGoneDetail;
+import android.webkit.ServiceWorkerClient;
+import android.webkit.ServiceWorkerController;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -141,6 +143,17 @@ public class MainActivity extends Activity {
                 .setDomain("appassets.androidplatform.net")
                 .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
                 .build();
+        // Las peticiones de un service worker no pasan por el WebViewClient: sin esto, uno que se
+        // quedó registrado (las versiones 1.0.0–1.1.2 lo registraban también aquí) iba a buscar la
+        // app a internet, a appassets.androidplatform.net, que no existe, y la página salía «sin
+        // conexión». Así las atiende el mismo cargador y la página lo da de baja al arrancar.
+        try {
+            ServiceWorkerController.getInstance().setServiceWorkerClient(new ServiceWorkerClient() {
+                @Override public WebResourceResponse shouldInterceptRequest(WebResourceRequest r) {
+                    return loader.shouldInterceptRequest(r.getUrl());
+                }
+            });
+        } catch (Throwable t) { Log.w(TAG, "service worker", t); }
         if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) WebView.setWebContentsDebuggingEnabled(true);
         web.setBackgroundColor(Theme.load(this).bg);
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);

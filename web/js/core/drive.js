@@ -49,7 +49,8 @@
 
   function available() {
     const C = cfg();
-    if (kind() === 'android') return !!(root.ZCAndroid && root.ZCAndroid.googleAuth);
+    // (en Android no hace falta client ID, pero sin registrar la app en Google Cloud Google la rechaza)
+    if (kind() === 'android') return !!(root.ZCAndroid && root.ZCAndroid.googleAuth && (C.googleAndroid === '1' || C.googleWebClientId));
     if (kind() === 'desktop') return !!(C.googleDesktopClientId && root.zcDesktop && root.zcDesktop.google);
     if (!C.googleWebClientId) return false;
     try { return location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1'; } catch (e) { return false; }
@@ -89,7 +90,10 @@
       const r = await ZC.native.call('googleAuth', !!interactive, cfg().googleScopes);
       if (!r || !r.token) {
         if (r && r.network) { const e = new Error('Sin conexión'); e.network = true; throw e; }
-        throw authError(r && r.cancelled ? 'Se canceló el inicio de sesión' : r && r.needsConsent ? 'Hay que volver a conectar con Google' : (r && r.error) || null);
+        let msg = r && r.cancelled ? 'Se canceló el inicio de sesión' : r && r.needsConsent ? 'Hay que volver a conectar con Google' : (r && r.error) || null;
+        // DEVELOPER_ERROR (10) / app sin registrar: no es culpa del usuario, que lo diga claro
+        if (msg && /\b10\b|DEVELOPER_ERROR|developer|not registered|unregistered|API_NOT_CONNECTED|\b17\b/i.test(msg)) msg = 'Google aún no reconoce esta versión de la app (falta registrarla en Google Cloud). Tus datos se siguen guardando en el móvil.';
+        throw authError(msg);
       }
       token = r.token; tokenExp = Date.now() + 50 * 60000; // (Google no dice cuánto dura: menos de 1 h)
       return token;

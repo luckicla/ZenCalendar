@@ -26,6 +26,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
+  // dentro de la app de Android no se toca nada (ahí lo sirve la propia app)
+  if (self.location.hostname === 'appassets.androidplatform.net') return;
   const url = new URL(req.url);
   // lo de fuera (APIs, Google, CDN) va directo a la red, sin tocarlo
   if (url.origin !== self.location.origin) return;

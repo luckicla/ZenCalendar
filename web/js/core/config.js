@@ -19,6 +19,10 @@
     googleWebClientId: '',
     googleDesktopClientId: '',
     googleDesktopClientSecret: '',
+    // Android: '1' cuando la app ya está registrada en Google Cloud (paquete + SHA-1). Hasta
+    // entonces no se enseña el botón de conectar, porque Google la rechazaría. También vale
+    // con que haya client ID web: quiere decir que Google ya está configurado.
+    googleAndroid: '',
     // permisos que se piden a Google: solo la carpeta oculta de la app en tu
     // Drive (no ve el resto de tus archivos) y tu nombre/correo/foto
     googleScopes: 'https://www.googleapis.com/auth/drive.appdata openid email profile',

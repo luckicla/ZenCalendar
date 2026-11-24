@@ -107,7 +107,9 @@
     wrap.style.zIndex = 60 + (layers.length + 1) * 2;
     layers.push(L);
     document.body.appendChild(wrap);
-    if (o.from && anim()) {
+    // (el círculo que se abre desde el botón, solo con ratón: en el WebView de Android, recortar con
+    // clip-path un panel de vidrio desenfocado mientras se anima parpadea; en táctil, la entrada normal)
+    if (o.from && anim() && !touchy()) {
       const r = panel.getBoundingClientRect();
       panel.style.setProperty('--ox', (o.from.x - r.left) + 'px');
       panel.style.setProperty('--oy', (o.from.y - r.top) + 'px');
@@ -115,6 +117,7 @@
     }
     paintScrim();
     requestAnimationFrame(() => requestAnimationFrame(() => wrap.classList.add('open')));
+    setTimeout(() => wrap.classList.add('settled'), anim() ? 420 : 0);
     if (kind === 'sheet') sheetDrag(L);
     wrap.addEventListener('click', e => { if (e.target === wrap && L.dismissable) L.close('scrim'); });
     setTimeout(() => { const f = body.querySelector('[autofocus]'); if (f && !touchy()) f.focus(); }, 60);

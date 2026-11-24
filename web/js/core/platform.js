@@ -333,7 +333,13 @@
       } catch (e) {}
       // el service worker: la app sin conexión y los toques en las notificaciones
       try {
-        if (root.navigator && navigator.serviceWorker && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+        // (solo en la versión web: en Android y en Windows la app ya va dentro y un service worker
+        // no aporta nada; en Android además se quedaba con la carga de la página y salía «sin
+        // conexión». El que dejaron las versiones de antes se da de baja aquí, con su caché)
+        if (root.navigator && navigator.serviceWorker && (A() || D())) {
+          navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {});
+          try { if (root.caches) caches.keys().then(ks => ks.filter(k => k.startsWith('zencalendar-')).forEach(k => caches.delete(k))).catch(() => {}); } catch (e) {}
+        } else if (root.navigator && navigator.serviceWorker && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
           // (una versión nueva publicada cambia sw.js: el nuevo se activa solo y aquí se avisa
           // con status 'ready'; updates.install() recarga la página)
           const hadController = !!navigator.serviceWorker.controller;

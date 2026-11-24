@@ -32,6 +32,7 @@ env:
   GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
   GOOGLE_DESKTOP_CLIENT_ID: ${{ vars.GOOGLE_DESKTOP_CLIENT_ID }}
   GOOGLE_DESKTOP_CLIENT_SECRET: ${{ vars.GOOGLE_DESKTOP_CLIENT_SECRET }}
+  GOOGLE_ANDROID_ENABLED: ${{ vars.GOOGLE_ANDROID_ENABLED }}
 
 jobs:
   # la versión sale del archivo VERSION; «release» dice si todavía no existe
