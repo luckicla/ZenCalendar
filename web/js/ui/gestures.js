@@ -77,7 +77,10 @@
   }
   const curView = () => (UI.app && UI.app.state.view) || 'month';
   const viewEl = () => { const h = $('#viewHost'); return h && h.lastElementChild; };
-  const spring = 'transform calc(420ms * var(--spd)) cubic-bezier(.2,.9,.25,1.08), opacity calc(300ms * var(--spd)) ease';
+  // (deslizar entre periodos: sin pasarse del final —con rebote, las dos vistas se iban más allá y se veía un
+  //  hueco detrás— y la vista se redibuja justo cuando acaba, no antes)
+  const spring = 'transform calc(320ms * var(--spd)) cubic-bezier(.2,.8,.2,1), opacity calc(300ms * var(--spd)) ease';
+  const springMs = () => 320 * (parseFloat(getComputedStyle(root).getPropertyValue('--spd')) || 1) + 30;
   // cancela las pulsaciones largas de las vistas (la vista escucha pointercancel)
   function cancelViewPress() { const v = viewEl(); if (v) try { v.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true })); } catch {} }
 
@@ -177,7 +180,7 @@
     el.style.transition = spring; if (peek) peek.style.transition = spring;
     if (commit) { el.style.transform = `translateX(${-dir * w}px)`; peek.style.transform = 'translateX(0)'; }
     else { el.style.transform = 'translateX(0)'; if (peek) peek.style.transform = `translateX(${dir * w}px)`; }
-    S.pending = fin; S.pendingT = setTimeout(fin, 300);
+    S.pending = fin; S.pendingT = setTimeout(fin, springMs());
   }
 
   // ---------- plegar: Semana ⇄ Mes arrastrando ----------

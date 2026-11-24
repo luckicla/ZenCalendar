@@ -108,8 +108,9 @@
 #viewHost { position: relative; flex: 1; min-height: 0; overflow: hidden; }
 #viewHost > .view { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: flex; flex-direction: column; }
 /* deslizar entre periodos (muelle) */
-.view.in-next { animation: inNext calc(520ms * var(--spd)) var(--spring) backwards; }
-.view.in-prev { animation: inPrev calc(520ms * var(--spd)) var(--spring) backwards; }
+/* (sin rebote: con el muelle la vista se pasaba de su sitio y dejaba ver un hueco detrás) */
+.view.in-next { animation: inNext calc(460ms * var(--spd)) cubic-bezier(.2, .8, .2, 1) backwards; }
+.view.in-prev { animation: inPrev calc(460ms * var(--spd)) cubic-bezier(.2, .8, .2, 1) backwards; }
 .view.out-next { animation: outNext calc(300ms * var(--spd)) var(--soft) forwards; pointer-events: none; }
 .view.out-prev { animation: outPrev calc(300ms * var(--spd)) var(--soft) forwards; pointer-events: none; }
 .view.in-fade { animation: inFade calc(380ms * var(--spd)) var(--spring) backwards; }

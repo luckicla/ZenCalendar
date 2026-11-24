@@ -185,6 +185,8 @@
       chip._swiped = true; setTimeout(() => { chip._swiped = false; }, 400);
       const dir = d < 0 ? -1 : 1;
       if (!swipeTo(chip, d < 0 ? 1 : -1, s0.axis === 'x' ? dir : 0, s0.axis === 'y' ? dir : 0)) back();
+      // (por si el selector no se ha vuelto a pintar: que el icono no se quede desplazado)
+      else setTimeout(() => { const n = ic(); if (n && n.style.transform) { n.style.transition = ''; n.style.transform = ''; n.style.opacity = ''; } }, 320);
     };
     chip.addEventListener('pointerup', end);
     chip.addEventListener('pointercancel', end);
