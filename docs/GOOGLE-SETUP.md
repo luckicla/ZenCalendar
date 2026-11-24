@@ -37,8 +37,8 @@ Menú ☰ → **APIs y servicios → Pantalla de consentimiento de OAuth** (en l
 Luego, en las secciones de la izquierda:
 
 - **Desarrollo de la marca** (Branding):
-  - Página principal de la app: `https://luckicla.github.io/zencalendar/`
-  - Política de privacidad: `https://luckicla.github.io/zencalendar/#privacidad` (el apartado «Privacidad» de la web; Google prefiere que esté en un dominio autorizado, como este).
+  - Página principal de la app: `https://luckicla.github.io/ZenCalendar/`
+  - Política de privacidad: `https://luckicla.github.io/ZenCalendar/#privacidad` (el apartado «Privacidad» de la web; Google prefiere que esté en un dominio autorizado, como este).
   - Dominios autorizados: `luckicla.github.io`
   - El logo es opcional. Si lo subes, Google tiene que revisar la marca (unos días) antes de enseñarlo; se puede dejar para después.
 - **Acceso a los datos** (Data Access) → **Añadir o quitar permisos**: marca `.../auth/drive.appdata`, `openid`, `.../auth/userinfo.email`, `.../auth/userinfo.profile` y `.../auth/calendar` (sale en la tabla de «permisos sensibles») → **Actualizar** → **Guardar**.
@@ -51,7 +51,7 @@ Menú ☰ → **APIs y servicios → Credenciales** (o **Google Auth Platform �
 
 - Tipo: **Aplicación web**. Nombre: `ZenCalendar web`.
 - **Orígenes de JavaScript autorizados**: `https://luckicla.github.io`
-  (la app web está en `https://luckicla.github.io/zencalendar/app/`, pero aquí solo va el origen, sin ruta).
+  (la app web está en `https://luckicla.github.io/ZenCalendar/app/`, pero aquí solo va el origen, sin ruta).
   Si quieres probar en tu ordenador, añade también `http://localhost:8000`.
 - **URIs de redireccionamiento**: ninguna (no hace falta).
 - Crear → copia el **ID de cliente** (acaba en `.apps.googleusercontent.com`).
@@ -126,20 +126,20 @@ Mientras Google no verifique la app pasa esto, solo en la parte de Google Calend
 
 **Google Auth Platform → Centro de verificación (Verification Center) → Preparar para la verificación**. Hace falta:
 
-1. **Página principal** (`https://luckicla.github.io/zencalendar/`) que diga qué hace la app y enlace a la política de privacidad, en el dominio verificado (`luckicla.github.io`: se demuestra que es tuyo con Google Search Console, añadiendo la propiedad con la etiqueta HTML o el archivo que te den, en `docs/`).
-2. **Política de privacidad** (`https://luckicla.github.io/zencalendar/#privacidad`) que diga, con estas palabras o parecidas, qué se hace con los datos de Google Calendar: que se leen y escriben solo para enseñarlos y editarlos en la app, que se guardan solo en el dispositivo del usuario (y nada en servidores de ZenCalendar, que no tiene), que no se comparten con nadie ni se usan para publicidad ni para entrenar modelos de IA, y que cumple la [Política de datos de usuario de los servicios de API de Google](https://developers.google.com/terms/api-services-user-data-policy), incluidos los requisitos de **uso limitado** (Limited Use). Que se pueda quitar el permiso desde la app (Quitar cuenta) o desde `myaccount.google.com/permissions`.
+1. **Página principal** (`https://luckicla.github.io/ZenCalendar/`) que diga qué hace la app y enlace a la política de privacidad, en el dominio verificado (`luckicla.github.io`: se demuestra que es tuyo con Google Search Console, añadiendo la propiedad con la etiqueta HTML o el archivo que te den, en `docs/`).
+2. **Política de privacidad** (`https://luckicla.github.io/ZenCalendar/#privacidad`) que diga, con estas palabras o parecidas, qué se hace con los datos de Google Calendar: que se leen y escriben solo para enseñarlos y editarlos en la app, que se guardan solo en el dispositivo del usuario (y nada en servidores de ZenCalendar, que no tiene), que no se comparten con nadie ni se usan para publicidad ni para entrenar modelos de IA, y que cumple la [Política de datos de usuario de los servicios de API de Google](https://developers.google.com/terms/api-services-user-data-policy), incluidos los requisitos de **uso limitado** (Limited Use). Que se pueda quitar el permiso desde la app (Quitar cuenta) o desde `myaccount.google.com/permissions`.
 3. **Justificación del permiso** (el cuadro de texto para `.../auth/calendar`). Se puede pegar esto:
 
    > ZenCalendar es un calendario para Android, Windows y web. El usuario puede conectar una o varias cuentas de Google para ver sus calendarios de Google Calendar dentro de la app y crear, editar y borrar eventos en ellos (sincronización en las dos direcciones, incluidas las repeticiones, los avisos y los colores). Necesitamos `calendar` (y no `calendar.readonly` ni `calendar.events`) porque la app lista los calendarios del usuario (calendarList) para que elija cuáles ver y escribe eventos en ellos. Los datos se quedan en el dispositivo del usuario; ZenCalendar no tiene servidores y no comparte ni vende datos.
 
-4. **Vídeo de demostración** (de 1 a 3 minutos, subido a YouTube como «oculto»): se ve la pantalla de permiso de Google en inglés o español con el **client ID en la barra de direcciones** (en la web se ve en la ventanita de Google; en Windows en el navegador), el usuario da permiso, y luego en la app: sus calendarios de Google, crear un evento y verlo aparecer en `calendar.google.com`, editarlo y borrarlo, y cómo quitar la cuenta. Graba la versión web (`https://luckicla.github.io/zencalendar/app/`) y, si puedes, también la de Windows y la de Android, porque cada cliente se revisa.
+4. **Vídeo de demostración** (de 1 a 3 minutos, subido a YouTube como «oculto»): se ve la pantalla de permiso de Google en inglés o español con el **client ID en la barra de direcciones** (en la web se ve en la ventanita de Google; en Windows en el navegador), el usuario da permiso, y luego en la app: sus calendarios de Google, crear un evento y verlo aparecer en `calendar.google.com`, editarlo y borrarlo, y cómo quitar la cuenta. Graba la versión web (`https://luckicla.github.io/ZenCalendar/app/`) y, si puedes, también la de Windows y la de Android, porque cada cliente se revisa.
 5. **Correo de contacto** que mires: Google escribe allí con preguntas; contestar rápido acorta la revisión (suele tardar de unos días a unas semanas).
 
 Con `auth/calendar` no hace falta la auditoría de seguridad de pago (eso es solo para permisos «restringidos», como el Drive completo o Gmail).
 
 ## Cómo comprobar que va
 
-- **Web**: abre `https://luckicla.github.io/zencalendar/app/` → Ajustes → Google Drive → «Conectar con Google». Sale la ventanita de Google, eliges la cuenta y vuelve con tu correo y tu foto.
+- **Web**: abre `https://luckicla.github.io/ZenCalendar/app/` → Ajustes → Google Drive → «Conectar con Google». Sale la ventanita de Google, eliges la cuenta y vuelve con tu correo y tu foto.
 - **Windows**: el mismo botón abre el navegador con la página de Google; al terminar dice «¡Conectado! ✿» y puedes cerrar la pestaña.
 - **Android**: el mismo botón enseña la hoja de Google para elegir la cuenta y dar permiso.
 - Crea un evento en un sitio y en 2–3 segundos (o al pulsar «Sincronizar») aparece en el otro.

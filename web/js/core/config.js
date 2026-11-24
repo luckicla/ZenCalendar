@@ -37,6 +37,6 @@
     driveFile: 'zencalendar.json',
     repo: 'luckicla/zencalendar',
     // la página de los enlaces de invitación (docs/w/)
-    inviteBase: 'https://luckicla.github.io/zencalendar/w/',
+    inviteBase: 'https://luckicla.github.io/ZenCalendar/w/',
   };
 })(typeof window !== 'undefined' ? window : globalThis);

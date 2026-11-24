@@ -13,8 +13,8 @@ const linesBy = groups => Object.fromEntries(groups.map(g => [g.wid, g.lines]));
     assert.strictEqual(W.parseJoin('zencalendar://join#Ab3dE.tok'), 'Ab3dE.tok');
     assert.strictEqual(W.parseJoin('zencalendar://join/?code=Ab3dE.tok'), 'Ab3dE.tok');
     assert.strictEqual(W.parseJoin('zencalendar://join?join=Ab3dE.tok'), 'Ab3dE.tok');
-    assert.strictEqual(W.parseJoin('https://luckicla.github.io/zencalendar/w/#Ab3dE.tok'), 'Ab3dE.tok');
-    assert.strictEqual(W.parseJoin('https://luckicla.github.io/zencalendar/app/?join=Ab3dE.tok'), 'Ab3dE.tok');
+    assert.strictEqual(W.parseJoin('https://luckicla.github.io/ZenCalendar/w/#Ab3dE.tok'), 'Ab3dE.tok');
+    assert.strictEqual(W.parseJoin('https://luckicla.github.io/ZenCalendar/app/?join=Ab3dE.tok'), 'Ab3dE.tok');
     for (const bad of ['', 'zencalendar://join/', 'zencalendar://join/#sinpunto', 'zencalendar://open/#a.b', 'zencalendar://join/#a.b<script>',
       'https://otra.web/w/#a.b', 'zencalendar://join/#' + 'a'.repeat(65) + '.b', null]) assert.strictEqual(W.parseJoin(bad), null, String(bad));
   });
@@ -23,7 +23,7 @@ const linesBy = groups => Object.fromEntries(groups.map(g => [g.wid, g.lines]));
     assert.strictEqual(W.joinFromArgv(['C:\\ZenCalendar\\ZenCalendar.exe', '--hidden', 'zencalendar://join/#w1.t1']), 'w1.t1');
     assert.strictEqual(W.joinFromArgv(['electron.exe', 'C:\\app', '--allow-file-access', 'zencalendar://join/#w1.t1']), 'w1.t1');
     assert.strictEqual(W.joinFromArgv(['ZenCalendar.exe', '--new']), null);
-    assert.strictEqual(W.joinFromArgv(['ZenCalendar.exe', 'https://luckicla.github.io/zencalendar/w/#w1.t1']), null, 'solo el protocolo propio');
+    assert.strictEqual(W.joinFromArgv(['ZenCalendar.exe', 'https://luckicla.github.io/ZenCalendar/w/#w1.t1']), null, 'solo el protocolo propio');
   });
 
   await t('marcas de Firestore: se comparan con los decimales que traigan', () => {

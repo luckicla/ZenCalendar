@@ -360,7 +360,7 @@
 
   // ---------- entrar con un enlace ----------
   async function joinAsk() {
-    const v = await UI.prompt(t('Unirme con un enlace'), '', { ok: t('Seguir'), placeholder: 'https://luckicla.github.io/zencalendar/w/#…', label: t('Pega aquí el enlace que te han pasado') });
+    const v = await UI.prompt(t('Unirme con un enlace'), '', { ok: t('Seguir'), placeholder: 'https://luckicla.github.io/ZenCalendar/w/#…', label: t('Pega aquí el enlace que te han pasado') });
     if (!v) return;
     if (!W().parseCode(v)) { UI.toast(t('Ese enlace no parece de ZenCalendar')); return; }
     joinFlow(v);

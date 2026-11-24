@@ -198,7 +198,7 @@
     const headers = { 'Content-Type': 'application/json' };
     const key = getKey(p.id);
     if (key) headers.Authorization = 'Bearer ' + key;
-    if (p.id === 'openrouter') { headers['HTTP-Referer'] = 'https://luckicla.github.io/zencalendar/'; headers['X-Title'] = 'ZenCalendar'; }
+    if (p.id === 'openrouter') { headers['HTTP-Referer'] = 'https://luckicla.github.io/ZenCalendar/'; headers['X-Title'] = 'ZenCalendar'; }
     const body = { model, messages, temperature: 0.2, response_format: { type: 'json_object' } };
     const send = b => ZC.net.fetch(base + '/chat/completions', { method: 'POST', headers, body: JSON.stringify(b), timeout: 120000 });
     let r = await send(body);

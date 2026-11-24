@@ -3,7 +3,7 @@
 // (tests/core/desktop-ws.test.js):
 //
 //  - parseJoin / joinFromArgv: el código «<wid>.<token>» de un enlace zencalendar://join/#… (o del de la web
-//    https://luckicla.github.io/zencalendar/w/#…, o de ?join=…).
+//    https://luckicla.github.io/ZenCalendar/w/#…, o de ?join=…).
 //  - createChecker: la comprobación periódica con la app cerrada en la bandeja. Con el refresh token de
 //    Firebase que pasa la página (ZC.platform.wsCreds) renueva el ID token (securetoken.googleapis.com),
 //    busca por REST los workspaces del usuario (memberIds array-contains uid) y, en cada uno, los items con

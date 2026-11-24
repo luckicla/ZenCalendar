@@ -585,7 +585,7 @@
   function inviteLink(wid) {
     const w = spaces.get(wid);
     if (!w || !w.inviteToken) return '';
-    return (cfg().inviteBase || 'https://luckicla.github.io/zencalendar/w/') + '#' + wid + '.' + w.inviteToken;
+    return (cfg().inviteBase || 'https://luckicla.github.io/ZenCalendar/w/') + '#' + wid + '.' + w.inviteToken;
   }
   async function regenerateLink(wid) {
     await needSession();

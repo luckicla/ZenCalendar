@@ -248,8 +248,8 @@ claro y oscuro. El logo (`assets/logo.svg`) es minimalista y profesional: squirc
 calendario blanca con dos pestañas y una «Z» en degradado. Úsalo tal cual en la barra y en la bienvenida (el frontend puede
 copiarlo a `web/img/ui/logo.svg`). La interfaz es pastel y suave, pero elegante, no infantil.
 
-La web de presentación va en `docs/` (la hace un tercer agente) y se publica en `https://luckicla.github.io/zencalendar/`;
-la app web en `https://luckicla.github.io/zencalendar/app/` (copia de `web/`).
+La web de presentación va en `docs/` (la hace un tercer agente) y se publica en `https://luckicla.github.io/ZenCalendar/`;
+la app web en `https://luckicla.github.io/ZenCalendar/app/` (copia de `web/`).
 
 ## IA que borra y alarmas (1.2.0)
 
@@ -471,7 +471,7 @@ Núcleo en `web/js/core/ws.js` (se carga después de `gcal.js`); `web/js/core/ws
   members: [{ uid, name, email, photo, joined, owner }], memberIds, invitedEmails, inviteToken, createdAt, updatedAt }`.
 - `await create({ name, color, emoji, bg })` · `await update(wid, patch)` (dueño) · `await setBackground(wid, file | dataURL | null)`
   (la reduce a 1600 px y < 600 KB) · `bgURL(wid)` (dataURL o null; si no está, la baja y avisa con `change`) · `await bgData(wid)`.
-- `inviteLink(wid)` → `https://luckicla.github.io/zencalendar/w/#<wid>.<token>` · `await regenerateLink(wid)` ·
+- `inviteLink(wid)` → `https://luckicla.github.io/ZenCalendar/w/#<wid>.<token>` · `await regenerateLink(wid)` ·
   `await inviteEmail(wid, email)` · `await uninviteEmail(wid, email)` · `parseCode(texto)` → `{ wid, token } | null`
   (vale el enlace entero, `#…`, `?join=…` o `zencalendar://join/#…`) · `await peek(code)` (lo que se ve antes de entrar) ·
   `await join(code)` · `pendingInvites()` · `await acceptInvite(wid)` · `await declineInvite(wid)`.

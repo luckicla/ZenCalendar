@@ -161,7 +161,7 @@ const USERS = [
     ok(cur && cur.name === 'Club de lectura' && cur.emoji === '📚' && cur.color === '#86B862' && cur.bg.value === 'olas', 'crea el workspace y entra');
     // invitar
     await p.evaluate(() => ZC.ui.wsui.inviteSheet(ZC.ws.current().id)); await p.waitForTimeout(400);
-    ok((await p.locator('.wsi-link input').inputValue()).startsWith('https://luckicla.github.io/zencalendar/w/#'), 'el enlace de invitación');
+    ok((await p.locator('.wsi-link input').inputValue()).startsWith('https://luckicla.github.io/ZenCalendar/w/#'), 'el enlace de invitación');
     await p.locator('.wsi [data-wi=wa]').click(); await p.waitForTimeout(100);
     ok(await p.evaluate(() => window.__opened.some(o => o.app === 'whatsapp' && o.url.includes('/w/#'))), 'WhatsApp con el enlace');
     await p.locator('.wsi [data-wi=mail]').click(); await p.waitForTimeout(100);

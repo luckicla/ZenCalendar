@@ -4,7 +4,7 @@
   "description": "ZenCalendar: tu calendario tranquilito, con avisos y sincronizado con tu Google Drive",
   "main": "main.js",
   "author": "luckicla",
-  "homepage": "https://luckicla.github.io/zencalendar/",
+  "homepage": "https://luckicla.github.io/ZenCalendar/",
   "license": "SEE LICENSE IN ../LICENSE",
   "scripts": {
     "start": "electron .",

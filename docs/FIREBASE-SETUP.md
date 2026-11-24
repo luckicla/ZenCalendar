@@ -70,7 +70,7 @@ restricciones de sitio web, añade `https://luckicla.github.io/*` y `http://loca
 que incluyan **Cloud Firestore API**, **Identity Toolkit API** y **Token Service API**. Si no tiene restricciones, no toques nada.
 
 ### Comprobar que va
-1. Abre <https://luckicla.github.io/zencalendar/app/> → arriba, **Mi calendario ▾** → **Conectar con Google**.
+1. Abre <https://luckicla.github.io/ZenCalendar/app/> → arriba, **Mi calendario ▾** → **Conectar con Google**.
 2. **Crear workspace** → ponle nombre → **Invitar** → **Copiar** y abre el enlace en otro navegador o en el móvil.
 3. En la consola de Firebase → Firestore verás `workspaces/…` con sus `items`.
 

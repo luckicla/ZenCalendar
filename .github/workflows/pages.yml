@@ -1,7 +1,7 @@
 name: Web (GitHub Pages)
 
-# https://luckicla.github.io/zencalendar/      → la web de presentación (carpeta docs/)
-# https://luckicla.github.io/zencalendar/app/  → la app web (carpeta web/), con Drive si hay client ID web
+# https://luckicla.github.io/ZenCalendar/      → la web de presentación (carpeta docs/)
+# https://luckicla.github.io/ZenCalendar/app/  → la app web (carpeta web/), con Drive si hay client ID web
 
 on:
   push:

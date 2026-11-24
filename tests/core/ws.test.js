@@ -89,7 +89,7 @@ async function pair() {
     assert.ok(raw.inviteToken.length >= 16);
     assert.ok(fb.raw('workspaces/' + w.id + '/invite/' + raw.inviteToken).name === 'Cenas de los viernes');
     assert.ok(A.store.calendar('ws:' + w.id), 'el calendario del workspace está en el store');
-    assert.ok(A.ws.inviteLink(w.id).startsWith('https://luckicla.github.io/zencalendar/w/#' + w.id + '.'));
+    assert.ok(A.ws.inviteLink(w.id).startsWith('https://luckicla.github.io/ZenCalendar/w/#' + w.id + '.'));
     assert.equal(A.ws.parseCode(A.ws.inviteLink(w.id)).wid, w.id);
     assert.equal(A.ws.parseCode('zencalendar://join/#' + w.id + '.' + raw.inviteToken).token, raw.inviteToken);
     assert.equal(A.ws.parseCode('https://x/app/?join=' + w.id + '.' + raw.inviteToken).wid, w.id);

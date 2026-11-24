@@ -10,12 +10,12 @@ ZenCalendar es mi calendario. Lo hice porque quería uno bonito de verdad, paste
 
 ## Descargar
 
-Todo está en la web, **[luckicla.github.io/zencalendar](https://luckicla.github.io/zencalendar/)**, y en [Releases](https://github.com/luckicla/zencalendar/releases/latest):
+Todo está en la web, **[luckicla.github.io/ZenCalendar](https://luckicla.github.io/ZenCalendar/)**, y en [Releases](https://github.com/luckicla/zencalendar/releases/latest):
 
 - **Windows, instalador**: `ZenCalendar-Instalador.exe`. Se instala como una app más (menú Inicio y escritorio), se queda junto al reloj para avisarte y se actualiza sola.
 - **Windows, portable**: `ZenCalendar-Portable.exe`. Sin instalar: los datos van en una carpeta `ZenCalendar-datos` al lado del `.exe`. Te avisa cuando hay versión nueva.
 - **Android**: `ZenCalendar.apk`. Se instala a mano la primera vez (Android 7 o más nuevo) y después **se actualiza sola**: al abrirla mira si hay una nueva (como mucho cada 6 horas, o cuando tú quieras desde Ajustes), la descarga, comprueba que llega entera y te enseña el instalador de Android. La primera vez Android te pedirá permitir que ZenCalendar instale apps; después se vuelve a abrir sola y te dice «Actualizado a la versión…».
-- **En el navegador**: [luckicla.github.io/zencalendar/app](https://luckicla.github.io/zencalendar/app/), por si estás en un ordenador que no es el tuyo. Se puede instalar como app desde el navegador.
+- **En el navegador**: [luckicla.github.io/ZenCalendar/app](https://luckicla.github.io/ZenCalendar/app/), por si estás en un ordenador que no es el tuyo. Se puede instalar como app desde el navegador.
 
 Si Windows o Android te dicen que es peligroso, lee [¿Es seguro?](#es-seguro), que está explicado.
 
@@ -116,7 +116,7 @@ De todas formas, GitHub Actions lo hace solo en cada cambio en `main`:
   - `android-latest`: la última `ZenCalendar.apk`, siempre en el mismo enlace, con `version.txt` («`<compilación> <sha256> <versión>`»). La app de Android se actualiza desde aquí: compara su número de compilación (`versionCode` = el número de la ejecución de GitHub Actions, que siempre sube) con el de `version.txt`, descarga la APK y comprueba el sha256.
   - `pc-latest`: el último `ZenCalendar-Instalador.exe` y `ZenCalendar-Portable.exe`. De aquí se actualiza sola la versión instalada (electron-updater, con `latest.yml`), pero solo cuando cambia `VERSION` (compara la versión); la portable mira `version.txt` y, si hay una nueva, «Actualizar» abre la descarga.
   - `v<VERSION>` (por ejemplo `v1.0.0`): la release oficial, con los tres archivos y las notas, marcada como *latest*. De aquí salen los botones de descarga de la web (`releases/latest/download/…`). Se crea una sola vez por versión: en la primera compilación en la que salen bien Android y Windows (si una falla, la siguiente lo vuelve a intentar con el mismo número).
-- `.github/workflows/pages.yml` publica la web: la presentación (`docs/`, sin los documentos internos) en `luckicla.github.io/zencalendar/` y la app (`web/`) en `luckicla.github.io/zencalendar/app/`. **Antes de la primera vez** hay que ir a **Settings → Pages → Build and deployment → Source** y elegir **GitHub Actions** (si no, el paso de publicar falla).
+- `.github/workflows/pages.yml` publica la web: la presentación (`docs/`, sin los documentos internos) en `luckicla.github.io/ZenCalendar/` y la app (`web/`) en `luckicla.github.io/ZenCalendar/app/`. **Antes de la primera vez** hay que ir a **Settings → Pages → Build and deployment → Source** y elegir **GitHub Actions** (si no, el paso de publicar falla).
 
 **Sacar una versión nueva**: cambia el número del archivo `VERSION` (por ejemplo de `1.0.0` a `1.0.1`) y súbelo a `main`. GitHub Actions compila, crea la release `v1.0.1` con sus notas y la marca como la última; la de Windows instalada se actualiza sola y la de Android también. Los cambios que subas sin tocar `VERSION` llegan igual a Android (y a `android-latest`/`pc-latest`), pero no crean release oficial.
 
