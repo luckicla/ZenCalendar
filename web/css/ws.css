@@ -265,8 +265,6 @@ html.look-swap #viewHost, html.look-swap #side, html.look-swap #bgCanvas, html.l
   /* (en el móvil el distintivo ya está en el selector: en el título, solo el nombre) */
   .ws-name .ws-tb, html[data-design="dot"] .ws-dname .ws-badge { display: none; }
   .ws-gear { width: 30px; margin: 0 -2px; }
-  /* (dentro de un workspace, con el engranaje al lado, la flechita del selector sobra: así cabe el nombre) */
-  html.in-ws .ws-chip .wsc-chev { display: none; }
   .wsd-icons { grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); max-height: 180px; }
 }
 
@@ -347,3 +345,11 @@ html[data-design="dot"] #periodTitle.ws-title { position: relative; padding-righ
 .wsc-me .me-ph, .wsm-me .me-ph { width: 100%; height: 100%; object-fit: cover; display: block; }
 .wsm-me:has(.me-ph) { border-radius: 50%; }
 .me-ini { font-weight: 700; font-size: .85em; line-height: 1; }
+
+/* Dot: un solo aro. En el PC, la píldora lleva el aro de color y el icono va sin el suyo; en el móvil, el
+   botón es un círculo sin aro y el aro es el del icono (antes salían los dos, uno encima del otro) */
+html[data-design="dot"] .ws-chip .ws-badge:not(.has-av) { box-shadow: none; }
+@media (max-width: 759px) {
+  html[data-design="dot"] .ws-chip.is-ws { box-shadow: none; }
+  html[data-design="dot"] .ws-chip .ws-badge:not(.has-av) { box-shadow: inset 0 0 0 1.5px var(--wc); }
+}
