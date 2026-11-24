@@ -53,7 +53,8 @@
     }
     box.addEventListener('click', async e => {
       const p = e.target.closest('[data-p]'); if (p) { UI.look.applyPreset(p.dataset.p); box.querySelectorAll('.wl-p').forEach(b => b.classList.toggle('on', b === p)); UI.haptic('tick'); return; }
-      const ds = e.target.closest('[data-design]'); if (ds) { UI.dot.pick(ds.dataset.design); paint(); UI.haptic('tick'); return; }
+      // (solo las tarjetas del selector: <html> también lleva data-design y lo cogería en cualquier toque)
+      const ds = e.target.closest('.dz-card[data-design]'); if (ds && box.contains(ds)) { UI.dot.pick(ds.dataset.design); paint(); UI.haptic('tick'); return; }
       const sc = e.target.closest('#wlScheme [data-v]'); if (sc) { UI.look.set({ scheme: sc.dataset.v }); paint(); return; }
       const g = e.target.closest('[data-go]'); if (g) { step = +g.dataset.go; paint(); return; }
       const a = e.target.closest('[data-a]'); if (!a) return;

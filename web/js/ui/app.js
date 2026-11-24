@@ -137,7 +137,7 @@
     $('#btnNext').onclick = () => step(1);
     $('#periodTitle').onclick = e => titleMenu(e.currentTarget);
     $('#viewSeg').onclick = e => { const b = e.target.closest('button[data-view]'); if (b) go({ view: b.dataset.view }); };
-    $('#bnav').onclick = e => { const b = e.target.closest('[data-view]'); if (b) { UI.haptic('tick'); if (b.dataset.view === state.view && state.view !== 'tasks') goToday(); else go({ view: b.dataset.view }); } };
+    $('#bnav').onclick = e => { const b = e.target.closest('#bnav [data-view]'); if (b) { UI.haptic('tick'); if (b.dataset.view === state.view && state.view !== 'tasks') goToday(); else go({ view: b.dataset.view }); } };
     $('#btnSearch').onclick = () => UI.quick.search();
     $('#btnAI').onclick = () => UI.aipanel.open();
     $('#btnSettings').onclick = () => UI.settings.open();
