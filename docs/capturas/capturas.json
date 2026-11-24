@@ -1,9 +1,13 @@
 {
-  "_": "Capturas reales de la app para la web. Pon la imagen en esta carpeta (webp, png o jpg) y escribe aquí su nombre en el hueco que toca. Mientras un hueco esté vacío, la web enseña una maqueta en HTML. Los huecos «-dot» son los del diseño Dot (si faltan, en Dot sale la maqueta en Dot). Tamaños recomendados: pc-semana 1920x1248 (16:10,4) y las del móvil 900x1900 (9:19).",
+  "_": "Capturas reales de la app para la web. Pon la imagen en esta carpeta (webp, png o jpg) y escribe aquí su nombre en el hueco que toca. Mientras un hueco esté vacío, la web enseña una maqueta en HTML. pc-workspace y movil-workspace son los de la sección «Workspaces» (allí no hay maqueta: sin captura, el hueco queda vacío). Los huecos «-dot» son los del diseño Dot (si faltan, en Dot sale la maqueta en Dot). Tamaños recomendados: pc-semana 1920x1248 (16:10,4) y las del móvil 900x1900 (9:19).",
   "pc-semana": "pc-semana.webp",
   "movil-mes": "movil-mes.webp",
   "movil-agenda": "movil-agenda.webp",
   "pc-semana-dot": "pc-semana-dot.webp",
   "movil-mes-dot": "movil-mes-dot.webp",
-  "movil-agenda-dot": "movil-agenda-dot.webp"
+  "movil-agenda-dot": "movil-agenda-dot.webp",
+  "pc-workspace": "pc-workspace.webp",
+  "movil-workspace": "movil-workspace.webp",
+  "pc-workspace-dot": "pc-workspace-dot.webp",
+  "movil-workspace-dot": "movil-workspace-dot.webp"
 }

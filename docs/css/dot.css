@@ -315,13 +315,13 @@ html[data-design="dot"] .rows li { grid-template-columns: 4fr 8fr; padding: 20px
 html[data-design="dot"] .rows h3 { font-size: var(--d-16); line-height: 1.45; }
 html[data-design="dot"] .rows p { max-width: 58ch; }
 /* Funciones: una ficha técnica a dos columnas */
-html[data-design="dot"] #funciones .rows { display: grid; grid-template-columns: 1fr 1fr; column-gap: 48px; }
-html[data-design="dot"] #funciones .rows li { grid-template-columns: minmax(0, 1fr); gap: 6px; align-content: start; }
+html[data-design="dot"] #funciones .rows, html[data-design="dot"] #workspaces .rows { display: grid; grid-template-columns: 1fr 1fr; column-gap: 48px; }
+html[data-design="dot"] #funciones .rows li, html[data-design="dot"] #workspaces .rows li { grid-template-columns: minmax(0, 1fr); gap: 6px; align-content: start; }
 /* Privacidad: cuatro columnas, como cuatro garantías */
-html[data-design="dot"] #privacidad .rows { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 32px; }
+html[data-design="dot"] #privacidad .rows { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 32px; row-gap: 8px; }
 html[data-design="dot"] #privacidad .rows li { grid-template-columns: minmax(0, 1fr); gap: 8px; align-content: start; border-top-color: var(--ink); }
 @media (max-width: 1000px) { html[data-design="dot"] #privacidad .rows { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 760px) { html[data-design="dot"] #funciones .rows { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) { html[data-design="dot"] #funciones .rows, html[data-design="dot"] #workspaces .rows { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 600px) {
   html[data-design="dot"] .rows li { grid-template-columns: minmax(0, 1fr); gap: 6px; }
   html[data-design="dot"] #privacidad .rows { grid-template-columns: minmax(0, 1fr); }

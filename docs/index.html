@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ZenCalendar: el calendario que apunta lo que escribes, para Android y Windows</title>
-<meta name="description" content="Escribe «cena con Marta el viernes a las 9» y ZenCalendar lo pone en su día. Calendario para Android y Windows con IA, sincronización por tu Google Drive, widgets y temas a tu gusto. Gratis y sin anuncios.">
+<meta name="description" content="Escribe «cena con Marta el viernes a las 9» y ZenCalendar lo pone en su día. Calendario para Android y Windows con IA, Google Drive y Google Calendar, workspaces para compartir con tus amigos, widgets y temas a tu gusto. Gratis y sin anuncios.">
 <meta name="author" content="luckicla">
 <meta name="theme-color" content="#FCFBFE" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#16131D" media="(prefers-color-scheme: dark)">
@@ -13,7 +13,7 @@
 <meta property="og:locale" content="es_ES">
 <meta property="og:site_name" content="ZenCalendar">
 <meta property="og:title" content="ZenCalendar: apúntalo como lo dirías">
-<meta property="og:description" content="Calendario para Android y Windows que entiende lo que escribes. Con IA, sincronización por tu Google Drive y widgets. Gratis y sin anuncios.">
+<meta property="og:description" content="Calendario para Android y Windows que entiende lo que escribes. Con IA, Google Drive y Google Calendar, y workspaces para compartir con tus amigos. Gratis y sin anuncios.">
 <meta property="og:url" content="https://luckicla.github.io/ZenCalendar/">
 <meta property="og:image" content="https://luckicla.github.io/ZenCalendar/img/og.png">
 <meta property="og:image:width" content="1200">
@@ -49,7 +49,7 @@
   "name": "ZenCalendar",
   "operatingSystem": "Android, Windows 10, Windows 11",
   "applicationCategory": "ProductivityApplication",
-  "description": "Calendario para Android y Windows que entiende lo que escribes, con asistente de IA, sincronización por Google Drive, widgets y personalización.",
+  "description": "Calendario para Android y Windows que entiende lo que escribes, con asistente de IA, sincronización por Google Drive y Google Calendar, workspaces compartidos, widgets y personalización.",
   "url": "https://luckicla.github.io/ZenCalendar/",
   "downloadUrl": "https://github.com/luckicla/zencalendar/releases/latest",
   "inLanguage": ["es", "en", "ca"],
@@ -69,6 +69,7 @@
       <span>ZenCalendar</span>
     </a>
     <nav class="top-links" aria-label="Principal">
+      <a href="#workspaces">Compartir</a>
       <a href="#funciones">Qué hace</a>
       <a href="#aspecto">Aspecto</a>
       <a href="#seguro">¿Es seguro?</a>
@@ -98,6 +99,7 @@
         <div class="hero-text">
           <h1 id="hero-title">Apúntalo como lo dirías.</h1>
           <p>Escribe «cena con Marta el viernes a las 9» y ZenCalendar lo pone en su día. Para Android y Windows, gratis y sin anuncios.</p>
+          <p class="hero-share">Y si quedáis en grupo, compartís el calendario con un enlace. <a href="#workspaces">Cómo</a></p>
           <div class="actions" id="hero-actions">
             <a class="btn btn--primary dl-android" href="https://github.com/luckicla/zencalendar/releases/latest/download/ZenCalendar.apk">Descargar para Android</a>
             <a class="btn dl-windows" href="https://github.com/luckicla/zencalendar/releases/latest/download/ZenCalendar-Instalador.exe">Descargar para Windows</a>
@@ -128,6 +130,38 @@
     </div>
   </section>
 
+  <!-- Workspaces -->
+  <section class="page" id="workspaces" aria-labelledby="ws-title">
+    <div class="wrap page-grid">
+      <div class="page-head" data-dot="con amigos">
+        <h2 id="ws-title">Un calendario para quedar.</h2>
+      </div>
+      <div class="page-body">
+        <p class="lead">Crea un workspace para la familia, el piso o las cenas de los viernes. Invitas con un enlace y lo que apunta cualquiera lo veis todos al momento.</p>
+      </div>
+      <div class="shots shots--ws">
+        <figure class="shot shot--pc" data-shot="pc-workspace">
+          <div class="shot-frame"></div>
+          <figcaption>«Cenas de los viernes» en el PC: sus planes, sus tareas y las tres personas.</figcaption>
+        </figure>
+        <figure class="shot shot--phone" data-shot="movil-workspace">
+          <div class="shot-frame"></div>
+          <figcaption>El mismo workspace en el móvil.</figcaption>
+        </figure>
+      </div>
+      <div class="page-body ws-rows">
+        <ul class="rows">
+          <li><h3>Invita con un enlace</h3><p>Lo mandas por WhatsApp o por correo. Quien lo abre entra con su cuenta de Google y ya está dentro.</p></li>
+          <li><h3>Todos apuntan</h3><p>Planes y tareas se guardan para todos y se ven al momento en el móvil y en el PC de cada uno.</p></li>
+          <li><h3>Tareas para alguien</h3><p>«Llevar el postre», para Bea. Con «Mis tareas» ves solo lo tuyo.</p></li>
+          <li><h3>Te enteras</h3><p>Te avisa cuando alguien añade o cambia algo. Con la app cerrada, el aviso llega en unos minutos.</p></li>
+          <li><h3>Cada uno con su cara</h3><p>Icono o foto, color y fondo propios. Al entrar, el título pasa a ser el nombre del workspace, así sabes siempre dónde estás.</p></li>
+          <li><h3>Cambias deslizando</h3><p>Desliza la foto de arriba para pasar de tu calendario a un workspace, como al cambiar de cuenta en Gmail. En el PC, con la rueda.</p></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
   <!-- IA -->
   <section class="page" id="ia" aria-labelledby="ia-title">
     <div class="wrap page-grid">
@@ -135,7 +169,7 @@
         <h2 id="ia-title">Pídeselo con tus palabras.</h2>
       </div>
       <div class="page-body">
-        <p class="lead">Dile que mueva la reunión al jueves, que te apunte el horario del gimnasio o qué tienes la semana que viene. Antes de cambiar nada te enseña lo que va a hacer, y tú decides.</p>
+        <p class="lead">Dile que mueva la reunión al jueves, que quite todo lo de mañana o que te despierte a las 7. Antes de cambiar nada te enseña lo que va a hacer, y tú decides.</p>
         <div class="ia">
           <div class="chat" id="chat" aria-label="Ejemplo de conversación con el asistente">
             <div class="msg msg--me">
@@ -162,6 +196,10 @@
             </div>
           </div>
           <div class="ia-side">
+            <dl class="options options--say">
+              <div><dt>«Quita todo lo de mañana»</dt><dd>Te enseña la lista de lo que va a borrar. Desmarcas lo que quieras guardar, y si te arrepientes, Deshacer.</dd></div>
+              <div><dt>«Despiértame a las 7»</dt><dd>Pone una alarma de verdad, que suena hasta que la paras. Y si algo parece importante, como un vuelo, te propone ponerle alarma.</dd></div>
+            </dl>
             <p>También lee fotos: un cartel, una invitación o el horario de clases. Eliges con qué IA funciona:</p>
             <dl class="options">
               <div><dt>Gratis</dt><dd>Con una clave gratuita de Gemini, Groq u OpenRouter. Lo básico va sin internet y sin clave.</dd></div>
@@ -178,16 +216,16 @@
   <section class="page" id="drive" aria-labelledby="drive-title">
     <div class="wrap page-grid">
       <div class="page-head">
-        <h2 id="drive-title">Sincroniza con tu Google Drive.</h2>
+        <h2 id="drive-title">Tu Google, con un botón.</h2>
       </div>
       <div class="page-body">
-        <p class="lead">Tus eventos van del móvil al PC a través de tu propio Drive. No hay cuentas nuestras ni servidor de nadie.</p>
+        <p class="lead">Tu Drive hace de servidor: tus eventos van del móvil al PC a través de él. Y si usas Google Calendar, tus calendarios entran en ZenCalendar, de una cuenta o de varias.</p>
         <div class="drive">
           <ul class="facts-list">
-            <li><b>Un solo botón.</b> Tocas «Conectar con Google», eliges tu cuenta y listo.</li>
-            <li><b>Una carpeta privada.</b> No ensucia tu Drive y solo ZenCalendar puede abrirla.</li>
-            <li><b>Sin conexión también.</b> Cuando vuelve internet se pone al día sola, evento a evento, sin pisar lo que cambiaste en otro sitio.</li>
-            <li><b>Con las fotos.</b> Las imágenes de tus eventos viajan con ellos.</li>
+            <li><b>Un solo botón.</b> Tocas «Conectar con Google», eliges tu cuenta y listo. No hay cuentas de ZenCalendar.</li>
+            <li><b>Una carpeta privada.</b> En tu Drive, sin ensuciarlo: solo ZenCalendar puede abrirla. Las fotos de tus eventos viajan también.</li>
+            <li><b>Google Calendar, en los dos sentidos.</b> Lo que creas o cambias aquí aparece en Google, y al revés. Con las cuentas que quieras, el trabajo y la personal.</li>
+            <li><b>Sin conexión también.</b> Cuando vuelve internet se pone al día sola, sin pisar lo que cambiaste en otro sitio.</li>
           </ul>
           <div class="sync" id="sync">
             <div class="sync-line" aria-hidden="true">
@@ -205,7 +243,7 @@
               </div>
               <button type="button" class="btn btn--small" id="g-btn" aria-pressed="false">Conectar con Google</button>
             </div>
-            <p class="note">Es un ejemplo: aquí no se conecta nada.</p>
+            <p class="note">Es un ejemplo: aquí no se conecta nada. Al conectar Google Calendar, Google te avisa de que la app aún está en revisión; es normal.</p>
           </div>
         </div>
       </div>
@@ -296,7 +334,7 @@
         <h2 id="widgets-title">Mira tu día sin abrir la app.</h2>
       </div>
       <div class="page-body">
-        <p class="lead">Los widgets llevan los colores de tu tema. Tocas un evento y se abre justo ahí.</p>
+        <p class="lead">Los widgets llevan los colores de tu tema, también en Dot. Tocas un evento y se abre justo ahí.</p>
         <div class="widgets">
           <figure class="wall wall--android">
             <div class="wall-stage" aria-hidden="true">
@@ -309,7 +347,7 @@
             <div class="wall-stage" aria-hidden="true">
               <div class="widget w-desk" id="w-desk"></div>
             </div>
-            <figcaption><b>Windows.</b> Una agenda pequeña y transparente en el escritorio. La enciendes y la apagas en Ajustes.</figcaption>
+            <figcaption><b>Windows.</b> Una agenda pequeña y transparente en el escritorio, siempre encima o quieta detrás de las ventanas. La enciendes y la apagas en Ajustes.</figcaption>
           </figure>
         </div>
       </div>
@@ -319,21 +357,23 @@
   <!-- Funciones -->
   <section class="page" id="funciones" aria-labelledby="features-title">
     <div class="wrap page-grid">
-      <div class="page-head" data-dot="10 funciones">
+      <div class="page-head" data-dot="12 funciones">
         <h2 id="features-title">Lo que hace.</h2>
       </div>
       <div class="page-body">
         <ul class="rows">
-          <li><h3>Cinco vistas</h3><p>Mes, semana, día, agenda y año. En el móvil deslizas para cambiar de mes. Arrastras un evento para moverlo o alargarlo, y arrastras sobre las horas para crear uno.</p></li>
+          <li><h3>Cinco vistas</h3><p>Mes, semana, día, agenda y año. El mes, si quieres, sin los días del mes de antes y del de después.</p></li>
+          <li><h3>Gestos</h3><p>Deslizas para cambiar de mes, pellizcas para ampliar las horas, arrastras para mover o alargar, y deslizas una tarea para completarla. Cada gesto se puede apagar.</p></li>
           <li><h3>Repeticiones</h3><p>Cada día, ciertos días de la semana, el día 15 de cada mes, el tercer martes, cada año. Al cambiar una eliges: solo esta, esta y las siguientes, o todas.</p></li>
-          <li><h3>Avisos que llegan</h3><p>Los que quieras por evento, a la hora o antes. En Android llegan aunque reinicies el móvil, y en Windows aunque cierres la ventana.</p></li>
-          <li><h3>Fotos en los eventos</h3><p>La entrada del concierto, el mapa o la receta, dentro del evento. También se sincronizan.</p></li>
+          <li><h3>Avisos y alarmas</h3><p>Avisos a la hora o antes, aunque la app esté cerrada. Y alarmas que suenan como un despertador hasta que las paras.</p></li>
           <li><h3>Tareas y listas</h3><p>Recordatorios con casilla y listas dentro de cada evento, para la compra o la maleta.</p></li>
-          <li><h3>Festivos</h3><p>Los de España ya vienen puestos, con la Semana Santa calculada. Los puedes quitar.</p></li>
-          <li><h3>Desde Google Calendar</h3><p>Exporta tu calendario de Google a un archivo .ics e impórtalo. También exporta a .ics y hace copias de seguridad.</p></li>
-          <li><h3>Calendarios con color</h3><p>Personal, Trabajo, Cumpleaños y los que crees, cada uno con su color. Y un buscador para encontrar cualquier cosa.</p></li>
-          <li><h3>Atajos de teclado</h3><p>En el PC cambias de vista, saltas a hoy o creas un evento sin tocar el ratón.</p></li>
-          <li><h3>Sin anuncios</h3><p>Ni anuncios, ni registro, ni suscripciones. En español, inglés y catalán.</p></li>
+          <li><h3>Fotos en los eventos</h3><p>La entrada del concierto, el mapa o la receta, dentro del evento.</p></li>
+          <li><h3>Calendarios con color</h3><p>Personal, Trabajo, Cumpleaños, los que crees y los de Google, cada uno con su color. Y un buscador para encontrar cualquier cosa.</p></li>
+          <li><h3>Festivos</h3><p>Los de España ya vienen puestos, con la Semana Santa calculada, y los de algunas comunidades. Los puedes quitar.</p></li>
+          <li><h3>Dos diseños</h3><p>Zen, el pastel, y Dot, en blanco y negro con su propia letra de puntos. Cada uno con sus iconos de la app.</p></li>
+          <li><h3>Se actualiza sola</h3><p>En Android y en Windows mira si hay versión nueva y se pone al día con un toque.</p></li>
+          <li><h3>Importar y exportar</h3><p>Archivos .ics de cualquier calendario y una copia de seguridad entera en un archivo.</p></li>
+          <li><h3>Sin anuncios</h3><p>Ni anuncios, ni suscripciones. En español, inglés y catalán.</p></li>
         </ul>
       </div>
     </div>
@@ -425,6 +465,7 @@
         <ul class="rows">
           <li><h3>«Windows protegió su PC»</h3><p>SmartScreen desconfía de los programas sin una firma de pago (cuesta cientos de euros al año) y que aún se han descargado poco. Toca <i>Más información</i> y luego <i>Ejecutar de todas formas</i>.</p></li>
           <li><h3>«App no segura» en Android</h3><p>Play Protect avisa de cualquier app que no venga de Google Play. Toca <i>Más detalles</i> y luego <i>Instalar de todas formas</i>.</p></li>
+          <li><h3>Qué permisos pide</h3><p>En Android, los avisos, las alarmas a la hora exacta y, solo cuando actualizas, instalar su propia versión nueva. Nada de contactos, ubicación ni archivos.</p></li>
           <li><h3>Código abierto</h3><p>Todo el código está en GitHub. El APK y los .exe los compila GitHub Actions a partir de ese mismo código, no el ordenador de nadie.</p></li>
           <li><h3>Compruébalo tú</h3><p>Sube el archivo a <a href="https://www.virustotal.com" rel="noopener">VirusTotal</a>, que lo pasa por decenas de antivirus a la vez. O pásale el enlace del código a una IA y pídele que te explique qué hace.</p></li>
         </ul>
@@ -440,7 +481,9 @@
       </div>
       <div class="page-body">
         <ul class="rows">
-          <li><h3>Tus eventos</h3><p>Se guardan en tu móvil o tu PC y, si conectas Google, en tu propio Drive. En ningún otro sitio.</p></li>
+          <li><h3>Tus eventos</h3><p>En tu móvil o tu PC y, si conectas Google, en tu propio Drive. En ningún otro sitio.</p></li>
+          <li><h3>Google Calendar</h3><p>Tus calendarios de Google siguen en Google. ZenCalendar habla directamente con Google desde tu dispositivo.</p></li>
+          <li><h3>Los workspaces</h3><p>Lo que apuntáis en un workspace se guarda en Firebase, de Google, y solo lo pueden leer sus miembros. Lo demás no sale de tu calendario.</p></li>
           <li><h3>Tus claves de IA</h3><p>Se quedan en el dispositivo donde las pones. Ni siquiera se copian a tu Drive.</p></li>
           <li><h3>Lo que le pides a la IA</h3><p>Si usas un proveedor de internet, le llega a ese proveedor. Con el modelo de tu dispositivo o el modo sin internet, no sale de ahí.</p></li>
           <li><h3>Sin rastreo</h3><p>La app no tiene anuncios ni analíticas, y esta web no usa cookies.</p></li>

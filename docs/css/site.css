@@ -94,6 +94,9 @@ img, svg { display: block; max-width: 100%; }
 .demo .mo-num { position: relative; align-self: flex-start; font: 400 var(--t-17)/1.2 var(--font-date); color: var(--ink); }
 .demo .mo-day:nth-child(7n) .mo-num { color: var(--sunday); }
 .demo .mo-day.is-out .mo-num { color: var(--pencil); opacity: 0.55; }
+/* como en la app: el mes sin los días del mes de antes y del de después */
+.demo .mo-day.is-out { pointer-events: none; }
+.demo .mo-day.is-out > * { visibility: hidden; }
 /* hoy, rodeado a mano con rotulador lavanda */
 .demo .mo-day.is-today .mo-num::before {
   content: ""; position: absolute; inset: -5px -8px -4px -7px; border: 2px solid var(--lavender);
@@ -312,6 +315,16 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius
 .shot-mock > .app { position: absolute; left: 0; top: 0; width: 960px; height: 624px; aspect-ratio: auto; border-radius: 0; box-shadow: none; transform: scale(var(--k, 0.5)); transform-origin: 0 0; }
 .shot--phone .shot-mock > .app { width: 360px; height: 760px; }
 @media (max-width: 900px) { .shots { grid-template-columns: 1fr 1fr; } .shot--pc { grid-column: 1 / -1; } }
+/* Workspaces: el PC y el móvil, y debajo lo que se puede hacer */
+.shots--ws { grid-template-columns: 4fr 1.45fr; }
+.shot-frame:empty { aspect-ratio: 1920 / 1248; }
+.shot--phone .shot-frame:empty { aspect-ratio: 900 / 1900; }
+.ws-rows { margin-top: var(--s-6); }
+.ws-rows .rows { margin-top: 0; }
+@media (max-width: 900px) { .shots--ws { grid-template-columns: minmax(0, 1fr) minmax(0, 0.5fr); } .shots--ws .shot--pc { grid-column: 1 / -1; } .shots--ws .shot--phone { max-width: 260px; } }
+.hero-share { font-size: var(--t-14); }
+.options--say { margin-bottom: var(--s-2); }
+.options--say dt { font-family: var(--font-text); font-weight: 500; }
 
 /* ───── Descarga ───── */
 .files { list-style: none; border-bottom: 1px solid var(--rule); }

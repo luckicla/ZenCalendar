@@ -353,3 +353,13 @@ html[data-design="dot"] .ws-chip .ws-badge:not(.has-av) { box-shadow: none; }
   html[data-design="dot"] .ws-chip.is-ws { box-shadow: none; }
   html[data-design="dot"] .ws-chip .ws-badge:not(.has-av) { box-shadow: inset 0 0 0 1.5px var(--wc); }
 }
+/* (móviles estrechos dentro de un workspace: el selector conserva su flechita y el engranaje; el título
+   cede —mínimo más bajo y sin su propia flechita, el menú del mes sigue al tocarlo— y el nombre se
+   recorta con «…» en vez de pisar la lupa) */
+@media (max-width: 400px) {
+  #periodTitle.ws-title { min-width: 64px; }
+  html:not([data-design="dot"]) #periodTitle.ws-title > .ic { display: none; }
+}
+/* (Dot, móvil, dentro de un workspace: el «24» de hoy se montaba sobre la lupa; fuera, como en Zen —hoy
+   sigue en el menú del título y tocando la vista activa abajo—) */
+@media (max-width: 440px) { html[data-design="dot"].in-ws #top #btnToday { display: none; } }
