@@ -228,11 +228,34 @@
     else if (UI.bg) UI.bg.set(kind === 'imagen' ? 'liso' : kind, { speed: +L.bgSpeed || 1, amount: +L.bgAmount || 1, animate: effAnim() !== 'none', hidden: kind === 'imagen' && !!imgEl });
     // Dot pone encima lo suyo (variables, letras, fondo de puntos o «glyph»); con Zen solo apaga lo que tuviera encendido
     if (UI.dot) try { UI.dot.apply(L, p, { set, light, anim: effAnim() }); } catch (e) { console.error(e); }
+    narrow();
+    glassFallback(st, set);
     paintLogo(p);
     try {
       if (!(ZC.platform && ZC.platform.isWidget)) ZC.platform && ZC.platform.setTheme && ZC.platform.setTheme({ bg: p.bg, surface: p.s1, fg: p.fg, muted: p.mut, a1: p.a1, a2: p.a2, a3: p.a3, light, alpha: (+L.widgetAlpha || 72) / 100, radius: isDot() ? 28 : +L.radius, design: root.dataset.design, ...(isDot() ? { accent: p.a1 } : {}) });
     } catch (e) { console.warn(e); }
     listeners.forEach(fn => { try { fn(L, p); } catch (e) { console.error(e); } });
+  }
+
+  // pantallas estrechas «de verdad»: el ancho en px de letra al 100 % (360 px con la letra al 130 % son como 277).
+  // nrw < 380 (móviles de 360-375, o más anchos con la letra grande) y xnrw < 320: el CSS compacta lo que no cabe.
+  function narrow() {
+    const z = (+L.zoom || 100) / 100, w = (innerWidth || 1024) / z;
+    root.classList.toggle('nrw', w < 380);
+    root.classList.toggle('xnrw', w < 320);
+  }
+  addEventListener('resize', narrow);
+  // WebView viejos (Chrome < 111) no saben color-mix(): sin esto los paneles se quedan sin fondo
+  // y se ve el texto de debajo a través. Se calcula aquí el vidrio con rgba().
+  const CMIX = !!(window.CSS && CSS.supports && CSS.supports('color', 'color-mix(in srgb, red 50%, transparent)'));
+  function glassFallback(st, set) {
+    root.classList.toggle('no-cmix', !CMIX);
+    if (CMIX) return;
+    const s1 = hex2rgb(st.getPropertyValue('--s1').trim() || '#ffffff').join(',');
+    const a = k => Math.max(0, Math.min(100, parseFloat(st.getPropertyValue(k)) || 80)) / 100;
+    set('--glass-side', `rgba(${s1},${a('--o-side')})`); set('--glass-main', `rgba(${s1},${a('--o-main')})`);
+    set('--glass-bar', `rgba(${s1},${a('--o-bar')})`); set('--glass-card', `rgba(${s1},${a('--o-card')})`);
+    set('--glass-pop', `rgba(${s1},${Math.min(1, a('--o-card') + .08)})`);
   }
 
   function paintLogo(p) {

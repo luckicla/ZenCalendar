@@ -12,10 +12,10 @@
     if (o.allDay) time = `<span class="ag-time all">${t('Todo el día')}</span>`;
     else if (C.multiDay(o)) time = `<span class="ag-time">${sameDay(d, o.start) ? C.fmtT(o.start) : '···'}<small>${sameDay(d, lastDay(o)) ? C.fmtT(o.end) : '···'}</small></span>`;
     else time = `<span class="ag-time">${C.fmtT(o.start)}${o.isTask ? '' : `<small>${C.fmtT(o.end)}</small>`}</span>`;
-    const sub = [ev.location ? `<span class="mi">${UI.icon('pin', 13)}${esc(ev.location)}</span>` : '', ev.rrule ? `<span class="mi" title="${esc(t('Se repite'))}">${UI.icon('repeat', 13)}</span>` : '', (ev.attachments || []).length ? `<span class="mi">${UI.icon('image', 13)}${ev.attachments.length}</span>` : '', (ev.checklist || []).length ? `<span class="mi">${UI.icon('list', 13)}${ev.checklist.filter(c => c.done).length}/${ev.checklist.length}</span>` : ''].filter(Boolean).join('');
+    const sub = [ev.location ? `<span class="mi">${UI.icon('pin', 13)}<span class="mt">${esc(ev.location)}</span></span>` : '', ev.rrule ? `<span class="mi" title="${esc(t('Se repite'))}">${UI.icon('repeat', 13)}</span>` : '', (ev.attachments || []).length ? `<span class="mi">${UI.icon('image', 13)}${ev.attachments.length}</span>` : '', (ev.checklist || []).length ? `<span class="mi">${UI.icon('list', 13)}${ev.checklist.filter(c => c.done).length}/${ev.checklist.length}</span>` : ''].filter(Boolean).join('');
     return `<div class="ag-card ${o.isTask ? 'task' : ''} ${o.done ? 'done' : ''} ${!o.isTask && o.end < new Date() ? 'past' : ''}" role="button" tabindex="0" data-key="${esc(o.key)}" style="${C.evVars(o)};--i:${i}">
       ${time}<span class="ag-bar"></span>
-      <span class="ag-main"><b>${esc(C.titleOf(ev))}</b>${sub || o.calendar ? `<small>${o.calendar ? `<span class="mi cal-n"><i class="dot" style="background:${esc(o.calendar.color)}"></i>${esc(o.calendar.name)}</span>` : ''}${sub}</small>` : ''}</span>
+      <span class="ag-main"><b>${esc(C.titleOf(ev))}</b>${sub || o.calendar ? `<small>${o.calendar ? `<span class="mi cal-n"><i class="dot" style="background:${esc(o.calendar.color)}"></i><span class="mt">${esc(o.calendar.name)}</span></span>` : ''}${sub}</small>` : ''}</span>
       ${o.isTask ? `<span class="tick ${o.done ? 'on' : ''}" role="checkbox" aria-checked="${o.done}" aria-label="${t('Hecha')}">${UI.icon('check', 14)}</span>` : ''}</div>`;
   }
   UI.views.agendaCard = agendaCard;

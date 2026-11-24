@@ -31,7 +31,7 @@ html[data-design="dot"] :is(.dp-tag, .dm-head span, .tg-dh .wd, .tg-hours span, 
 html[data-design="dot"] #bgCanvas, html[data-design="dot"] #bgImg, html[data-design="dot"] #bgVeil { display: none !important; }
 html[data-design="dot"][data-dotbg="dots"] body { background-image: radial-gradient(circle, rgb(var(--fg-rgb) / .2) 0 1px, transparent 1.4px); background-size: var(--dot-gap) var(--dot-gap); background-position: calc(var(--dot-gap) / -2) calc(var(--dot-gap) / -2); }
 html[data-design="dot"][data-dotbg="grid"] body { background-image: linear-gradient(rgb(var(--fg-rgb) / .065) 1px, transparent 1px), linear-gradient(90deg, rgb(var(--fg-rgb) / .065) 1px, transparent 1px), radial-gradient(circle, rgb(var(--fg-rgb) / .3) 0 1.2px, transparent 1.6px); background-size: calc(var(--dot-gap) * 2) calc(var(--dot-gap) * 2), calc(var(--dot-gap) * 2) calc(var(--dot-gap) * 2), calc(var(--dot-gap) * 8) calc(var(--dot-gap) * 8); background-position: -1px -1px, -1px -1px, calc(var(--dot-gap) * -4) calc(var(--dot-gap) * -4); }
-#dotGlyph { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+#dotGlyph { position: fixed; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 
 /* ---------- matriz de puntos (dot.js → matrix) ---------- */
 .dm { display: block; flex: none; overflow: visible; color: var(--fg); }
@@ -287,7 +287,7 @@ html[data-design="dot"] .dm-head span.we { color: rgb(var(--fg-rgb) / .58); }
 html[data-design="dot"] .dm-day { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; padding: 0; background: none; border-radius: 0; overflow: visible; cursor: pointer; container-type: size; box-shadow: none; }
 html[data-design="dot"] .dm-day:hover, html[data-design="dot"] .dm-day.out, html[data-design="dot"] .dm-day.we:not(.out), html[data-design="dot"] .dm-day.today { background: none; }
 html[data-design="dot"] .dm-day.sel { box-shadow: none; }
-.dm-dot { --sz: 44px; --sz: min(78cqmin, 66px); width: var(--sz); height: var(--sz); border-radius: 50%; display: grid; place-items: center; background: rgb(var(--fg-rgb) / .065); color: rgb(var(--fg-rgb) / .78); transition: background var(--t-fast) steps(2), color var(--t-fast) steps(2), outline-color var(--t-fast); outline: 1.5px solid transparent; outline-offset: 3px; }
+.dm-dot { --sz: 44px; width: var(--sz); height: var(--sz); border-radius: 50%; display: grid; place-items: center; background: rgb(var(--fg-rgb) / .065); color: rgb(var(--fg-rgb) / .78); transition: background var(--t-fast) steps(2), color var(--t-fast) steps(2), outline-color var(--t-fast); outline: 1.5px solid transparent; outline-offset: 3px; }
 html[data-design="dot"] .dm-day .num { min-width: 0; height: auto; padding: 0; border-radius: 0; background: none; font: 400 .98rem/1 var(--zd); font-size: clamp(.72rem, 26cqmin, 1.08rem); letter-spacing: 0; color: inherit; cursor: inherit; }
 html[data-design="dot"] .dm-day .num:hover { background: none; }
 .dm-day.l1 .dm-dot { background: rgb(var(--fg-rgb) / .2); color: var(--fg); }
@@ -307,7 +307,9 @@ html[data-design="dot"] .dm-day.today .num { background: none; color: inherit; f
 .dm-day.hol .dm-dot::after { content: ""; position: absolute; transform: translate(calc(var(--sz) * .36), calc(var(--sz) * -.36)); width: 6px; height: 6px; border-radius: 50%; background: var(--a1); box-shadow: 0 0 0 2px var(--s1); }
 .dm-day.out.hol .dm-dot::after { display: none; }
 .dm-day.drop .dm-dot { outline: 2px dashed var(--a1); outline-offset: 3px; }
-.dm-pips { --sz: 44px; --sz: min(78cqmin, 66px); position: absolute; left: 50%; top: calc(50% + var(--sz, 44px) / 2 + 5px); display: flex; gap: 3px; transform: translateX(-50%); }
+.dm-pips { --sz: 44px; position: absolute; left: 50%; top: calc(50% + var(--sz, 44px) / 2 + 5px); display: flex; gap: 3px; transform: translateX(-50%); }
+/* (las consultas de contenedor, solo donde las hay: en un WebView viejo una variable con cqmin dejaría el punto sin tamaño) */
+@supports (width: 1cqmin) { .dm-dot, .dm-pips { --sz: min(78cqmin, 66px); } }
 .dm-pips i { width: 4px; height: 4px; border-radius: 50%; background: var(--c); }
 html[data-dotcolor="mono"] .dm-pips { display: none; }
 /* al llegar a un mes: los puntos se encienden uno tras otro */
@@ -631,7 +633,7 @@ html[data-design="dot"] .wl-art.ok { color: var(--fg); background: transparent; 
 
 /* ---------- widget de escritorio ---------- */
 html[data-design="dot"] .w-card { border-radius: 28px; border: 1px solid var(--hair2); box-shadow: none; }
-html[data-design="dot"] .w-card::before { content: ""; position: absolute; inset: 10px; border-radius: 22px; pointer-events: none; background: radial-gradient(circle, rgb(var(--fg-rgb) / .07) .9px, transparent 1.3px) 0 0 / 10px 10px; -webkit-mask: linear-gradient(#000, transparent 55%); mask: linear-gradient(#000, transparent 55%); }
+html[data-design="dot"] .w-card::before { content: ""; position: absolute; top: 10px; right: 10px; bottom: 10px; left: 10px; border-radius: 22px; pointer-events: none; background: radial-gradient(circle, rgb(var(--fg-rgb) / .07) .9px, transparent 1.3px) 0 0 / 10px 10px; -webkit-mask: linear-gradient(#000, transparent 55%); mask: linear-gradient(#000, transparent 55%); }
 html[data-design="dot"] .w-card { position: relative; }
 html[data-design="dot"] .w-head { padding: 16px 12px 12px 18px; position: relative; }
 html[data-design="dot"] .w-date { gap: 14px; }
@@ -673,7 +675,7 @@ html[data-design="dot"] .w-n { font-weight: 500; }
   html[data-design="dot"] .dm-today small { display: none; }
   html[data-design="dot"] #btnToday.is-today::after { display: none; }
   html[data-design="dot"] #main { margin: 0 8px calc(88px + var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px))); border-radius: 26px; }
-  html[data-design="dot"] #side { border-radius: 0 28px 28px 0; border-left: 0; }
+  html[data-design="dot"] #side { border-radius: 0 28px 28px 0; border-left: var(--zc-safe-left, env(safe-area-inset-left, 0px)) solid transparent; border-top: var(--zc-safe-top, env(safe-area-inset-top, 0px)) solid transparent; border-bottom: var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px)) solid transparent; }
   html[data-design="dot"] #bnav { height: 64px; padding: 6px; border-radius: 999px; background: color-mix(in srgb, var(--s1) calc(var(--o-bar) + 8%), transparent); border: 1px solid var(--hair2); box-shadow: none; }
   html[data-design="dot"][data-scheme="light"] #bnav { background: color-mix(in srgb, var(--s1) calc(var(--o-bar) + 12%), transparent); }
   html[data-design="dot"] #bnav .nav-b { border-radius: 999px; gap: 4px; font: 400 .52rem/1 var(--zd); letter-spacing: .1em; text-transform: uppercase; color: var(--mut); }
@@ -681,17 +683,18 @@ html[data-design="dot"] .w-n { font-weight: 500; }
   html[data-design="dot"] #bnav .nav-b.on { background: transparent; color: var(--fg); }
   html[data-design="dot"] #bnav .nav-b.on .ic { transform: none; }
   html[data-design="dot"] #bnav .nav-b.on::before { content: ""; position: absolute; top: 4px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--a1); }
-  html[data-design="dot"] .fab { right: 18px; bottom: calc(92px + var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px))); width: 60px; height: 60px; }
+  html[data-design="dot"] .fab { right: calc(18px + var(--zc-safe-right, env(safe-area-inset-right, 0px))); bottom: calc(92px + var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px))); width: 60px; height: 60px; }
   /* Mes: la rejilla arriba, el día elegido debajo */
   html[data-design="dot"] #viewHost > .dm-month { flex-direction: column; }
   html[data-design="dot"] .dm-cal { flex: none; padding: 10px 8px 8px; }
   html[data-design="dot"] .dm-head { padding-bottom: 6px; }
   html[data-design="dot"] .dm-grid { flex: none; grid-template-rows: repeat(var(--weeks), 47px); }
   html[data-design="dot"] .dm-month.wn .dm-head, html[data-design="dot"] .dm-month.wn .dm-week { grid-template-columns: 22px repeat(7, minmax(0, 1fr)); }
-  .dm-dot { --sz: 40px; --sz: min(86cqmin, 42px); }
+  .dm-dot { --sz: 40px; }
+  @supports (width: 1cqmin) { .dm-dot { --sz: min(86cqmin, 42px); } }
   html[data-design="dot"] .dm-day .num { font-size: .86rem; }
   .dm-pips { display: none; }
-  html[data-design="dot"] .dm-panel { min-width: 0; max-width: none; border-left: 0; border-top: 1px solid var(--hair); padding: 14px 10px 16px; }
+  html[data-design="dot"] .dm-panel { min-width: 0; max-width: none; border-left: 0; border-top: 1px solid var(--hair); padding: 14px 10px 84px; }   /* (84: lo último sube por encima del «+») */
   .dp-head { padding: 0 6px; }
   .dp-tags { margin-top: 10px; }
   .dp-add { display: none; }
@@ -720,4 +723,10 @@ html[data-design="dot"] .w-n { font-weight: 500; }
   html[data-design="dot"] .set-nav button.on::before { display: none; }
   html[data-design="dot"] .set-nav button + button { box-shadow: none; background: var(--dotline); background-position: 46px 0; background-size: 6px 3px; background-repeat: repeat-x; }
   html[data-design="dot"] .scard { padding: 16px 14px; }
+}
+
+/* ---------- WebView viejos (sin aspect-ratio): el punto de cada día del Año, cuadrado con el truco del relleno ---------- */
+@supports not (aspect-ratio: 1 / 1) {
+  html[data-design="dot"] .yd { height: 0; min-height: 0; padding-bottom: 64%; }
+  @media (max-width: 759px) { html[data-design="dot"] .yd { padding-bottom: 70%; } }
 }

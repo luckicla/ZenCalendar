@@ -106,7 +106,7 @@
 /* ---------- vista principal ---------- */
 #main { grid-area: main; min-height: 0; min-width: 0; position: relative; display: flex; flex-direction: column; border-radius: var(--rad); background: var(--glass-main); -webkit-backdrop-filter: blur(var(--gb)) saturate(1.5); backdrop-filter: blur(var(--gb)) saturate(1.5); border: 1px solid var(--edge); box-shadow: var(--sh-2), var(--edge-in); overflow: hidden; }
 #viewHost { position: relative; flex: 1; min-height: 0; overflow: hidden; }
-#viewHost > .view { position: absolute; inset: 0; display: flex; flex-direction: column; }
+#viewHost > .view { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: flex; flex-direction: column; }
 /* deslizar entre periodos (muelle) */
 .view.in-next { animation: inNext calc(520ms * var(--spd)) var(--spring) backwards; }
 .view.in-prev { animation: inPrev calc(520ms * var(--spd)) var(--spring) backwards; }
@@ -149,7 +149,7 @@
 .desk-side .fab { display: none; }
 
 /* zona para soltar archivos .ics */
-#drop { position: fixed; inset: 0; z-index: 150; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 60%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: fadeIn var(--t-med) backwards; pointer-events: none; }
+#drop { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 150; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 60%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: fadeIn var(--t-med) backwards; pointer-events: none; }
 #drop > div { display: grid; justify-items: center; gap: 12px; padding: 40px 54px; border-radius: 32px; border: 2.5px dashed color-mix(in srgb, var(--a1) 70%, transparent); background: var(--glass-pop); color: var(--a1t); font: 700 1.2rem var(--font-title); box-shadow: var(--sh-3); animation: popIn var(--t-slow) var(--spring) backwards; }
 #drop .ic { width: 46px; height: 46px; }
 
@@ -162,31 +162,35 @@
   .brand-text { display: none; }
 }
 @media (max-width: 759px) {
-  #app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "top" "main"; padding: 0; row-gap: 0; column-gap: 0; }
+  #app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "top" "main"; padding: 0 var(--zc-safe-right, env(safe-area-inset-right, 0px)) 0 var(--zc-safe-left, env(safe-area-inset-left, 0px)); row-gap: 0; column-gap: 0; }
   #top { margin: 0; padding: calc(var(--zc-safe-top, env(safe-area-inset-top, 0px)) + 6px) 8px 6px 8px; min-height: 60px; background: transparent; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; gap: 0; }
   .brand, #viewSeg, .tb-nav .nav-arrow, #btnToday .txt { display: none; }
   .tb-nav { margin-left: 2px; flex: 1; min-width: 0; }
   #periodTitle { padding-left: 8px; margin-left: 0; }
-  #periodTitle h1 { font-size: 1.4rem; }
+  #periodTitle h1 { font-size: 1.4rem; font-size: min(1.4rem, 5.3vw); letter-spacing: -.01em; }   /* (con la letra grande en 360 px, «Noviembre» cabe entero) */
+  .xnrw #periodTitle { padding-right: 6px; }
+  .xnrw #periodTitle > .ic { display: none; }   /* (sin la flechita: el título sigue abriendo el menú) */
   #btnToday { width: 40px; padding: 0; margin: 0; background: none; }
   #btnToday .ic { margin: 0; }
   .tb-spacer { display: none; }
   .searchpill { margin-left: 0; }
   #main { margin: 0 8px calc(86px + var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px))); border-radius: calc(var(--rad) + 2px); }
   #quick { display: none; }
-  #side { position: fixed; z-index: 70; left: 0; top: 0; bottom: 0; width: min(330px, 86vw); border-radius: 0 calc(var(--rad) + 6px) calc(var(--rad) + 6px) 0; padding-top: calc(var(--zc-safe-top, env(safe-area-inset-top, 0px)) + 16px); transform: translateX(-105%); background: var(--glass-pop); box-shadow: var(--sh-3); }
+  #side { position: fixed; z-index: 70; left: 0; top: 0; bottom: 0; width: min(330px, 86vw); border-radius: 0 calc(var(--rad) + 6px) calc(var(--rad) + 6px) 0; padding-top: 16px; transform: translateX(-105%); background: var(--glass-pop); box-shadow: var(--sh-3);
+    /* las barras del sistema como bordes transparentes: el vidrio llega hasta arriba y abajo, pero lo que se desplaza se corta antes de meterse debajo */
+    border-top: var(--zc-safe-top, env(safe-area-inset-top, 0px)) solid transparent; border-bottom: var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px)) solid transparent; border-left: var(--zc-safe-left, env(safe-area-inset-left, 0px)) solid transparent; }
   #app.side-on #side { transform: none; }
-  #bnav { position: fixed; z-index: 20; left: 10px; right: 10px; bottom: calc(10px + var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px))); height: 66px; display: flex; align-items: stretch; padding: 6px; border-radius: 26px; background: var(--glass-bar); -webkit-backdrop-filter: blur(calc(var(--gb) + 6px)) saturate(1.6); backdrop-filter: blur(calc(var(--gb) + 6px)) saturate(1.6); border: 1px solid var(--edge); box-shadow: var(--sh-2), var(--edge-in); }
+  #bnav { position: fixed; z-index: 20; left: calc(10px + var(--zc-safe-left, env(safe-area-inset-left, 0px))); right: calc(10px + var(--zc-safe-right, env(safe-area-inset-right, 0px))); bottom: calc(10px + var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px))); height: 66px; display: flex; align-items: stretch; padding: 6px; border-radius: 26px; background: var(--glass-bar); -webkit-backdrop-filter: blur(calc(var(--gb) + 6px)) saturate(1.6); backdrop-filter: blur(calc(var(--gb) + 6px)) saturate(1.6); border: 1px solid var(--edge); box-shadow: var(--sh-2), var(--edge-in); }
   [data-scheme=light] #bnav { background: color-mix(in srgb, var(--s1) calc(var(--o-bar) + 10%), transparent); }
   #bnav .nav-b { position: relative; overflow: hidden; flex: 1; display: grid; place-items: center; align-content: center; gap: 3px; border-radius: 20px; font-size: .7rem; font-weight: 650; color: var(--mut); transition: color var(--t-fast), background var(--t-fast); }
   #bnav .nav-b .ic { width: 23px; height: 23px; transition: transform var(--t-med) var(--spring); }
   #bnav .nav-b.on { color: var(--a1t); background: color-mix(in srgb, var(--a1) 15%, transparent); }
   #bnav .nav-b.on .ic { transform: translateY(-1px) scale(1.08); }
-  .fab { right: 18px; bottom: calc(90px + var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px))); width: 58px; height: 58px; }
-  .side-scrim { position: fixed; inset: 0; z-index: 69; background: rgb(var(--fg-rgb) / .16); animation: fadeIn var(--t-med) backwards; }
+  .fab { right: calc(18px + var(--zc-safe-right, env(safe-area-inset-right, 0px))); bottom: calc(90px + var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px))); width: 58px; height: 58px; }
+  .side-scrim { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 69; background: rgb(var(--fg-rgb) / .16); animation: fadeIn var(--t-med) backwards; }
   #toasts { bottom: calc(92px + var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px))); }
 }
-@media (max-width: 1099px) and (min-width: 760px) { .side-scrim { position: fixed; inset: 0; z-index: 39; } }
+@media (max-width: 1099px) and (min-width: 760px) { .side-scrim { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 39; } }
 
 /* ---------- un momento cuidado al arrancar (solo una vez) ---------- */
 html.boot #top { animation: bootTop calc(520ms * var(--spd)) var(--soft) backwards; }
@@ -199,3 +203,5 @@ html.boot #bnav, html.boot .fab { animation: bootNav calc(700ms * var(--spd)) va
 @keyframes bootNav { from { opacity: 0; transform: translateY(30px); } }
 
 @media (min-width: 1100px) { #app:not(.side-off) .fab { display: none; } }
+/* (móviles de 360-380 px: el mes entero antes que la flechita, que el título sigue abriendo el menú) */
+@media (max-width: 380px) { #periodTitle > .ic { display: none; } #periodTitle { padding-right: 6px; } }

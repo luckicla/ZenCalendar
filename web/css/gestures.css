@@ -18,7 +18,7 @@ html.pinching, html.pinching * { user-select: none; }
 .sw-row > .ag-card, .sw-row > .task-row { position: relative; z-index: 1; background: var(--s1); }
 [data-scheme=dark] .sw-row > .ag-card, [data-scheme=dark] .sw-row > .task-row { background: color-mix(in srgb, var(--s1) 92%, var(--fg)); }
 .sw-row > .ag-card::before { display: none; }
-.sw-bg { position: absolute; inset: 0; display: flex; align-items: center; opacity: 0; transition: opacity var(--t-fast), background var(--t-fast); }
+.sw-bg { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: flex; align-items: center; opacity: 0; transition: opacity var(--t-fast), background var(--t-fast); }
 .sw-row.to-right .sw-left, .sw-row.to-left .sw-right { opacity: 1; }
 .sw-left { justify-content: flex-start; padding-left: 18px; background: color-mix(in srgb, var(--a3) 40%, var(--s1)); color: var(--fg); font-weight: 700; }
 .sw-left span { display: inline-flex; align-items: center; gap: 8px; transition: transform var(--t-med) var(--spring); }

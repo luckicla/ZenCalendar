@@ -72,16 +72,16 @@ img { max-width: 100%; }
 .grad-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 /* ---------- fondo ---------- */
-#bgCanvas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; filter: blur(var(--bg-blur)); }
-#bgImg { position: fixed; inset: -40px; z-index: 0; background: center / cover no-repeat; filter: blur(var(--bg-blur)); pointer-events: none; }
-#bgVeil { position: fixed; inset: 0; z-index: 0; background: var(--bg); opacity: var(--bg-dim); pointer-events: none; }
+#bgCanvas { position: fixed; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; filter: blur(var(--bg-blur)); }
+#bgImg { position: fixed; top: -40px; right: -40px; bottom: -40px; left: -40px; z-index: 0; background: center / cover no-repeat; filter: blur(var(--bg-blur)); pointer-events: none; }
+#bgVeil { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 0; background: var(--bg); opacity: var(--bg-dim); pointer-events: none; }
 
 /* ---------- vidrio ---------- */
 .glass { background: var(--glass-card); -webkit-backdrop-filter: blur(var(--gb)) saturate(1.5); backdrop-filter: blur(var(--gb)) saturate(1.5); border: 1px solid var(--edge); box-shadow: var(--sh-1), var(--edge-in); }
 .no-blur .glass, .no-blur .panel { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 
 /* ---------- botones ---------- */
-.btn { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: calc(40px * (.85 + .15 * var(--d))); padding: 0 18px; border-radius: 999px; font-weight: 650; font-size: .94rem; white-space: nowrap; background: var(--s2); color: var(--fg); transition: transform var(--t-fast) var(--spring), background var(--t-fast), box-shadow var(--t-fast); user-select: none; }
+.btn { position: relative; overflow: hidden; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: calc(40px * (.85 + .15 * var(--d))); padding: 0 18px; border-radius: 999px; font-weight: 650; font-size: .94rem; white-space: nowrap; background: var(--s2); color: var(--fg); transition: transform var(--t-fast) var(--spring), background var(--t-fast), box-shadow var(--t-fast); user-select: none; }
 .btn:hover { background: var(--s3); }
 .btn:active { transform: scale(.96); }
 .btn.pri { background: var(--a1); color: var(--a1ink); box-shadow: 0 1px 2px rgb(var(--sh-rgb) / .18), 0 4px 12px -6px color-mix(in srgb, var(--a1) 80%, transparent), inset 0 1px 0 rgb(255 255 255 / .3); }
@@ -125,13 +125,16 @@ input[type=color]::-webkit-color-swatch { border: 0; border-radius: 50%; }
 /* segmentado: la pastilla de color se desliza */
 .seg { position: relative; display: inline-flex; padding: 4px; gap: 2px; border-radius: 999px; background: rgb(var(--fg-rgb) / .06); isolation: isolate; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .seg::-webkit-scrollbar { display: none; }
-.seg button { position: relative; z-index: 1; height: 32px; padding: 0 14px; border-radius: 999px; font-size: .88rem; font-weight: 600; color: var(--mut); white-space: nowrap; transition: color var(--t-fast); display: inline-flex; align-items: center; gap: 6px; overflow: hidden; }
+.seg button { position: relative; z-index: 1; flex-shrink: 0; min-width: max-content; height: 32px; padding: 0 14px; border-radius: 999px; font-size: .88rem; font-weight: 600; color: var(--mut); white-space: nowrap; transition: color var(--t-fast); display: inline-flex; align-items: center; gap: 6px; overflow: hidden; }
 .seg button:hover { color: var(--fg); }
 .seg button.on { color: var(--fg); }
 .seg .thumb { position: absolute; z-index: 0; top: 4px; height: 32px; left: 0; width: 0; border-radius: 999px; background: var(--s1); box-shadow: 0 1px 3px rgb(var(--sh-rgb) / .14), 0 4px 12px -4px rgb(var(--sh-rgb) / .2); transition: transform var(--t-med) var(--spring), width var(--t-med) var(--spring); }
 [data-scheme=dark] .seg .thumb { background: color-mix(in srgb, var(--s1) 60%, var(--fg) 14%); }
 .seg.wide { display: flex; }
 .seg.wide button { flex: 1; justify-content: center; }
+/* si no cabe en una fila (móvil estrecho, catalán, letra grande), se dobla en varias (lo decide UI.paintSeg) */
+.seg.fold { display: flex; flex-wrap: wrap; overflow: visible; border-radius: 20px; row-gap: 2px; }
+.seg.fold button { flex: 1 0 auto; justify-content: center; }
 
 /* interruptor */
 .sw { position: relative; width: 48px; height: 28px; flex: none; border-radius: 999px; background: rgb(var(--fg-rgb) / .16); transition: background var(--t-med); }
@@ -158,10 +161,10 @@ button.chip:hover { background: rgb(var(--fg-rgb) / .1); }
 kbd { font: 600 .74rem/1 var(--font-ui); padding: 3px 6px; border-radius: 6px; background: rgb(var(--fg-rgb) / .07); color: var(--mut); border: 1px solid var(--line); }
 
 /* ---------- capas ---------- */
-.scrim { position: fixed; inset: 0; z-index: 59; background: rgb(var(--fg-rgb) / .14); opacity: 0; transition: opacity var(--t-med); }
+.scrim { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 59; background: rgb(var(--fg-rgb) / .14); opacity: 0; transition: opacity var(--t-med); }
 [data-scheme=dark] .scrim { background: rgb(0 0 0 / .4); }
 .scrim.on { opacity: 1; }
-.layer { position: fixed; inset: 0; z-index: 62; display: flex; pointer-events: none; }
+.layer { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 62; display: flex; pointer-events: none; }
 .layer > .panel { pointer-events: auto; position: relative; display: flex; flex-direction: column; max-height: 100%; background: var(--glass-pop); -webkit-backdrop-filter: blur(calc(var(--gb) + 12px)) saturate(1.6); backdrop-filter: blur(calc(var(--gb) + 12px)) saturate(1.6); border: 1px solid var(--edge); box-shadow: var(--sh-3), var(--edge-in); color: var(--fg); }
 [data-scheme=light] .layer > .panel { background: color-mix(in srgb, var(--s1) calc(var(--o-card) + 6%), transparent); }
 .layer-body { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
@@ -183,8 +186,8 @@ kbd { font: 600 .74rem/1 var(--font-ui); padding: 3px 6px; border-radius: 6px; b
 .grabber { flex: none; display: grid; place-items: center; height: 22px; cursor: grab; touch-action: none; }
 .grabber i { width: 40px; height: 5px; border-radius: 5px; background: rgb(var(--fg-rgb) / .2); }
 /* pantalla completa (visor de fotos) */
-.layer-full { inset: 0; }
-.layer-full > .panel { width: 100%; height: 100%; border: 0; border-radius: 0; background: rgb(10 8 20 / .86); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); opacity: 0; transition: opacity var(--t-med); }
+.layer-full { top: 0; right: 0; bottom: 0; left: 0; }
+.layer-full > .panel { width: 100%; height: 100%; border: 0; border-radius: 0; padding: var(--zc-safe-top, env(safe-area-inset-top, 0px)) var(--zc-safe-right, env(safe-area-inset-right, 0px)) var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px)) var(--zc-safe-left, env(safe-area-inset-left, 0px)); background: rgb(10 8 20 / .86); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); opacity: 0; transition: opacity var(--t-med); }
 .layer-full.open > .panel { opacity: 1; }
 /* el «+» que se convierte en el editor */
 .layer.morph > .panel { clip-path: circle(28px at var(--ox) var(--oy)); transition: clip-path calc(520ms * var(--spd)) cubic-bezier(.5, 0, .1, 1), opacity var(--t-fast), transform var(--t-slow) var(--spring) !important; opacity: 1 !important; transform: none !important; }
@@ -245,9 +248,9 @@ kbd { font: 600 .74rem/1 var(--font-ui); padding: 3px 6px; border-radius: 6px; b
 
 /* visor de fotos */
 .lightbox .layer-body { display: grid; place-items: center; padding: 50px 16px; position: relative; }
-.lightbox img { max-width: 100%; max-height: calc(100vh - 100px); border-radius: var(--r-m); box-shadow: 0 30px 80px rgb(0 0 0 / .5); }
+.lightbox img { max-width: 100%; max-height: calc(100vh - 100px - var(--zc-safe-top, env(safe-area-inset-top, 0px)) - var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px))); border-radius: var(--r-m); box-shadow: 0 30px 80px rgb(0 0 0 / .5); }
 .lightbox .ibtn { position: absolute; color: #fff; background: rgb(255 255 255 / .12); }
-.lightbox .lb-x { top: calc(14px + var(--zc-safe-top, env(safe-area-inset-top, 0px))); right: 14px; }
+.lightbox .lb-x { top: 14px; right: 14px; }   /* (el panel ya deja el hueco de las barras) */
 .lightbox .lb-p { left: 14px; top: 50%; }
 .lightbox .lb-n { right: 14px; top: 50%; }
 
@@ -267,3 +270,21 @@ kbd { font: 600 .74rem/1 var(--font-ui); padding: 3px 6px; border-radius: 6px; b
 [data-anim=none] .spin { animation-duration: .8s !important; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+
+/* ---------- WebView viejos (Android 7-9 sin actualizar): respaldos de lo esencial ----------
+   (sin aspect-ratio los botones redondos se aplastan; sin color-mix() los fondos que lo usan desaparecen
+   y se ve el texto de debajo; el vidrio de los paneles lo calcula look.js con rgba() en ese caso) */
+@supports not (aspect-ratio: 1 / 1) {
+  .mini-grid button { height: 32px; }
+  .em-grid button { height: 36px; }
+  .dt-img { height: 96px; }
+  .yd { min-height: 1.7em; }
+}
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+  .mv-ev, .tg-ev { --evbg: var(--s2) !important; }
+  [data-evstyle=solid] .mv-ev, [data-evstyle=solid] .tg-ev { --evbg: var(--c) !important; }
+  .tg-ev.task { background: var(--s2); }
+  .welcome > .panel { background: var(--glass-pop) !important; }
+  .upd-banner, #bnav { background: var(--glass-pop); }
+  .toast { background: var(--fg); }
+}

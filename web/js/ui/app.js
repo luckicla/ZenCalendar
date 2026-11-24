@@ -15,10 +15,17 @@
     if (!seg) return;
     let th = seg.querySelector(':scope > .thumb');
     if (!th) { th = document.createElement('i'); th.className = 'thumb'; seg.prepend(th); }
+    // ¿cabe en una fila? Si no (360 px, catalán, letra grande…), se dobla en dos en vez de cortar o pisar los textos
+    if (seg.offsetWidth) {
+      const was = seg.classList.contains('fold');
+      if (was) seg.classList.remove('fold');
+      const over = seg.scrollWidth > seg.clientWidth + 1;
+      if (over !== was || over) seg.classList.toggle('fold', over);
+    }
     const on = seg.querySelector(':scope > button.on');
     if (!on || !on.offsetWidth) { th.style.width = '0'; return; }
     th.style.width = on.offsetWidth + 'px';
-    th.style.transform = `translateX(${on.offsetLeft}px)`;
+    th.style.transform = `translate(${on.offsetLeft}px, ${on.offsetTop - 4}px)`;
   }
   UI.paintSeg = paintSeg;
   const paintAllSegs = (root = document) => root.querySelectorAll('.seg').forEach(paintSeg);

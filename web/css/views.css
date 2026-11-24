@@ -20,7 +20,7 @@
 .v-month.wn .mv-week { grid-template-columns: 26px minmax(0, 1fr); }
 .mv-wk { display: grid; place-items: start center; padding-top: 9px; font-size: .66rem; font-weight: 700; color: var(--mut); opacity: .75; }
 .mv-cells { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; min-height: 0; }
-.mv-bars { position: absolute; inset: 0; pointer-events: none; }
+.mv-bars { position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; }
 .v-month.wn .mv-bars { left: 26px; }
 .mv-bars > * { pointer-events: auto; }
 .mc-day { position: relative; display: flex; align-items: flex-start; gap: 4px; min-width: 0; padding: 6px 7px; border-radius: calc(var(--rad) * .62); background: rgb(var(--fg-rgb) / .028); transition: background var(--t-fast), box-shadow var(--t-fast); cursor: default; overflow: hidden; }
@@ -67,7 +67,7 @@
 .dl-head { display: flex; align-items: center; gap: 8px; padding: 0 4px 10px; }
 .dl-head b { font: 700 1.04rem var(--font-title); }
 .dl-empty { color: var(--mut); font-size: .9rem; padding: 6px 4px; }
-.dl-list { display: grid; gap: 7px; }
+.dl-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; }   /* (minmax: un título largo se corta con «…» en vez de ensanchar la lista) */
 
 /* ---------- Semana y Día ---------- */
 .v-time { padding: 0 0 0 0; }
@@ -133,7 +133,7 @@
 .ag-day.today .n { background: var(--a1); color: var(--a1ink); }
 .ag-day.today .w { color: var(--a1t); }
 .ag-day.past { opacity: .75; }
-.ag-items { display: grid; min-width: 0; padding: 4px; border-radius: var(--r-l); background: color-mix(in srgb, var(--s1) 58%, transparent); }
+.ag-items { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; padding: 4px; border-radius: var(--r-l); background: color-mix(in srgb, var(--s1) 58%, transparent); }
 [data-scheme=dark] .ag-items { background: color-mix(in srgb, var(--s1) 42%, transparent); }
 .ag-day.today .ag-items { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--a1) 40%, transparent); }
 .ag-tags { display: flex; gap: 6px; padding: 6px 8px 2px; }
@@ -152,10 +152,11 @@
 .ag-main { flex: 1; min-width: 0; }
 .ag-main b { display: block; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ag-main small { display: flex; align-items: center; gap: 12px; margin-top: 2px; color: var(--mut); font-size: .8rem; white-space: nowrap; overflow: hidden; }
-.ag-main .mi { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.ag-main .mi { display: inline-flex; align-items: center; gap: 4px; min-width: 0; flex: 0 1 auto; }
+.ag-main .mi .mt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ag-main .mi .ic { flex: none; }
 .ag-main .mi .dot { width: 7px; height: 7px; }
-.ag-main .cal-n { overflow: hidden; text-overflow: ellipsis; flex: none; }
+.ag-main .cal-n { flex: 0 .35 auto; }
 .ag-card.done .ag-main b { text-decoration: line-through; color: var(--mut); }
 .ag-card.past:not(.task) { opacity: .7; }
 .ag-card .tick { --c: var(--c); }
@@ -233,4 +234,8 @@
   .yr-days { gap: 1px; }
   .yr-mt { font-size: .95rem; }
   .tk-scroll { padding: 10px 10px 30px; }
+  /* lo último de cada lista se puede subir por encima del «+» */
+  .ag-scroll, .tk-scroll, .yr-scroll { padding-bottom: 84px; }
+  .mv-daylist { padding-bottom: 84px; }
+  .tg-scroll { padding-bottom: 72px; }
 }

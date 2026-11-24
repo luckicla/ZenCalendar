@@ -63,6 +63,8 @@
         ZC.store.local('welcomed', true);
         const r = a.getBoundingClientRect(); UI.confetti(r.left + r.width / 2, r.top + r.height / 2, 30);
         L.close();
+        // (el aviso del icono de Dot se guardó para ahora, para no tapar la bienvenida)
+        if (UI.dot && UI.dot.on && UI.dot.on()) setTimeout(() => UI.dot.offerIcon(), 900);
       }
     });
     paint();

@@ -536,6 +536,8 @@
       if (!P.setAppIcon || !icons.some(i => i.id === 'dot')) return;
       if (ZC.store.local('dotIconAsked')) return;
       if ((UI.look.get().appIcon || '') === 'dot') return;
+      // durante la bienvenida el aviso taparía sus botones: se ofrece al terminarla
+      if (document.querySelector('.welcome .wl-card')) return;
       ZC.store.local('dotIconAsked', true);
       UI.toast(t('¿Pones también el icono de Dot?'), { ms: 9000, action: { label: t('Cambiar icono'), fn: () => { UI.look.set({ appIcon: 'dot' }); try { P.setAppIcon('dot'); } catch (e) { console.warn(e); } UI.toast(t('Icono cambiado'), { icon: 'check' }); } } });
     } catch (e) { console.warn(e); }

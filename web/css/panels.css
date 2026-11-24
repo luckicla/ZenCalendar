@@ -1,7 +1,7 @@
 /* ZenCalendar · ventanas: editor, detalle, buscador, asistente, ajustes, bienvenida y pantalla de carga. */
 
 /* ---------- pantalla de carga ---------- */
-#splash { position: fixed; inset: 0; z-index: 500; display: grid; place-items: center; background: var(--bg); transition: opacity .5s, visibility .5s; }
+#splash { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 500; display: grid; place-items: center; background: var(--bg); transition: opacity .5s, visibility .5s; }
 #splash.out { opacity: 0; visibility: hidden; }
 #splash img { width: 84px; height: 84px; animation: splash 1.6s ease-in-out infinite; filter: drop-shadow(0 14px 30px rgb(120 90 220 / .3)); }
 @keyframes splash { 50% { transform: scale(1.06) translateY(-3px); } }
@@ -17,7 +17,7 @@
 .cdot.sm { width: 28px; height: 28px; }
 .cdot span { font-size: .66rem; font-weight: 800; color: rgb(43 33 64 / .6); }
 .cdot.custom { background: conic-gradient(#ff9ccb, #ffc48a, #f2e27a, #7ed6c3, #7cc8f2, #b9a2ff, #ff9ccb); overflow: hidden; cursor: pointer; }
-.cdot.custom input { opacity: 0; position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
+.cdot.custom input { opacity: 0; position: absolute; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%; cursor: pointer; }
 .chips-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .kbd-list { display: grid; gap: 4px; margin-top: 6px; }
 .kbd-list div { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 4px; border-bottom: 1px solid var(--line); font-size: .92rem; }
@@ -92,7 +92,7 @@ input[type=number].in.sm { width: 72px; }
 .thumb img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; display: block; }
 .thumb .ibtn { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; background: rgb(20 15 35 / .55); color: #fff; }
 .img-btns { display: flex; gap: 6px; flex-wrap: wrap; }
-.ed-foot { flex: none; display: flex; align-items: center; gap: 6px; padding: 12px 16px; border-top: 1px solid var(--line); }
+.ed-foot { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; padding: 12px 16px; border-top: 1px solid var(--line); }
 .layer-sheet .ed-foot { padding-bottom: calc(12px + var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px))); }
 .emoji-pick { width: 316px; max-width: calc(100vw - 16px); padding: 10px; }
 .em-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
@@ -222,11 +222,11 @@ mark { background: color-mix(in srgb, var(--a2) 45%, transparent); color: inheri
 .sn-tx small { display: none; }
 .sn-go { display: none; }
 .set-content { overflow: auto; padding: 18px 24px 40px; }
-.set-sec { max-width: 760px; display: grid; gap: 8px; }
+.set-sec { max-width: 760px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .set-sec-h { display: flex; align-items: center; gap: 6px; }
 .set-sec-h h2 { font-size: 1.5rem; }
 .set-back { display: none; }
-.scard { padding: 22px 2px 6px; border-top: 1px solid var(--line); display: grid; gap: 6px; }
+.scard { padding: 22px 2px 6px; border-top: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }   /* (minmax: nada de lo de dentro puede ensanchar la sección) */
 .set-sec-h + .scard { border-top: 0; padding-top: 6px; }
 .scard:has(.drive) { border: 0; padding: 26px 22px 22px; border-radius: calc(var(--rad) + 2px); background: color-mix(in srgb, var(--s1) 70%, transparent); box-shadow: var(--sh-2); }
 [data-scheme=dark] .scard:has(.drive) { background: color-mix(in srgb, var(--s1) 50%, transparent); }
@@ -368,12 +368,12 @@ body:has(.set-layer.peek) .scrim { opacity: 0; }
 /* ---------- bienvenida ---------- */
 .welcome > .panel { background: color-mix(in srgb, var(--bg) 35%, transparent) !important; -webkit-backdrop-filter: blur(6px) !important; backdrop-filter: blur(6px) !important; }
 .welcome .layer-body { display: grid; place-items: center; padding: 24px; overflow: auto; }
-.wl { width: min(720px, 100%); display: grid; gap: 14px; }
+.wl { width: min(720px, 100%); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 .wl-dots { display: flex; justify-content: center; gap: 8px; }
 .wl-dots i { width: 8px; height: 8px; border-radius: 8px; background: rgb(var(--fg-rgb) / .18); transition: width var(--t-med) var(--spring), background var(--t-med); }
 .wl-dots i.on { width: 28px; background: var(--a1); }
 .wl-dots i.done { background: var(--a1); }
-.wl-card { display: grid; justify-items: center; text-align: center; gap: 14px; padding: 34px 32px 24px; border-radius: calc(var(--rad) + 12px); background: var(--glass-pop); -webkit-backdrop-filter: blur(calc(var(--gb) + 14px)) saturate(1.6); backdrop-filter: blur(calc(var(--gb) + 14px)) saturate(1.6); border: 1px solid var(--edge); box-shadow: var(--sh-3), var(--edge-in); animation: popIn var(--t-slow) var(--spring) backwards; }
+.wl-card { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; gap: 14px; padding: 34px 32px 24px; border-radius: calc(var(--rad) + 12px); background: var(--glass-pop); -webkit-backdrop-filter: blur(calc(var(--gb) + 14px)) saturate(1.6); backdrop-filter: blur(calc(var(--gb) + 14px)) saturate(1.6); border: 1px solid var(--edge); box-shadow: var(--sh-3), var(--edge-in); animation: popIn var(--t-slow) var(--spring) backwards; }
 [data-scheme=light] .wl-card { background: color-mix(in srgb, var(--s1) 78%, transparent); }
 .wl-logo { width: 88px; height: 88px; filter: drop-shadow(0 16px 30px rgb(120 90 220 / .35)); animation: logoIn calc(900ms * var(--spd)) var(--spring) backwards calc(150ms * var(--spd)); }
 @keyframes logoIn { from { opacity: 0; transform: scale(.6) rotate(-12deg); } }
@@ -389,7 +389,8 @@ body:has(.set-layer.peek) .scrim { opacity: 0; }
 .wl-sw { position: relative; display: flex; gap: 4px; margin-bottom: 4px; }
 .wl-sw i { width: 16px; height: 16px; border-radius: 50%; background: var(--pv-a1); }
 .wl-sw i:nth-child(2) { background: var(--pv-a2); } .wl-sw i:nth-child(3) { background: var(--pv-b2); }
-.wl-acts { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 8px; gap: 10px; }
+.wl-acts { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; width: 100%; margin-top: 8px; gap: 10px; }
+.wl-acts > :last-child { margin-left: auto; }   /* (si no caben, «Siguiente» baja a su fila, a la derecha) */
 .wl-art.ok { background: color-mix(in srgb, var(--a3) 30%, transparent); color: var(--a3t); }
 .wl-tips { display: grid; gap: 10px; width: 100%; text-align: left; }
 .wl-tips > div { display: flex; gap: 14px; align-items: flex-start; padding: 14px 16px; border-radius: var(--r-m); background: rgb(var(--fg-rgb) / .04); }
@@ -419,7 +420,7 @@ body:has(.set-layer.peek) .scrim { opacity: 0; }
   .set-nav button.on .sn-ic { background: rgb(var(--fg-rgb) / .05); color: inherit; }
   .sn-tx small { display: block; font-size: .78rem; color: var(--mut); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sn-go { display: block; color: var(--mut); }
-  .set-content { position: absolute; inset: 0; padding: 4px 12px 40px; background: transparent; transition: transform var(--t-slow) var(--spring), opacity var(--t-med); }
+  .set-content { position: absolute; top: 0; right: 0; bottom: 0; left: 0; padding: 4px 12px 40px; background: transparent; transition: transform var(--t-slow) var(--spring), opacity var(--t-med); }
   .layer-body:not(.at-list) .set-nav { visibility: hidden; }
   .at-list .set-content { transform: translateX(105%); opacity: 0; pointer-events: none; }
   .set-back { display: inline-grid; margin-left: -8px; }
@@ -439,4 +440,30 @@ body:has(.set-layer.peek) .scrim { opacity: 0; }
   .layer-modal.search-layer { padding-top: 0; }
   .dt-hero h2 { font-size: 1.4rem; }
 }
+/* ---------- móviles estrechos (o con la letra grande): .nrw / .xnrw los pone look.js ---------- */
+@media (max-width: 759px) {
+  /* fechas del editor: la etiqueta encima y los dos campos a lo ancho */
+  .nrw .ed-dt, .nrw .ed-dates .ed-dt:has(input:only-of-type) { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); row-gap: 4px; }
+  .nrw .ed-dt .lbl { grid-column: 1 / -1; padding-left: 4px; }
+  .nrw .ed-dt .in { padding: 0 6px 0 12px; }
+  .xnrw .ed-dt .in { font-size: .9rem; }
+  .nrw .ed-dt input:only-of-type { grid-column: 1 / -1; }
+  .nrw .ed-dur { padding-left: 4px; }
+  .nrw .ed-foot { padding-left: 10px; padding-right: 10px; gap: 4px; }
+  .nrw .ed-foot .btn { padding: 0 14px; }
+  .xnrw .ed-foot .btn.ghost[data-act=close] { display: none; }   /* (la X de arriba y deslizar hacia abajo ya cierran) */
+  .nrw .set-top h2 { font-size: 1.35rem; }
+  .nrw .cu-days { gap: 4px; }
+  .nrw .cu-d { width: 34px; height: 34px; }
+  .xnrw .cu-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); width: 100%; }
+  .xnrw .cu-d { width: auto; aspect-ratio: 1; height: auto; max-height: 40px; }
+}
 select.in.sm { padding-right: 32px; background-position: right 9px center; }
+
+/* ---------- columnas que no se ensanchan ----------
+   Una rejilla sin columnas definidas mide como su contenido más ancho que no se pueda partir (un título largo con «…»,
+   un segmentado, una fila de botones) y empuja todo fuera de la pantalla en un móvil estrecho. Con minmax(0, 1fr)
+   la columna es como mucho el ancho de la caja y lo de dentro se adapta (se corta con «…» o se dobla). En pantallas
+   anchas no cambia nada. */
+.fld, .dlg-in, .dlg-choices, .ed-sec, .ed-dates, .ed-custom, .ed-check, .ed-imgs, .dt-body, .sr-acts, .ai-acts, .ai-col, .ai-ttl, .ai-act-tx,
+.next-rem, .kbd-list, .wl-tips, .drive, .about, .sn-grp, .set-nav, .dev-model, .prov, .ub-tx, .dp-tx, .upd-md { grid-template-columns: minmax(0, 1fr); }
