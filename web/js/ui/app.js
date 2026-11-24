@@ -73,6 +73,7 @@
     document.documentElement.dataset.view = state.view;
     UI.side.render();
     if (UI.dot) UI.dot.chrome(state);
+    if (UI.wsui) UI.wsui.chrome(state);
   }
   function isShowingToday(td) {
     const d = state.date, v = state.view;
@@ -282,7 +283,7 @@
       const p = ZC.store.getPrefs() || {};
       if (ev.source !== 'local' && !UI.look.previewing()) UI.look.load(p.look);
       const lang = (p.cal || {}).lang || 'auto';
-      if (ZC.i18n.setLang(lang) !== curLang) { curLang = ZC.i18n.lang(); rebuild(); return; }
+      if (ZC.i18n.setLang(lang) !== curLang) { curLang = ZC.i18n.lang(); rebuild(); try { ZC.ws && ZC.ws.refreshCreds(); } catch {} return; }
       scheduleRender();
       return;
     }
@@ -330,6 +331,7 @@
         else if (o.action === 'open' && o.id) { const ev = ZC.store.get(o.id); if (ev) UI.editor.detail(C.occOf(ev, o.date)); }
         else if (o.action === 'day' && o.date) go({ view: 'day', date: C.parse(o.date) });
         else if (o.action === 'ai') UI.aipanel.open(o.text || '', o.images || []);
+        else if ((o.action === 'join' || o.action === 'workspace') && UI.wsui) UI.wsui.onOpen(o);
       };
       if (ZC.core.on) ZC.core.on('open', onOpen); else if (ZC.platform.onOpen) ZC.platform.onOpen(onOpen);
     } catch (e) { console.warn(e); }
@@ -353,6 +355,7 @@
     setTimeout(paintAllSegs, 300);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => paintAllSegs());
     if (!ZC.store.local('welcomed') && !qs.has('nowelcome')) setTimeout(() => UI.welcome.open(), 450);
+    if (UI.wsui) UI.wsui.applyMode();
   }
 
   UI.app = { state, go, step, render, goToday, closeSide, toggleSide, paintChrome, translateStatic, goToDate, rebuild };

@@ -430,10 +430,13 @@
     if ('notes' in out) out.notes = String(out.notes || '').slice(0, 5000);
     if ('location' in out) out.location = String(out.location || '').trim().slice(0, 300);
     if ('kind' in out) out.kind = /task|tarea|todo|recordatorio|reminder/i.test(String(out.kind)) ? 'task' : 'event';
+    const defCal = () => (ZC.store.defaultCalendarId ? ZC.store.defaultCalendarId() : 'personal');
     if ('calendarId' in out) {
-      const c = ZC.store.calendar(out.calendarId) || ZC.store.calendars().find(x => U().fold(x.name) === U().fold(out.calendarId));
-      if (c) out.calendarId = c.id; else if (isUpdate) delete out.calendarId; else out.calendarId = 'personal';
-    }
+      let c = ZC.store.calendar(out.calendarId) || ZC.store.calendars().find(x => U().fold(x.name) === U().fold(out.calendarId));
+      // (en un workspace, lo nuevo va al workspace salvo que se vea también lo tuyo)
+      if (c && !isUpdate && ZC.store.inWorkspace && ZC.store.inWorkspace() && !ZC.store.calendars().some(x => x.id === c.id)) c = null;
+      if (c) out.calendarId = c.id; else if (isUpdate) delete out.calendarId; else out.calendarId = defCal();
+    } else if (!isUpdate && ZC.store.inWorkspace && ZC.store.inWorkspace()) out.calendarId = defCal();
     if ('color' in out && !/^#[0-9a-f]{6}$/i.test(String(out.color || ''))) delete out.color;
     if ('emoji' in out && (typeof out.emoji !== 'string' || out.emoji.length > 8)) delete out.emoji;
     for (const k of ['start', 'end']) {

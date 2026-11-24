@@ -11,11 +11,14 @@
 //  - Widget de escritorio: una ventanita transparente con web/widget.html.
 //  - Inicio de sesión de Google para Drive (google.js) y peticiones sin CORS (IPC 'zc:fetch').
 //  - Instalada: se actualiza sola desde la release «pc-latest» (electron-updater).
-const { app, BrowserWindow, Menu, Tray, Notification, shell, ipcMain, nativeImage, protocol, net, screen } = require('electron');
+//  - Workspaces: abre los enlaces zencalendar://join/#… (protocolo registrado) y, con la ventana en la
+//    bandeja, mira cada 5 min si otros han cambiado algo en tus workspaces (workspaces.js).
+const { app, BrowserWindow, Menu, Tray, Notification, shell, ipcMain, nativeImage, protocol, net, screen, safeStorage, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
 const google = require('./google');
+const workspaces = require('./workspaces');
 
 const APP_ID = 'com.luckicla.zencalendar.desktop';
 const ORIGIN = 'app://zencalendar';
@@ -39,6 +42,22 @@ protocol.registerSchemesAsPrivileged([
 
 const first = app.requestSingleInstanceLock();
 if (!first) app.quit(); // ya estaba abierta: la otra se pone delante (second-instance)
+
+// enlaces zencalendar://join/#<wid>.<token> (invitaciones a workspaces). El instalador registra el
+// protocolo (package.json → build.protocols); aquí también, por la versión portable y por si se movió.
+function registerProtocol() {
+  try {
+    if (process.defaultApp) {
+      // (npm start: electron.exe + la carpeta de la app)
+      if (process.argv.length >= 2) app.setAsDefaultProtocolClient('zencalendar', process.execPath, [path.resolve(process.argv[1])]);
+    } else if (portable) {
+      // (el .exe portable se descomprime en una carpeta temporal cada vez: se registra el .exe de verdad)
+      app.setAsDefaultProtocolClient('zencalendar', portableFile, []);
+    } else if (!app.isDefaultProtocolClient('zencalendar')) {
+      app.setAsDefaultProtocolClient('zencalendar');
+    }
+  } catch (e) {}
+}
 
 let win = null, widget = null, tray = null, quitting = false;
 const startHidden = process.argv.includes('--hidden');
@@ -586,6 +605,25 @@ function setupIPC() {
     return null;
   });
 
+  // workspaces: las credenciales de Firebase para mirar cambios con la ventana cerrada (null = olvidarlas)
+  ipcMain.on('zc:ws-creds', (_e, c) => {
+    if (!wsChecker) return;
+    if (wsChecker.setCreds(c || null) && c) setTimeout(() => wsChecker.check(), 4000);
+  });
+  // compartir: { title, text, url, app: 'whatsapp' | 'email' } → 'whatsapp' | 'email' | 'copied' | false
+  ipcMain.handle('zc:share', (_e, o) => {
+    o = o && typeof o === 'object' ? o : {};
+    const s = v => (typeof v === 'string' ? v : '').slice(0, 4000);
+    const title = s(o.title), url = s(o.url);
+    let text = s(o.text);
+    if (url && !text.includes(url)) text = text ? text + '\n' + url : url;
+    if (!text && !title) return false;
+    if (o.app === 'whatsapp') { shell.openExternal('https://wa.me/?text=' + encodeURIComponent(text || title)); return 'whatsapp'; }
+    if (o.app === 'email') { shell.openExternal('mailto:?subject=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(text)); return 'email'; }
+    clipboard.writeText([title && !text.includes(title) ? title : '', text].filter(Boolean).join('\n'));
+    return 'copied';
+  });
+
   ipcMain.handle('zc:update', (_e, cmd) => {
     if (cmd === 'check') return checkUpdates();
     if (cmd === 'install') return installUpdate();
@@ -593,9 +631,57 @@ function setupIPC() {
   });
 }
 
+// ---------- workspaces: avisos con la ventana cerrada ----------
+// Credenciales y lo ya visto en workspaces.bin, cifrado con safeStorage (la cuenta de Windows).
+let wsChecker = null;
+function setupWorkspaces() {
+  const file = path.join(app.getPath('userData'), 'workspaces.bin');
+  wsChecker = workspaces.createChecker({
+    fetch: (url, o) => net.fetch(url, o),
+    load: () => {
+      try {
+        const b = fs.readFileSync(file);
+        const tag = b.slice(0, 3).toString();
+        if (tag === 'ZC1') return JSON.parse(safeStorage.decryptString(b.slice(3)));
+        if (tag === 'ZC0') return JSON.parse(b.slice(3).toString());
+      } catch (e) {}
+      return null;
+    },
+    save: data => {
+      try {
+        if (!data || !data.creds) { fs.rmSync(file, { force: true }); return; }
+        const json = JSON.stringify(data);
+        const out = safeStorage.isEncryptionAvailable() ? Buffer.concat([Buffer.from('ZC1'), safeStorage.encryptString(json)]) : Buffer.from('ZC0' + json);
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, out);
+      } catch (e) { log('workspaces.bin: ' + e.message); }
+    },
+    // con la ventana delante avisa la página (onSnapshot); aquí solo se apunta lo visto
+    isForeground: () => !!(win && !win.isDestroyed() && win.isVisible() && win.isFocused()),
+    notify: (g, S) => notify({
+      title: ((g.emoji ? g.emoji + ' ' : '') + g.name).trim(),
+      body: workspaces.groupBody(g, S),
+      onClick: () => open({ action: 'workspace', wid: g.wid, id: g.wid }),
+    }),
+    log,
+  });
+  setTimeout(() => wsChecker.check(), 30000);
+  setInterval(() => wsChecker.check(), 5 * 60000);
+}
+
 // ---------- arranque ----------
 app.on('second-instance', (_e, argv) => {
-  if (argv.includes('--new')) open({ action: 'new' }); else showWindow();
+  const code = workspaces.joinFromArgv(argv);
+  if (code) open({ action: 'join', code });
+  else if (argv.includes('--new')) open({ action: 'new' }); else showWindow();
+});
+let bootJoin = workspaces.joinFromArgv(process.argv);
+// (macOS; en Windows los enlaces llegan por la línea de órdenes)
+app.on('open-url', (e, url) => {
+  e.preventDefault();
+  const code = workspaces.parseJoin(url);
+  if (code && app.isReady()) open({ action: 'join', code });
+  else if (code) bootJoin = code;
 });
 
 app.whenReady().then(() => {
@@ -604,6 +690,7 @@ app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
   serveApp();
   setupIPC();
+  setupWorkspaces();
   createWindow();
   makeTray();
   if (S.widget && S.widget.on) createWidget();
@@ -613,6 +700,8 @@ app.whenReady().then(() => {
   setTimeout(checkUpdates, 20000);
   setInterval(checkUpdates, 6 * 3600e3);
   if (process.argv.includes('--new')) open({ action: 'new' });
+  registerProtocol();
+  if (bootJoin) { open({ action: 'join', code: bootJoin }); bootJoin = null; }
 });
 
 // con la ventana cerrada sigue en la bandeja

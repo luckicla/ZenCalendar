@@ -1153,7 +1153,7 @@
 
   // el color que el usuario pone a un calendario de Google se guarda en la cuenta (y viaja por Drive)
   async function captureCalendarEdits() {
-    for (const c of S().calendars()) {
+    for (const c of S().calendars('personal')) {
       if (c.source !== 'google' || !c.accountId) continue;
       const a = account(c.accountId);
       if (!a) continue;

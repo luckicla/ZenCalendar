@@ -3,6 +3,7 @@ package com.luckicla.zencalendar;
 import android.Manifest;
 import android.app.NotificationManager;
 import android.appwidget.AppWidgetManager;
+import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -121,6 +122,48 @@ final class Bridge {
 
     @JavascriptInterface public String takeShared() {
         return a.takeShared();
+    }
+
+    // ---------- workspaces ----------
+    /** Credenciales de Firebase para los avisos con la app cerrada (JSON; vacío = olvidarlas). Ver docs/CONTRATO.md. */
+    @JavascriptInterface public void wsCreds(String json) {
+        Workspaces.setCreds(app, json);
+    }
+
+    /**
+     * Compartir { title, text, url, app }: app 'whatsapp' → directo a WhatsApp (o WhatsApp Business, o wa.me);
+     * si no, la hoja de compartir del sistema.
+     */
+    @JavascriptInterface public void shareTo(String json) {
+        JSONObject o;
+        try { o = new JSONObject(json); } catch (Exception e) { return; }
+        String title = o.optString("title", ""), url = o.optString("url", "");
+        String text = o.optString("text", "");
+        if (!url.isEmpty() && !text.contains(url)) text = text.isEmpty() ? url : text + "\n" + url;
+        if (text.isEmpty()) text = title;
+        final String body = text;
+        boolean wa = "whatsapp".equals(o.optString("app", ""));
+        a.runOnUiThread(() -> {
+            if (wa) {
+                for (String pkg : new String[]{"com.whatsapp", "com.whatsapp.w4b"}) {
+                    try {
+                        Intent i = new Intent(Intent.ACTION_SEND);
+                        i.setType("text/plain");
+                        i.setPackage(pkg);
+                        i.putExtra(Intent.EXTRA_TEXT, body);
+                        a.startActivity(i);
+                        return;
+                    } catch (ActivityNotFoundException ignored) {
+                    } catch (Exception e) { break; }
+                }
+                // sin la app: wa.me en el navegador (deja elegir el chat o instalar WhatsApp)
+                try {
+                    a.openExternal(Uri.parse("https://wa.me/?text=" + Uri.encode(body)));
+                    return;
+                } catch (Exception ignored) {}
+            }
+            share(title, body);
+        });
     }
 
     // ---------- varios ----------

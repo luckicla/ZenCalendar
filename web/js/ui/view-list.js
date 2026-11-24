@@ -150,7 +150,7 @@
       <div class="tk-body"></div></div></div>`);
     const body = el.querySelector('.tk-body');
     const showDone = UI.views._tasksDone;
-    const all = ZC.store.events().filter(e => e.kind === 'task');
+    const all = ZC.store.events().filter(e => e.kind === 'task' && (!UI.wsui || UI.wsui.isMine(e)));
     const tdy = C.today(), tmw = addDays(tdy, 1), wk = addDays(tdy, 7);
     // cada tarea con la aparición que toca (en las que se repiten, la primera sin hacer de hoy en adelante)
     const occOf = new Map(all.map(e => [e.id, e.done ? C.occOf(e) : C.taskOcc(e)]));
@@ -162,7 +162,7 @@
     const row = (ev, late) => {
       const o = occOf.get(ev.id), s = o.start;
       const when = ev.allDay ? ZC.i18n.D.short(s) : ZC.i18n.D.short(s) + ', ' + C.fmtT(s);
-      return `<div class="task-row ${ev.done ? 'done' : ''}" data-key="${esc(o.key)}" style="${C.evVars(o)};--i:${k++}"><span class="tick ${ev.done ? 'on' : ''}" role="checkbox" aria-checked="${!!ev.done}" tabindex="0">${UI.icon('check', 14)}</span><span class="tt"><b>${esc(C.titleOf(ev))}${C.alarmMark(ev, 14)}</b><small class="${late ? 'late' : ''}">${esc(when)}${ev.rrule ? '. ' + esc(ZC.recur.describe(ev.rrule, ZC.i18n.lang(), C.parse(ev.start))) : ''}</small></span></div>`;
+      return `<div class="task-row ${ev.done ? 'done' : ''}" data-key="${esc(o.key)}" style="${C.evVars(o)};--i:${k++}"><span class="tick ${ev.done ? 'on' : ''}" role="checkbox" aria-checked="${!!ev.done}" tabindex="0">${UI.icon('check', 14)}</span><span class="tt"><b>${esc(C.titleOf(ev))}${C.alarmMark(ev, 14)}</b><small class="${late ? 'late' : ''}">${esc(when)}${ev.rrule ? '. ' + esc(ZC.recur.describe(ev.rrule, ZC.i18n.lang(), C.parse(ev.start))) : ''}${UI.wsui ? UI.wsui.forChip(ev) : ''}</small></span></div>`;
     };
     if (!showDone) {
       for (const [name, fn, cls] of groups) {
@@ -173,7 +173,7 @@
     } else {
       html = done.length ? `<section class="tk-grp stagger"><h3>${t('Hechas')} <span>${done.length}</span></h3>${done.map(e => row(e)).join('')}</section>` : `<div class="empty">${UI.ART.tasks}<b>${t('Aún no has terminado ninguna')}</b></div>`;
     }
-    body.innerHTML = `<div class="tk-top"><div class="seg" id="tkSeg"><button data-v="0" class="${showDone ? '' : 'on'}">${t('Pendientes')} <span class="cnt">${pending.length}</span></button><button data-v="1" class="${showDone ? 'on' : ''}">${t('Hechas')}</button></div></div>` + html;
+    body.innerHTML = `<div class="tk-top"><div class="seg" id="tkSeg"><button data-v="0" class="${showDone ? '' : 'on'}">${t('Pendientes')} <span class="cnt">${pending.length}</span></button><button data-v="1" class="${showDone ? 'on' : ''}">${t('Hechas')}</button></div>${UI.wsui ? UI.wsui.tasksToggle() : ''}</div>` + html;
     const map = new Map();
     for (const o of occOf.values()) if (o) map.set(o.key, o);
     body.addEventListener('click', e => {

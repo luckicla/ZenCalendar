@@ -41,6 +41,11 @@ contextBridge.exposeInMainWorld('zcDesktop', {
   // Google: Drive → 'connect' | 'token' | 'disconnect' | 'status'
   //         Google Calendar → 'add' (cfg.loginHint) | 'token' (cfg.account) | 'remove' ({ account, revoke }) | 'accounts'
   google: (cmd, cfg) => ipcRenderer.invoke('zc:google', cmd, cfg),
+  // workspaces: credenciales de Firebase para los avisos con la ventana cerrada (null = olvidarlas).
+  // { apiKey, projectId, uid, refreshToken, idToken?, expiresAt?, since?, strings? } (ver docs/CONTRATO.md)
+  wsCreds: c => ipcRenderer.send('zc:ws-creds', c && typeof c === 'object' ? JSON.parse(JSON.stringify(c)) : null),
+  // compartir: { title, text, url, app: 'whatsapp' | 'email' } → 'whatsapp' | 'email' | 'copied' | false
+  share: o => ipcRenderer.invoke('zc:share', o && typeof o === 'object' ? JSON.parse(JSON.stringify(o)) : {}),
   // actualizaciones: 'check' | 'install' | 'state'
   update: cmd => ipcRenderer.invoke('zc:update', cmd),
   onUpdate: cb => listen('zc:update', cb),

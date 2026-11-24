@@ -23,11 +23,20 @@
     // entonces no se enseña el botón de conectar, porque Google la rechazaría. También vale
     // con que haya client ID web: quiere decir que Google ya está configurado.
     googleAndroid: '',
+    // Firebase (workspaces compartidos): los rellena el workflow con las variables del repo
+    // FIREBASE_API_KEY, FIREBASE_APP_ID, FIREBASE_PROJECT_ID y FIREBASE_SENDER_ID
+    // (ver docs/FIREBASE-SETUP.md). Vacíos = sin workspaces, y todo lo demás funciona igual.
+    firebaseApiKey: '',
+    firebaseAppId: '',
+    firebaseProjectId: '',
+    firebaseSenderId: '',
     // permisos que se piden a Google: solo la carpeta oculta de la app en tu
     // Drive (no ve el resto de tus archivos) y tu nombre/correo/foto
     googleScopes: 'https://www.googleapis.com/auth/drive.appdata openid email profile',
     // nombre del archivo de datos en la carpeta oculta de Drive
     driveFile: 'zencalendar.json',
     repo: 'luckicla/zencalendar',
+    // la página de los enlaces de invitación (docs/w/)
+    inviteBase: 'https://luckicla.github.io/zencalendar/w/',
   };
 })(typeof window !== 'undefined' ? window : globalThis);

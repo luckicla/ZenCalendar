@@ -106,13 +106,48 @@
     try { root.open(url, '_blank', 'noopener'); } catch (e) {}
   }
 
+  // share({ title, text, url, app }) · app: 'whatsapp' abre WhatsApp directamente (Android: com.whatsapp; Windows y
+  // web: wa.me), 'email' abre el correo (mailto:). Devuelve true, 'copied' (se ha copiado al portapapeles) o false.
   async function share(o) {
     o = o || {};
+    const text = [o.text, o.url && !String(o.text || '').includes(o.url) ? o.url : ''].filter(Boolean).join('\n');
     try {
-      if (A() && A().share) { A().share(String(o.title || ''), String(o.text || o.url || '')); return true; }
+      if (A() && A().shareTo) { A().shareTo(JSON.stringify({ title: String(o.title || ''), text: String(o.text || ''), url: String(o.url || ''), app: o.app || '' })); return true; }
+      if (D() && D().share) { const r = await D().share({ title: o.title || '', text: o.text || '', url: o.url || '', app: o.app || '' }); if (r) return r === 'copied' ? 'copied' : true; }
+    } catch (e) { console.warn('[ZC] share', e); }
+    if (o.app === 'whatsapp') { openExternal('https://wa.me/?text=' + encodeURIComponent(text)); return true; }
+    if (o.app === 'email') { openExternal('mailto:?subject=' + encodeURIComponent(o.title || '') + '&body=' + encodeURIComponent(text)); return true; }
+    try {
+      if (A() && A().share) { A().share(String(o.title || ''), text || String(o.title || '')); return true; }
       if (root.navigator && navigator.share) { await navigator.share({ title: o.title, text: o.text, url: o.url }); return true; }
     } catch (e) { if (e && e.name === 'AbortError') return false; }
-    try { await navigator.clipboard.writeText([o.title, o.text, o.url].filter(Boolean).join('\n')); return 'copied'; } catch (e) { return false; }
+    try { await navigator.clipboard.writeText(text || String(o.title || '')); return 'copied'; } catch (e) { return false; }
+  }
+
+  // ---------- workspaces ----------
+  // wsCreds(creds | null): lo que necesita Android/Windows para avisar de los cambios de los workspaces con la
+  // app cerrada ({ apiKey, projectId, uid, refreshToken, workspaces: [{ id, name, color, emoji }], since, lang });
+  // null al cerrar sesión. Lo llama ZC.ws (docs/WORKSPACES.md → «Nativo»).
+  function wsCreds(c) {
+    try {
+      const json = c ? JSON.stringify(c) : '';
+      if (A() && A().wsCreds) A().wsCreds(json);
+      else if (D() && D().wsCreds) D().wsCreds(c || null);
+    } catch (e) { console.warn('[ZC] wsCreds', e); }
+  }
+  // notify({ title, body, tag, data }): una notificación suelta (los avisos de los workspaces con la app en segundo plano)
+  // (solo en la web: en Android y Windows los avisos de los workspaces los saca el nativo, docs/CONTRATO.md)
+  async function notify(o) {
+    o = o || {};
+    if (kind !== 'web') return false;
+    try {
+      if (!root.Notification || Notification.permission !== 'granted') return false;
+      const opts = { body: o.body || '', tag: o.tag || undefined, icon: 'img/icon-192.png', badge: 'img/favicon.png', data: o.data || null };
+      if (swReg && swReg.showNotification) { await swReg.showNotification(o.title || 'ZenCalendar', opts); return true; }
+      const n = new Notification(o.title || 'ZenCalendar', opts);
+      n.onclick = () => { try { root.focus(); } catch (e) {} if (o.data) _open(o.data); n.close(); };
+      return true;
+    } catch (e) { return false; }
   }
 
   function setAppIcon(id) {
@@ -330,6 +365,12 @@
           _open({ action, id: q.get('id') || undefined, date: q.get('date') || undefined, text: q.get('text') || undefined });
           history.replaceState(null, '', location.pathname + location.hash);
         }
+        // enlace de invitación a un workspace: app/?join=<wid>.<token> (o #join=…)
+        const j = q.get('join') || ((location.hash || '').match(/join=([^&]+)/) || [])[1];
+        if (j) {
+          _open({ action: 'join', code: decodeURIComponent(j) });
+          history.replaceState(null, '', location.pathname);
+        }
       } catch (e) {}
       // el service worker: la app sin conexión y los toques en las notificaciones
       try {
@@ -362,7 +403,7 @@
     isWidget: role === 'widget',
     win, setTheme, openExternal, share, appIcons, setAppIcon, appIcon,
     desktopWidget, desktopWidgetOn, desktopWidgetPin, setAutostart, autostart,
-    onOpen, notifyPermission, canPinWidget, pinWidget,
+    onOpen, notifyPermission, canPinWidget, pinWidget, wsCreds, notify,
     onBack, updates, init, openApp, setWindowMaterial, setEdgeToEdge, haptic,
     // el diseño del último setTheme: 'zen' | 'dot'
     get design() { try { const t = ZC.store.local('theme'); return normDesign(t && t.design); } catch (e) { return 'zen'; } },

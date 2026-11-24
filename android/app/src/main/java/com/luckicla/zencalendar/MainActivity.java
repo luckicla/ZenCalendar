@@ -59,6 +59,8 @@ public class MainActivity extends Activity {
     static final int REQ_FILE = 7201, REQ_NOTIF = 7202;
 
     private static WeakReference<MainActivity> current = new WeakReference<>(null);
+    // la app está a la vista (los avisos de workspaces los da entonces la página, no Workspaces)
+    static volatile boolean visible;
     private final Handler main = new Handler(Looper.getMainLooper());
 
     private FrameLayout box;
@@ -96,6 +98,7 @@ public class MainActivity extends Activity {
         // los avisos y los widgets, por si la app llevaba tiempo cerrada
         Alarms.schedule(this);
         Widgets.scheduleTicks(this);
+        Workspaces.ensureJob(this);
     }
 
     @Override protected void onNewIntent(Intent intent) {
@@ -106,9 +109,15 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        visible = true;
         // (vuelta de Ajustes → «Instalar apps desconocidas»: sigue la actualización)
         Updater.resume(this);
         js("window.dispatchEvent(new Event('zc-resume'))");
+    }
+
+    @Override protected void onPause() {
+        visible = false;
+        super.onPause();
     }
 
     @Override protected void onDestroy() {
@@ -323,7 +332,22 @@ public class MainActivity extends Activity {
                 o.put("action", what != null ? what : "open");
                 if (i.getStringExtra("id") != null) o.put("id", i.getStringExtra("id"));
                 if (i.getStringExtra("date") != null) o.put("date", i.getStringExtra("date"));
+                // aviso de un workspace: se abre ese workspace y sus líneas pendientes se olvidan
+                if ("workspace".equals(what) && i.getStringExtra("id") != null) {
+                    o.put("wid", i.getStringExtra("id"));
+                    Workspaces.opened(this, i.getStringExtra("id"), true);
+                }
                 deliverOpen(o.toString());
+            } else if (Intent.ACTION_VIEW.equals(action)) {
+                // invitación a un workspace: zencalendar://join/#<wid>.<token> (también con la app cerrada:
+                // deliverOpen lo guarda hasta que la página lo recoge). Desde «Recientes» no se repite.
+                String code = Workspaces.joinCode(i.getData());
+                if (code != null && (i.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == 0) {
+                    JSONObject o = new JSONObject();
+                    o.put("action", "join");
+                    o.put("code", code);
+                    deliverOpen(o.toString());
+                }
             } else if (Intent.ACTION_SEND.equals(action)) {
                 JSONObject o = new JSONObject();
                 o.put("action", "ai");

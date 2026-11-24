@@ -19,6 +19,7 @@
         ['reminders', () => ZC.reminders.init()],
         ['drive', () => ZC.drive.init()],
         ['gcal', () => ZC.gcal && ZC.gcal.init()],
+        ['ws', () => ZC.ws && ZC.ws.init()],
       ];
       for (const [name, fn] of steps) {
         try { await fn(); } catch (e) { console.error('[ZC] falló el arranque de ' + name, e); }

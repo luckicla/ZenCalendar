@@ -114,8 +114,8 @@
 
   // ---------- avisos de cambios ----------
   function changed(type, source) {
-    if (type === 'events') evList = null;
-    if (type === 'calendars') { calList = null; evList = null; }
+    if (type === 'events') { evList = null; wsView = null; }
+    if (type === 'calendars') { calList = null; evList = null; wsView = null; }
     if (source !== 'window' && bc) {
       try { bc.postMessage({ type, from: instance }); } catch (e) {}
     }
@@ -259,6 +259,8 @@
   const tomb = (x, now) => {
     const t = { id: x.id, deleted: true, updated: Math.max(now || Date.now(), (x.updated || 0) + 1) };
     if (isGoogleId(x.id)) for (const k of ['calendarId', 'source', 'accountId', 'gid', 'gEventId', 'etag', 'gSynced']) if (x[k] != null) t[k] = x[k];
+    // (las de un workspace se quedan con su calendario: así se sabe adónde va la lápida)
+    if (isWsId(x.calendarId)) t.calendarId = x.calendarId;
     return t;
   };
 
@@ -282,7 +284,43 @@
     };
   }
   // ¿va a Drive? (lo de Google no; tampoco un evento suelto en un calendario de Google)
-  const forDrive = x => !!x && !isGoogleId(x.id) && !isGoogleId(x.calendarId);
+  const forDrive = x => !!x && !isGoogleId(x.id) && !isGoogleId(x.calendarId) && !isWsId(x.calendarId) && !isWsId(x.id);
+
+  // ---------- workspaces (lo usa ZC.ws) ----------
+  // Lo de un workspace vive en Firestore, no aquí: ZC.ws lo pone en esta capa «virtual»
+  // (en memoria) y cada workspace es un calendario 'ws:<wid>'. No va a IndexedDB ni a Drive.
+  // En modo workspace (cur) las vistas solo ven ese calendario; con dim, también lo tuyo (atenuado).
+  // Lo que se guarda en un calendario 'ws:…' se manda a ZC.ws._write (Firestore).
+  const isWsId = id => typeof id === 'string' && id.slice(0, 3) === 'ws:';
+  const wsV = { cur: null, dim: false, cals: new Map(), items: new Map() };
+  let wsView = null; // caché de events() en modo workspace
+  /** ZC.ws: { cur: wid|null, dim, calendars: [cal] (todos), items: [ev] (altas/cambios; deleted = fuera), purge: [ids], clear: wid } */
+  function wsSet(w) {
+    w = w || {};
+    let ev = false, cal = false;
+    if ('cur' in w && w.cur !== wsV.cur) { wsV.cur = w.cur || null; ev = cal = true; }
+    if ('dim' in w && !!w.dim !== wsV.dim) { wsV.dim = !!w.dim; ev = cal = true; }
+    if (w.calendars) {
+      wsV.cals.clear();
+      for (const c of w.calendars) wsV.cals.set(c.id, Object.assign({ visible: true, order: -1, source: 'ws', deleted: false }, c));
+      cal = true;
+    }
+    if (w.reset) { wsV.items.clear(); ev = true; }
+    if (w.clear) { for (const [id, e] of wsV.items) if (e.calendarId === 'ws:' + w.clear) wsV.items.delete(id); ev = true; }
+    for (const e of (w.items || [])) { if (e.deleted) wsV.items.delete(e.id); else wsV.items.set(e.id, e); ev = true; }
+    for (const id of (w.purge || [])) { if (wsV.items.delete(id)) ev = true; }
+    if (cal) changed('calendars', 'sync');
+    if (ev || cal) changed('events', 'sync');
+  }
+  const wsCurId = () => (wsV.cur ? 'ws:' + wsV.cur : null);
+  async function wsPut(list, source) {
+    for (const e of list) { if (e.deleted) wsV.items.delete(e.id); else wsV.items.set(e.id, e); }
+    changed('events', source);
+    if (ZC.ws && ZC.ws._write) {
+      try { await ZC.ws._write(list); }
+      catch (e) { console.warn('[ZC] workspace: no se pudo guardar', e); }
+    }
+  }
 
   /** ZC.gcal escribe aquí lo que baja de Google: { events, calendars, purgeEvents, purgeCalendars } (ids) */
   async function gwrite(w) {
@@ -300,23 +338,50 @@
   const rawEvent = id => evMap.get(id) || null;
 
   async function putEvents(list, source) {
+    const ws = list.filter(e => isWsId(e.calendarId));
+    if (ws.length) {
+      list = list.filter(e => !isWsId(e.calendarId));
+      // (lo de Firestore no se espera: sin conexión se queda pendiente y se manda solo)
+      const p = wsPut(ws, source);
+      if (!list.length) { p.catch(() => {}); return; }
+    }
     for (const e of list) evMap.set(e.id, e);
     await db.put('events', list);
     changed('events', source);
   }
 
   // ---------- eventos ----------
-  function events() {
+  // scope: 'view' (lo que se ve ahora: en un workspace, el workspace), 'personal' (lo tuyo) o 'all' (lo tuyo y todos los workspaces)
+  function events(scope) {
     if (!evList) evList = [...evMap.values()].filter(e => !e.deleted);
-    return evList;
+    if (scope === 'personal') return evList;
+    if (scope === 'all') return wsV.items.size ? evList.concat([...wsV.items.values()]) : evList;
+    if (!wsV.cur) return evList;
+    if (!wsView) {
+      const id = wsCurId();
+      const mine = [...wsV.items.values()].filter(e => e.calendarId === id);
+      wsView = wsV.dim ? mine.concat(evList) : mine;
+    }
+    return wsView;
   }
-  const get = id => { const e = evMap.get(id); return e && !e.deleted ? e : null; };
+  const get = id => { const w = wsV.items.get(id); if (w) return w; const e = evMap.get(id); return e && !e.deleted ? e : null; };
+  const rawAny = id => wsV.items.get(id) || evMap.get(id) || null;
 
   async function saveEvent(partial) {
     if (!partial) throw new Error('saveEvent: falta el evento');
-    const old = partial.id ? evMap.get(partial.id) : null;
+    const old = partial.id ? rawAny(partial.id) : null;
     // guardar algo que estaba borrado (una lápida) lo vuelve a crear desde cero
     const prev = old && !old.deleted ? old : null;
+    // de lo tuyo a un workspace (o al revés): se rehace con otro id y lo de antes queda como lápida
+    if (prev && 'calendarId' in partial && partial.calendarId && isWsId(partial.calendarId) !== isWsId(prev.calendarId)) {
+      const copy = stripGoogle(Object.assign({}, prev, partial, { id: undefined, created: undefined, updated: 0 }));
+      for (const k of ['createdBy', 'updatedBy', 'assignee', 'wsUpdated']) if (!isWsId(copy.calendarId)) delete copy[k];
+      if (isWsId(copy.calendarId)) copy.attachments = [];
+      const moved = normEvent(copy, null);
+      await putEvents([tomb(prev)]);
+      await putEvents([moved]);
+      return moved;
+    }
     const e = normEvent(partial, prev);
     if (old) e.updated = Math.max(e.updated, (old.updated || 0) + 1);
     await putEvents([e]);
@@ -326,13 +391,13 @@
   async function deleteEvent(id, opts) {
     opts = opts || {};
     const u = U();
-    const ev = evMap.get(id);
+    const ev = rawAny(id);
     if (!ev || ev.deleted) return;
     const now = Date.now();
     const mode = ev.rrule ? (opts.mode || 'all') : 'all';
     const date = opts.date ? u.ymd(u.parse(opts.date)) : null;
     const out = [];
-    const detached = () => [...evMap.values()].filter(x => !x.deleted && x.recurrenceOf === id);
+    const detached = () => [...evMap.values(), ...wsV.items.values()].filter(x => !x.deleted && x.recurrenceOf === id);
     if (mode === 'one' && date) {
       out.push(Object.assign({}, ev, { exdates: [...new Set([...(ev.exdates || []), date])].sort(), updated: Math.max(now, ev.updated + 1) }));
     } else if (mode === 'future' && date) {
@@ -354,12 +419,12 @@
     const gone = new Set();
     for (const t of out) {
       if (!t.deleted) continue;
-      const was = t.id === id ? ev : evMap.get(t.id);
+      const was = t.id === id ? ev : rawAny(t.id);
       for (const a of ((was && was.attachments) || [])) gone.add(a.id);
     }
     await putEvents(out);
     if (gone.size) {
-      for (const e of events()) for (const a of (e.attachments || [])) gone.delete(a.id);
+      for (const e of events('all')) for (const a of (e.attachments || [])) gone.delete(a.id);
       for (const b of gone) await deleteBlob(b).catch(() => {});
     }
   }
@@ -411,17 +476,26 @@
   }
 
   // ---------- calendarios ----------
-  function calendars() {
+  // scope como en events(): en un workspace, 'view' es ese calendario (y los tuyos detrás, si se ven atenuados)
+  function calendars(scope) {
     if (!calList) calList = [...calMap.values()].filter(c => !c.deleted).sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.name).localeCompare(b.name));
-    return calList;
+    if (scope === 'personal') return calList;
+    if (scope === 'all') return wsV.cals.size ? [...wsV.cals.values()].concat(calList) : calList;
+    if (!wsV.cur) return calList;
+    const w = wsV.cals.get(wsCurId());
+    return w ? (wsV.dim ? [w].concat(calList) : [w]) : (wsV.dim ? calList : []);
   }
-  const calendar = id => { const c = calMap.get(id); return c && !c.deleted ? c : null; };
+  const calendar = id => { if (isWsId(id)) return wsV.cals.get(id) || null; const c = calMap.get(id); return c && !c.deleted ? c : null; };
+  // el calendario donde va algo nuevo si no se dice otro (en un workspace, el workspace)
+  const defaultCalendarId = () => (wsV.cur && wsV.cals.has(wsCurId()) ? wsCurId() : ((calendars('personal').find(c => c.visible !== false && !isGoogleId(c.id)) || calendars('personal')[0] || { id: 'personal' }).id));
 
   async function saveCalendar(partial) {
+    // el calendario de un workspace es el workspace: lo cambia ZC.ws (color/nombre, si eres el dueño)
+    if (partial && isWsId(partial.id)) return ZC.ws && ZC.ws._saveCalendar ? ZC.ws._saveCalendar(partial) : calendar(partial.id);
     const u = U();
     const prev = partial.id ? calMap.get(partial.id) : null;
     const now = Date.now();
-    const c = Object.assign({ id: u.uid(), name: '', color: '#C9B8FF', visible: true, order: calendars().length, deleted: false }, prev || {}, partial);
+    const c = Object.assign({ id: u.uid(), name: '', color: '#C9B8FF', visible: true, order: calendars('personal').length, deleted: false }, prev || {}, partial);
     c.name = String(c.name || '');
     if (!COLOR_RE.test(String(c.color || '').trim())) c.color = '#C9B8FF';
     c.visible = c.visible !== false;
@@ -434,6 +508,7 @@
   }
 
   async function deleteCalendar(id) {
+    if (isWsId(id)) return; // (un workspace se borra o se deja desde ZC.ws)
     const c = calMap.get(id);
     if (!c || c.deleted) return;
     if (isGoogleId(id)) {
@@ -460,7 +535,8 @@
     from = u.parse(from); to = u.parse(to);
     if (!from || !to || !ZC.recur) return [];
     const out = [];
-    for (const ev of events()) {
+    const dimOthers = !!(wsV.cur && wsV.dim && (opts.scope || 'view') === 'view');
+    for (const ev of events(opts.scope || 'view')) {
       if (!includeTasks && ev.kind === 'task') continue;
       const cal = calendar(ev.calendarId);
       if (!includeHidden && cal && cal.visible === false) continue;
@@ -476,6 +552,8 @@
           // extra: el final «exclusivo» (para todo el día, las 00:00 del día siguiente al último)
           endEx: ev.allDay ? u.addDays(inst.end, 1) : inst.end,
           date: day,
+          // (en un workspace con lo tuyo a la vista: lo tuyo sale atenuado)
+          dim: dimOthers && !isWsId(ev.calendarId),
         });
       }
     }
@@ -614,7 +692,7 @@
     return {
       app: 'ZenCalendar', format: 1, version: (ZC.config && ZC.config.version) || '', exported: Date.now(),
       // (lo de Google Calendar no: está en Google)
-      events: U().clone(events().filter(forDrive)), calendars: U().clone(calendars().filter(forDrive)), prefs: getPrefs(),
+      events: U().clone(events('personal').filter(forDrive)), calendars: U().clone(calendars('personal').filter(forDrive)), prefs: getPrefs(),
     };
   }
 
@@ -822,6 +900,9 @@
     merge, snapshot, applyRemote, hasBlobData, stable, normEvent,
     // Google Calendar
     driveOnly, isGoogleId, stripGoogle, _gwrite: gwrite, _rawEvents: rawEvents, _rawEvent: rawEvent,
+    // workspaces (ZC.ws)
+    isWsId, defaultCalendarId, _wsSet: wsSet,
+    inWorkspace: () => wsV.cur, get wsDim() { return wsV.dim; },
     get persistent() { return !!(db && db.persistent); },
     get ready() { return !!db; },
     DEFAULT_PREFS,

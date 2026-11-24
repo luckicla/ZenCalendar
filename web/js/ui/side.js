@@ -50,6 +50,10 @@
   }
   function cals() {
     const box = document.getElementById('sideCals'); if (!box) return;
+    // en un workspace: su tarjeta (miembros, invitar, ver también lo tuyo)
+    const wsh = UI.wsui && UI.wsui.sideHTML();
+    box.classList.toggle('ws-on', !!wsh);
+    if (wsh) { box.innerHTML = wsh; return; }
     const list = ZC.store.calendars();
     const GA = UI.gacc;
     const grps = GA ? GA.groups(list) : [{ id: 'local', label: '', cals: list }];
@@ -65,9 +69,9 @@
   function tasks() {
     const box = document.getElementById('sideTasks'); if (!box) return;
     // (las que se repiten salen con la aparición que toca, no con la primera de la serie)
-    const all = ZC.store.events().filter(e => e.kind === 'task' && !e.done).map(ev => ({ ev, o: C.taskOcc(ev) })).filter(x => x.o).sort((a, b) => a.o.start - b.o.start);
+    const all = ZC.store.events().filter(e => e.kind === 'task' && !e.done && (!UI.wsui || UI.wsui.isMine(e))).map(ev => ({ ev, o: C.taskOcc(ev) })).filter(x => x.o).sort((a, b) => a.o.start - b.o.start);
     const tdy = C.today();
-    box.innerHTML = `<header><h3>${t('Tareas')}</h3><button class="ibtn sm" data-act="newtask" aria-label="${t('Nueva tarea')}" title="${t('Nueva tarea')}">${UI.icon('plus', 18)}</button></header>` +
+    box.innerHTML = `<header><h3>${t('Tareas')}</h3>${UI.wsui ? UI.wsui.tasksToggle() : ''}<button class="ibtn sm" data-act="newtask" aria-label="${t('Nueva tarea')}" title="${t('Nueva tarea')}">${UI.icon('plus', 18)}</button></header>` +
       (all.length ? all.slice(0, 5).map(({ ev, o }) => {
         const s = o.start, late = s < tdy;
         const when = sameDay(s, tdy) ? (ev.allDay ? t('Hoy') : t('Hoy') + ', ' + C.fmtT(s)) : sameDay(s, addDays(tdy, 1)) ? t('Mañana') : ZC.i18n.D.short(s);

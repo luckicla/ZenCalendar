@@ -61,7 +61,8 @@
     const to = u.addDays(new Date(now), HORIZON_DAYS);
     const out = [];
     let occ = [];
-    try { occ = ZC.store.occurrences(from, to, { includeHidden: true, includeTasks: true }); } catch (e) { return []; }
+    // (lo tuyo y lo de todos tus workspaces, estés donde estés)
+    try { occ = ZC.store.occurrences(from, to, { includeHidden: true, includeTasks: true, scope: 'all' }); } catch (e) { return []; }
     const dismissed = new Set(ZC.store.local('reminders.dismissed') || []);
     for (const o of occ) {
       if (o.isTask && o.done) continue;
@@ -109,7 +110,7 @@
     const from = u.startOfDay(now);
     const to = u.addDays(from, 15);
     let occ = [];
-    try { occ = ZC.store.occurrences(from, to, { includeHidden: false, includeTasks: true }); } catch (e) {}
+    try { occ = ZC.store.occurrences(from, to, { includeHidden: false, includeTasks: true, scope: 'personal' }); } catch (e) {}
     const items = [];
     for (const o of occ) {
       if (!o.allDay && o.endEx < now && !o.isTask) continue; // lo que ya acabó hoy

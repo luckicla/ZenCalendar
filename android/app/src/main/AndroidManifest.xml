@@ -49,6 +49,13 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
             </intent-filter>
+            <!-- invitaciones a workspaces: zencalendar://join/#<wid>.<token> (la página docs/w/ lo abre con intent://) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="zencalendar" android:host="join" />
+            </intent-filter>
         </activity>
 
         <!-- un icono por variante (Ajustes → Icono de la app); solo uno activo a la vez -->
@@ -160,6 +167,12 @@
                 <action android:name="android.intent.action.DATE_CHANGED" />
             </intent-filter>
         </receiver>
+
+        <!-- workspaces: mirar cada ~15 min si otros han cambiado algo (JobScheduler, Workspaces.java) -->
+        <service
+            android:name=".WsJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
 
         <!-- widgets -->
         <receiver android:name=".AgendaWidget" android:exported="true" android:label="@string/widget_agenda">

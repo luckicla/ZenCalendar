@@ -533,3 +533,142 @@ Todo en `docs/CONTRATO.md` → «Google Calendar con varias cuentas (1.3.0)». L
 - **Aviso**: `regress.js` falla hoy en «serie semanal arrastrada a otro día con «Todos»» **también sin estos cambios**: la prueba
   usa la semana del 23-11-2026, que es la de hoy, y al arrastrar no coge el evento. Con el reloj fijado al 10-11-2026
   (`page.clock.install`) pasa entera. Conviene fijar el reloj en esa prueba.
+
+## Workspaces → para web (de nativo)
+
+Todo lo nativo está en `docs/CONTRATO.md` → «Workspaces: lo nativo (1.4.0)». Lo que falta en `web/js/core/platform.js`
+(es vuestro; esta es la forma exacta que espera Android y Windows):
+
+1. **`wsCreds`** (ws.js ya lo busca con `typeof P().wsCreds === 'function'`):
+   ```js
+   function wsCreds(c) {
+     try {
+       if (A() && A().wsCreds) { A().wsCreds(c ? JSON.stringify(c) : ''); return true; }
+       if (D() && D().wsCreds) { D().wsCreds(c || null); return true; }
+     } catch (e) {}
+     return false;
+   }
+   // en ZC.platform (solo donde hay nativo, para que en la web ws.js no lo llame):
+   //   wsCreds: (A() && A().wsCreds) || (D() && D().wsCreds) ? wsCreds : undefined,
+   ```
+2. **`share({ title, text, url, app })`**, antes de lo que hay:
+   ```js
+   if (A() && A().shareTo) { A().shareTo(JSON.stringify({ title: o.title || '', text: o.text || '', url: o.url || '', app: o.app || '' })); return o.app || true; }
+   if (D() && D().share) return await D().share({ title: o.title || '', text: o.text || '', url: o.url || '', app: o.app || '' });
+   if (o.app === 'whatsapp') { openExternal('https://wa.me/?text=' + encodeURIComponent([o.text, o.url].filter(Boolean).join('\n'))); return 'whatsapp'; }
+   ```
+   (Windows devuelve `'whatsapp' | 'email' | 'copied' | false`; con `'copied'` la interfaz dice «Enlace copiado».)
+3. **Web `?join=`** (el botón «Abrir en el navegador» de `docs/w/` lleva a `../app/?join=<wid>.<token>`): en `init()`, en la
+   parte `kind === 'web'`, `if (q.get('join')) { _open({ action: 'join', code: q.get('join') }); history.replaceState(null, '', location.pathname); }`
+   (si ws.js ya lo lee de `location`, nada).
+4. **`onOpen`**: llegan `{ action: 'join', code }` (enlace, también con la app cerrada) y `{ action: 'workspace', wid, id }`
+   (al tocar un aviso de workspace → `ZC.ws.switchTo(wid)`).
+
+En `ws.js`:
+- `creds()` ya manda `{ apiKey, projectId, uid, refreshToken, workspaces, since, lang }`: vale (lo demás se ignora; los
+  workspaces los busca el nativo solo). Falta **`strings`** con los textos en el idioma de la app (claves y ejemplo en
+  CONTRATO; sin ellos salen en castellano) y, si se puede, `idToken` + `expiresAt` (ahorra una renovación).
+- **La lápida de un item borrado debería llevar `title`** (hoy `{ id, deleted, createdBy, updatedBy, updated }`): si no, el
+  aviso dice «Ana ha borrado «(sin título)»». Si las reglas lo dejan, `title` del item anterior.
+- En Android y Windows, **sin notificaciones del sistema desde la página** por cambios de workspaces (solo toasts con la app a
+  la vista): las saca el nativo, que se calla mientras la app está delante. En Windows la página sigue viva escondida en la
+  bandeja: si también avisara, saldrían dobles.
+- Reglas: el nativo hace `runQuery` en `workspaces` con `memberIds array-contains <uid>` (como mucho 30) y en
+  `workspaces/{wid}/items` con `updated > X` ordenado por `updated`. `updated` tiene que ser `serverTimestamp()`.
+
+## Workspaces: hecho por nativo
+
+- **Android**
+  - `AndroidManifest.xml`: `intent-filter` `VIEW`/`DEFAULT`/`BROWSABLE` `zencalendar://join` en `MainActivity`; servicio
+    `.WsJob` (`BIND_JOB_SERVICE`, no exportado). Sin permisos nuevos (el job persistente usa `RECEIVE_BOOT_COMPLETED`, que ya
+    estaba) y sin dependencias nuevas de Gradle.
+  - `MainActivity`: `zencalendar://join/#<código>` → `onOpen({ action: 'join', code })` (en frío se guarda hasta que la página
+    lo recoge; desde «Recientes» no se repite). Aviso de workspace tocado → `{ action: 'workspace', wid, id }` y se olvidan
+    sus líneas. `visible` (onResume/onPause) para que el job no avise con la app delante.
+  - `Bridge`: `wsCreds(json)` y `shareTo(json)` (WhatsApp → WhatsApp Business → `wa.me` → hoja del sistema; sin `app`, la hoja).
+  - `Workspaces.java` (nuevo): credenciales cifradas (AES-GCM, clave del Android Keystore; si el aparato no deja, en claro
+    en las preferencias privadas), `JobScheduler` cada 15 min con red y persistente, canal «Workspaces», una notificación
+    por workspace (InboxStyle, últimas 6 líneas, se juntan hasta tocarla o quitarla; `PendingIntent` con `FLAG_IMMUTABLE`;
+    ids negativos para no chocar con los avisos), sesión revocada → se olvida y se para el job.
+  - `WsSync.java` (nuevo): la comprobación sin nada de Android (solo org.json), la misma lógica que Windows.
+  - `WsJob.java` (nuevo), `AlarmReceiver` (quitar el aviso → `WS_DISMISS`), `BootReceiver` (vuelve a programar el job),
+    `strings.xml` (`channel_ws`, `channel_ws_desc`).
+- **Windows**
+  - `desktop/workspaces.js` (nuevo): `parseJoin`/`joinFromArgv` y `createChecker` (la comprobación; mismas reglas que Android).
+  - `main.js`: `setAsDefaultProtocolClient('zencalendar')` (en la portable, el `.exe` de verdad; en `npm start`, con la carpeta),
+    el enlace al arrancar y en `second-instance` (y `open-url`) → `onOpen({ action: 'join', code })`; comprobación cada 5 min
+    (y a los 30 s) con la ventana no enfocada → notificación de Windows por workspace (tocarla → `{ action: 'workspace', wid }`);
+    IPC `zc:ws-creds` (cifradas con `safeStorage` en `workspaces.bin`) y `zc:share`.
+  - `preload.js`: `zcDesktop.wsCreds(c)`, `zcDesktop.share(o)`. `package.json`: `build.protocols` (el instalador NSIS registra
+    `zencalendar://`) y `workspaces.js` en `files`.
+- **Pruebas** (`node tests/core/run.js`, todo verde; `node tests/ui/interact.js` bien):
+  - `tests/core/_fake-firestore.js`: Firebase de mentira (securetoken + `runQuery` con reglas de miembros) y un guion común.
+  - `desktop-ws.test.js` (14): enlaces y línea de órdenes, decimales de las marcas, agrupado, sin lo mío ni lo de antes, nombres
+    largos, «y N más», ID token caducado, ventana delante, me echan, dos vueltas a la vez, sesión revocada, otra cuenta.
+  - `android-ws.test.js` (7): compila `WsSync.java` con un org.json mínimo (`tests/core/java/`) y lo ejecuta en la JVM contra el
+    mismo Firebase de mentira por HTTP: da exactamente lo mismo que Windows (sin `javac` se salta; en Actions hay Java).
+  - El Java de `android/` compila con `-Xlint:all` contra los stubs de `/tmp/zdot/jc/` (ampliados: JobScheduler, Keystore,
+    InboxStyle, Uri…). `main.js` probado a mano con un electron de mentira (arranque con enlace, `second-instance`, compartir,
+    guardar/borrar credenciales).
+
+### Workspaces: por probar en un aparato
+- Android: tocar el enlace en WhatsApp/Chrome con la app cerrada y abierta (la página `docs/w/` con `intent://`); que el job
+  salte con la app cerrada (`adb shell cmd jobscheduler run -f com.luckicla.zencalendar 7301`) y tras reiniciar; que la clave
+  del Keystore funcione en marcas raras (Xiaomi, Huawei); WhatsApp directo y sin WhatsApp; el canal en Ajustes del sistema;
+  tocar y deslizar el aviso; con ahorro de batería fuerte el job puede tardar más de 15 min (Android lo decide).
+- Windows: instalar con el NSIS y abrir `zencalendar://join/#…` desde el navegador con la app cerrada y abierta; la portable;
+  desinstalar quita el protocolo; las notificaciones con la ventana en la bandeja.
+- Firebase de verdad: que la API key acepte `securetoken` y Firestore por REST (si la key tiene restricción por web/«HTTP
+  referrer», el REST desde Android/Windows no lleva referrer y fallaría: la key de Firebase por defecto no la tiene), que las
+  reglas dejen la consulta `memberIds array-contains` y el formato real de `updated` (serverTimestamp).
+
+## Workspaces: hecho por web
+
+- **Núcleo** (`web/js/core/`)
+  - `ws.js` (nuevo, `ZC.ws`, API completa del contrato + `peek`, `acceptInvite`, `declineInvite`, `uninviteEmail`, `bgData`,
+    `setDim`, `refreshCreds`): SDK de Firebase 10.14.1 por `import()` desde gstatic, Firestore con caché persistente (y de
+    memoria si no se puede), Auth con el token de Google de `ZC.drive` (`ZC.drive._token`, nuevo) o con la ventanita de
+    Firebase en la web. Arranque al momento con una copia pequeña (nombre/color/fondo) y el SDK se baja a los 0,9 s.
+  - `ws-mock.js` (nuevo): Firebase de mentira (Auth + Firestore: consultas, `onSnapshot`, lotes, centinelas, sin conexión)
+    que comprueba cada lectura/escritura con las reglas de `firestore.rules` portadas a JS.
+  - `store.js`: capa virtual de workspaces (calendario `ws:<wid>`, `scope` en `events/calendars/occurrences`, `dim`,
+    `defaultCalendarId`, lápidas y cambios de lo tuyo ↔ workspace), nada de eso va a IndexedDB, Drive ni a la copia.
+    `reminders.js` (avisos de lo tuyo y de todos los workspaces), `gcal.js` (`calendars('personal')`), `ai.js` (crea en el
+    workspace abierto), `core.js` (arranca `ZC.ws`), `drive.js` (`_token`).
+  - `platform.js`: `share` con `ZCAndroid.shareTo`/`zcDesktop.share` y `app: 'whatsapp'|'email'`, `wsCreds`, `notify` (solo
+    web), `?join=`/`#join=` → `onOpen({ action: 'join' })`. Lo de «para web» del nativo, hecho: `strings` traducidos en las
+    credenciales (y otra vez al cambiar de idioma), la lápida lleva `title`, y en Android/Windows la página no saca
+    notificaciones del sistema (solo toasts). `idToken`/`expiresAt` no se mandan (opcional).
+  - `config.js` + `tools/setconfig.js` + `build.yml`/`pages.yml`: `FIREBASE_API_KEY/APP_ID/PROJECT_ID/SENDER_ID`.
+- **Interfaz** (`web/js/ui/ws.js`, `ws-i18n.js`, `web/css/ws.css`; retoques en `app.js`, `look.js`, `side.js`, `editor.js`,
+  `view-list.js`, `cal.js`, `welcome.js`, `index.html`)
+  - Selector «Mi calendario ▾» a la izquierda del título (con el distintivo y el color del workspace, punto de novedades,
+    deslizarlo = el de al lado), menú con caritas e invitaciones pendientes; en el móvil, hoja inferior.
+  - En un workspace: título con su emoji y nombre (letra que se encoge con lo largo que sea, elipsis) y el mes debajo; franja
+    y borde de su color; acento y fondo del workspace con transición; aspecto por workspace en `prefs.wsLook[wid]` (solo la
+    diferencia; el diseño Zen/Dot sigue siendo de toda la app), con aviso en Aspecto/Fondo y «Como al principio».
+  - Crear/editar (nombre, emoji, color, fondo: el de cada uno, color, animado o foto), miembros (quitar = enlace nuevo), salir,
+    borrar; invitar (copiar, WhatsApp, correo, compartir, correo de Google, cambiar el enlace); entrar con un enlace (pantalla
+    con sus colores, conectar Google si hace falta); panel lateral del workspace con «Ver también mi calendario»; tareas
+    «Para» + «Mis tareas»; «Lo añadió Ana» en el detalle; toasts agrupados con «Ver»; Ajustes → Workspaces; consejo en la
+    bienvenida. Sin Firebase configurado no se pinta nada (Ajustes lo dice).
+- **Firebase**: `firestore.rules` (miembros leen/escriben; solo el dueño cambia nombre/color/emoji/fondo, invita, cambia el
+  enlace, echa y borra; cada uno se sale; entrar con enlace = `joins/{uid}` con la clave en la misma escritura; invitados por
+  correo leen y entran o rechazan; items validados con `updated == request.time` y `updatedBy == uid`; vista previa del enlace
+  en `invite/{token}` solo con la clave buena). `docs/FIREBASE-SETUP.md` (paso a paso + prompt para el asistente del navegador).
+- **Página del enlace**: `docs/w/index.html` (Zen y Dot, claro/oscuro, ES/CA/EN; `intent://` en Android, `zencalendar://` en
+  Windows, «Abrir en la app» / «Descargar» / «Abrir en el navegador») y `docs/img/og-invite.png` (vista previa de WhatsApp).
+- **Pruebas**: `tests/core/ws.test.js` (18: sin configurar, token bueno/malo, crear, modo workspace, entrar con clave buena/mala,
+  no miembro no lee, solo el dueño cambia el nombre, createdBy no se falsea, asignar, lápidas, salir/echar, correo, borrar,
+  foto, sin conexión, mover, IA, credenciales nativas) y `tests/ui/ws.js` (Zen/Dot, claro/oscuro, ES/CA/EN, 360 px y PC).
+  Siguen bien `node tests/core/run.js`, las de `tests/ui/` de siempre y `QUICK=1 SHOTS=0 node tests/ui/overlap.js`.
+
+### Workspaces: por probar con Firebase de verdad
+- Que la consulta de `invitedEmails array-contains` pase las reglas (Firestore tiene que poder «probar» la regla con la
+  consulta; si no, la de invitaciones por correo falla sola y lo demás sigue) y que el correo del token de Google llegue en
+  minúsculas (se guarda en minúsculas).
+- Electron con `app://` y el WebView de Android cargando módulos de gstatic con `import()` (si alguno no deja, sale «Sin
+  conexión» en Ajustes → Workspaces y el resto de la app va igual).
+- Ventanita de Firebase en la web: `luckicla.github.io` en Dominios autorizados.
+
+Workspaces: hecho por web

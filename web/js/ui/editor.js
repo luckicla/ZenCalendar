@@ -113,6 +113,7 @@
           </div>
           <div class="ed-sec">
             <div class="ed-row top"><span class="ed-ic">${UI.icon('calendar', 20)}</span>${calChips(cals)}</div>
+            ${UI.wsui ? UI.wsui.editorRow(D) : ''}
             <div class="ed-row"><span class="ed-ic">${UI.icon('palette', 20)}</span><div class="ed-colors"><button type="button" class="cdot sm ${!D.color ? 'on' : ''}" data-color="" style="--c:${esc(cal.color || '#B9A2FF')}" title="${t('Color del calendario')}"><span>A</span></button>${EV_COLORS.map(c => `<button type="button" class="cdot sm ${D.color && D.color.toLowerCase() === c.toLowerCase() ? 'on' : ''}" data-color="${c}" style="--c:${c}" aria-label="${c}"></button>`).join('')}</div></div>
             <div class="ed-row top"><span class="ed-ic">${UI.icon('bell', 20)}</span><div class="ed-rems">${D.reminders.slice().sort((a, b) => a - b).map(m => `<span class="chip">${esc(remLabel(m))}<button type="button" class="x" data-rem="${m}" aria-label="${t('Quitar aviso')}">${UI.icon('x', 14)}</button></span>`).join('')}<button type="button" class="chip add" data-act="addrem">${UI.icon('plus', 15)}${t('Aviso')}</button></div></div>
             <div class="ed-row top ed-alarm ${D.alarm ? 'on' : ''}"><span class="ed-ic">${UI.icon('alarm', 20)}</span><div class="ed-al">
@@ -126,7 +127,7 @@
             <div class="ed-row"><span class="ed-ic">${UI.icon('pin', 20)}</span><div class="ed-loc"><input class="in" name="location" value="${esc(D.location || '')}" placeholder="${esc(t('Lugar'))}" autocomplete="off"><button type="button" class="ibtn" data-act="maps" ${D.location ? '' : 'hidden'} aria-label="${t('Abrir en Google Maps')}" title="${t('Abrir en Google Maps')}">${UI.icon('external', 18)}</button></div></div>
             <div class="ed-row top"><span class="ed-ic">${UI.icon('notes', 20)}</span><textarea class="in" name="notes" rows="3" placeholder="${esc(t('Notas'))}">${esc(D.notes || '')}</textarea></div>
             <div class="ed-row top"><span class="ed-ic">${UI.icon('list', 20)}</span><div class="ed-check">${D.checklist.map(it => `<div class="ck-item ${it.done ? 'done' : ''}" data-ck="${esc(it.id)}"><span class="tick ${it.done ? 'on' : ''}" role="checkbox" aria-checked="${!!it.done}" tabindex="0">${UI.icon('check', 14)}</span><input class="ck-in" value="${esc(it.text)}" aria-label="${t('Elemento de la lista')}"><button type="button" class="ibtn sm" data-ckdel="${esc(it.id)}" aria-label="${t('Quitar')}">${UI.icon('x', 16)}</button></div>`).join('')}<input class="in ck-new" placeholder="${esc(t('Añadir a la lista…'))}" aria-label="${t('Añadir a la lista')}"></div></div>
-            <div class="ed-row top"><span class="ed-ic">${UI.icon('image', 20)}</span><div class="ed-imgs"><div class="thumbs"></div><div class="img-btns"><button type="button" class="chip add" data-act="addimg">${UI.icon('plus', 15)}${t('Imagen')}</button><button type="button" class="chip add" data-act="camera">${UI.icon('camera', 15)}${t('Cámara')}</button></div></div></div>
+            <div class="ed-row top ${ZC.store.isWsId && ZC.store.isWsId(D.calendarId) ? 'ws-noimg' : ''}"><span class="ed-ic">${UI.icon('image', 20)}</span><div class="ed-imgs"><div class="thumbs"></div><div class="img-btns"><button type="button" class="chip add" data-act="addimg">${UI.icon('plus', 15)}${t('Imagen')}</button><button type="button" class="chip add" data-act="camera">${UI.icon('camera', 15)}${t('Cámara')}</button></div></div></div>
           </div>
         </div>
         <div class="ed-foot">
@@ -285,10 +286,11 @@
       }
     });
     body.addEventListener('click', async e => {
-      const b = e.target.closest('[data-act], [data-kind], [data-cal], [data-color], [data-rem], [data-ckdel], [data-imgdel], .thumb img, .cu-d, [data-cu] button, .ck-item .tick');
+      const b = e.target.closest('[data-act], [data-kind], [data-cal], [data-assign], [data-color], [data-rem], [data-ckdel], [data-imgdel], .thumb img, .cu-d, [data-cu] button, .ck-item .tick');
       if (!b) return;
       if (b.dataset.kind) { read(); D.kind = b.dataset.kind; if (D.kind === 'task') D.end = D.start; else if (D.end === D.start && !D.allDay) D.end = toLocal(new Date(parse(D.start).getTime() + (C.prefsCal().defaultDuration || 60) * 60000)); paint(); return; }
       if (b.dataset.cal) { read(); D.calendarId = b.dataset.cal; paint(); return; }
+      if (b.dataset.assign !== undefined) { read(); D.assignee = b.dataset.assign || null; paint(); return; }
       if ('color' in b.dataset) { read(); D.color = b.dataset.color || null; paint(); return; }
       if ('rem' in b.dataset) { read(); D.reminders = D.reminders.filter(m => m !== +b.dataset.rem); paint(); return; }
       if (b.dataset.ckdel) { read(); D.checklist = D.checklist.filter(x => x.id !== b.dataset.ckdel); paint(); return; }
@@ -429,7 +431,7 @@
           ${ev.emoji ? `<div class="dt-emoji">${esc(ev.emoji)}</div>` : ''}
           <h2 class="${o.done ? 'done' : ''}">${esc(ev.title || (task ? t('Tarea sin título') : t('Sin título')))}</h2>
           <p class="dt-when">${esc(C.whenText(o, { withDate: true }))}</p>
-          <div class="dt-tags"><span class="chip"><i class="dot" style="background:${esc(cal.color || color)}"></i>${esc(cal.name || '')}</span>${ev.rrule ? `<span class="chip">${UI.icon('repeat', 14)}${esc(describe(ev.rrule, ev.start))}</span>` : ''}${task ? `<span class="chip">${UI.icon('tasks', 14)}${t('Tarea')}</span>` : ''}${ev.alarm ? `<span class="chip al">${UI.icon('alarm', 14)}${t('Alarma')}</span>` : ''}</div>
+          ${UI.wsui ? UI.wsui.detailRow(ev) : ''}<div class="dt-tags"><span class="chip"><i class="dot" style="background:${esc(cal.color || color)}"></i>${esc(cal.name || '')}</span>${ev.rrule ? `<span class="chip">${UI.icon('repeat', 14)}${esc(describe(ev.rrule, ev.start))}</span>` : ''}${task ? `<span class="chip">${UI.icon('tasks', 14)}${t('Tarea')}</span>` : ''}${ev.alarm ? `<span class="chip al">${UI.icon('alarm', 14)}${t('Alarma')}</span>` : ''}</div>
         </div>
         <div class="dt-body">
           ${task && !ro ? `<button class="btn ${o.done ? 'soft' : 'pri'} block dt-done" data-act="done">${UI.icon('check', 18)}${o.done ? t('Marcar como pendiente') : t('Marcar como hecha')}</button>` : ''}

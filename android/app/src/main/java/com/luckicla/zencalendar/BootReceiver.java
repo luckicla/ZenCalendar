@@ -17,5 +17,7 @@ public class BootReceiver extends BroadcastReceiver {
         if (Intent.ACTION_MY_PACKAGE_REPLACED.equals(a)) Updater.onUpdated(c);
         Widgets.updateAll(c);
         Widgets.scheduleTicks(c);
+        // (el de los workspaces es persistente, pero por si Android lo perdió)
+        Workspaces.ensureJob(c);
     }
 }

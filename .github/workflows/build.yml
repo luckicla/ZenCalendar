@@ -33,6 +33,11 @@ env:
   GOOGLE_DESKTOP_CLIENT_ID: ${{ vars.GOOGLE_DESKTOP_CLIENT_ID }}
   GOOGLE_DESKTOP_CLIENT_SECRET: ${{ secrets.GOOGLE_DESKTOP_CLIENT_SECRET || vars.GOOGLE_DESKTOP_CLIENT_SECRET }}
   GOOGLE_ANDROID_ENABLED: ${{ vars.GOOGLE_ANDROID_ENABLED }}
+  # workspaces compartidos (Firebase, docs/FIREBASE-SETUP.md); sin ellas la app va igual, sin workspaces
+  FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+  FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
+  FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+  FIREBASE_SENDER_ID: ${{ vars.FIREBASE_SENDER_ID }}
 
 jobs:
   # la versión sale del archivo VERSION; «release» dice si todavía no existe

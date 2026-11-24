@@ -92,7 +92,8 @@
   const titleOf = ev => (ev.emoji ? ev.emoji + ' ' : '') + (ev.title || (ev.kind === 'task' ? t('Tarea sin título') : t('Sin título')));
   // color del evento para el CSS (solo colores de verdad: el valor acaba dentro de un atributo style)
   const safeColor = c => (/^#[0-9a-f]{3,8}$/i.test(String(c || '').trim()) ? String(c).trim() : '');
-  function evVars(o) { return `--c:${safeColor(o.color) || safeColor(o.calendar && o.calendar.color) || 'var(--a1)'}`; }
+  // (o.dim: lo tuyo detrás de un workspace, atenuado)
+  function evVars(o) { return `--c:${safeColor(o.color) || safeColor(o.calendar && o.calendar.color) || 'var(--a1)'}${o.dim ? ';opacity:.45;filter:saturate(.55)' : ''}`; }
 
   // ---------- mover / cambiar duración (con la pregunta de las series) ----------
   async function askSeries(o, verb) {

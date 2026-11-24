@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es" data-design="zen">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Te han invitado a un workspace · ZenCalendar</title>
+<meta name="description" content="Un calendario compartido para apuntar planes y tareas juntos. Toca para entrar.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#FCFBFE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16131F" media="(prefers-color-scheme: dark)">
+<!-- la vista previa de WhatsApp y compañía: la página es estática, así que es la misma para todos los enlaces -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ZenCalendar">
+<meta property="og:locale" content="es_ES">
+<meta property="og:title" content="Te han invitado a un workspace en ZenCalendar">
+<meta property="og:description" content="Un calendario compartido para apuntar planes y tareas juntos. Toca para entrar.">
+<meta property="og:image" content="https://luckicla.github.io/zencalendar/img/og-invite.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Invitación a un calendario compartido de ZenCalendar">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Te han invitado a un workspace en ZenCalendar">
+<meta name="twitter:description" content="Un calendario compartido para apuntar planes y tareas juntos. Toca para entrar.">
+<meta name="twitter:image" content="https://luckicla.github.io/zencalendar/img/og-invite.png">
+<link rel="icon" href="../img/favicon-32.png">
+<link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+<script>
+  // diseño Zen / Dot: el mismo que eligió en la web (zc.site.design) o ?design=dot
+  (function () { try { var q = new URLSearchParams(location.search).get('design'); var d = q || localStorage.getItem('zc.site.design') || 'zen'; if (q) localStorage.setItem('zc.site.design', q); document.documentElement.dataset.design = d === 'dot' ? 'dot' : 'zen'; } catch (e) {} })();
+</script>
+<style>
+  @font-face { font-family: "ZenDot"; src: url("../fonts/ZenDot.woff") format("woff"); font-display: swap; }
+  :root {
+    color-scheme: light dark;
+    --paper: #FCFBFE; --paper-2: #F4F1FA; --ink: #2B2440; --pencil: #665F7A; --rule: #E3DFEC;
+    --lav: #9F8DFF; --lav-ink: #5A45D4; --pink: #F0A6CC; --mint: #7DD3B9; --btn-bg: #2B2440; --btn-fg: #FCFBFE;
+    --font-date: "Bitter", "Rockwell", "Roboto Slab", Georgia, serif;
+    --font-text: "Fira Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --r: 22px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper: #16131F; --paper-2: #211D2E; --ink: #EEEAF8; --pencil: #ADA6C4; --rule: #34304A; --lav-ink: #B9ABFF; --btn-bg: #EEEAF8; --btn-fg: #16131F; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body { min-height: 100dvh; display: grid; place-items: center; padding: max(20px, env(safe-area-inset-top)) 18px max(20px, env(safe-area-inset-bottom));
+    background: var(--paper); color: var(--ink); font: 400 1rem/1.55 var(--font-text); -webkit-font-smoothing: antialiased; }
+  main { width: min(440px, 100%); }
+  .page { position: relative; padding: 30px 26px 24px; border-radius: var(--r); background: var(--paper); border: 1px solid var(--rule); border-top: 3px solid var(--ink); box-shadow: 0 24px 60px -30px rgb(43 36 64 / .35); text-align: center; overflow: hidden; }
+  .rings { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 120px; }
+  .rings i { width: 10px; height: 10px; border-radius: 50%; background: var(--paper-2); box-shadow: inset 0 0 0 2px var(--rule); }
+  .logo { width: 64px; height: 64px; margin: 14px auto 14px; display: block; }
+  .k { margin: 0; color: var(--pencil); font-size: .95rem; }
+  h1 { margin: 4px 0 8px; font: 700 clamp(1.6rem, 1.2rem + 2vw, 2.1rem)/1.15 var(--font-date); letter-spacing: -.01em; }
+  .lead { margin: 0 auto 22px; max-width: 34ch; color: var(--pencil); }
+  .strip { display: flex; justify-content: center; gap: 6px; margin: 0 0 22px; }
+  .strip i { width: 34px; height: 8px; border-radius: 99px; background: var(--lav); }
+  .strip i:nth-child(2) { background: var(--mint); } .strip i:nth-child(3) { background: var(--pink); }
+  .acts { display: grid; gap: 10px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 0 20px; border-radius: 999px; border: 0; font: 600 1.02rem/1 var(--font-text); text-decoration: none; cursor: pointer; transition: transform .15s ease, background .15s ease; }
+  .btn:active { transform: scale(.98); }
+  .btn svg { width: 20px; height: 20px; flex: none; }
+  .pri { background: var(--btn-bg); color: var(--btn-fg); }
+  .sec { background: var(--paper-2); color: var(--ink); }
+  .ghost { background: transparent; color: var(--lav-ink); min-height: 44px; }
+  .btn:focus-visible { outline: 3px solid var(--lav); outline-offset: 3px; }
+  .status { min-height: 1.5em; margin: 14px 0 0; font-size: .88rem; color: var(--pencil); }
+  .steps { margin: 18px 0 0; padding: 14px 16px 0; border-top: 1px dashed var(--rule); text-align: left; font-size: .88rem; color: var(--pencil); }
+  .steps ol { margin: 6px 0 0; padding-left: 20px; }
+  .steps b { color: var(--ink); }
+  .bad h1 { font-size: 1.5rem; }
+  footer { margin-top: 16px; text-align: center; font-size: .82rem; color: var(--pencil); }
+  footer a { color: var(--lav-ink); }
+  .dz { background: none; border: 0; color: var(--pencil); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  [hidden] { display: none !important; }
+
+  /* ---------- Dot ---------- */
+  html[data-design="dot"] { --paper: #FFFFFF; --paper-2: #F2F2F2; --ink: #000; --pencil: #6A6A6A; --rule: #DADADA; --acc: #D71921; --btn-bg: #000; --btn-fg: #fff; --lav-ink: #000; --r: 28px; }
+  @media (prefers-color-scheme: dark) { html[data-design="dot"] { --paper: #000; --paper-2: #141414; --ink: #fff; --pencil: #8F8F8F; --rule: #2A2A2A; --btn-bg: #fff; --btn-fg: #000; --lav-ink: #fff; } }
+  html[data-design="dot"] body { background: var(--paper) radial-gradient(circle, var(--rule) 1.1px, transparent 1.4px) 0 0 / 16px 16px; font-family: "Space Grotesk", "Archivo", "Segoe UI", system-ui, sans-serif; }
+  html[data-design="dot"] .page { border: 1px solid var(--rule); border-top: 1px solid var(--rule); box-shadow: none; background: color-mix(in srgb, var(--paper) 88%, transparent); backdrop-filter: blur(10px); }
+  html[data-design="dot"] .rings, html[data-design="dot"] .strip, html[data-design="dot"] .logo.zen { display: none; }
+  html[data-design="dot"] .logo.dot { display: block; }
+  .logo.dot { display: none; }
+  html[data-design="dot"] .k { font: 400 .78rem/1 "ZenDot", ui-monospace, monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--pencil); }
+  html[data-design="dot"] h1 { font: 400 clamp(1.5rem, 1.1rem + 2vw, 2rem)/1.15 "ZenDot", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; margin: 14px 0 12px; }
+  html[data-design="dot"] h1::after { content: ''; display: block; width: 8px; height: 8px; margin: 14px auto 0; border-radius: 50%; background: var(--acc); }
+  html[data-design="dot"] .pri { border-radius: 999px; }
+  html[data-design="dot"] .sec { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
+  html[data-design="dot"] .btn { font-weight: 500; letter-spacing: .01em; }
+  html[data-design="dot"] .status, html[data-design="dot"] .steps { font-family: inherit; }
+  html[data-design="dot"] .steps { border-top-style: dotted; }
+  @media (prefers-reduced-motion: no-preference) {
+    .page { animation: in .5s cubic-bezier(.2, .9, .3, 1.15) both; }
+    @keyframes in { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+  }
+</style>
+</head>
+<body>
+<main>
+  <section class="page" id="card" aria-live="polite">
+    <div class="rings" aria-hidden="true"><i></i><i></i></div>
+    <img class="logo zen" src="../img/logo.svg" alt="" width="64" height="64">
+    <svg class="logo dot" viewBox="0 0 24 24" width="64" height="64" aria-hidden="true"><rect x=".5" y=".5" width="23" height="23" rx="7" fill="currentColor" opacity=".06" stroke="currentColor" stroke-opacity=".2" stroke-width=".4"/><g fill="currentColor"><circle cx="9.4" cy="5" r="1.1"/><circle cx="14.6" cy="5" r="1.1"/><circle cx="6.8" cy="9.2" r=".98"/><circle cx="9.4" cy="9.2" r=".98"/><circle cx="12" cy="9.2" r=".98"/><circle cx="14.6" cy="9.2" r=".98"/><circle cx="17.2" cy="9.2" r=".98"/><circle cx="14.6" cy="11.8" r=".98"/><circle cx="12" cy="14.4" r=".98"/><circle cx="9.4" cy="17" r=".98"/><circle cx="6.8" cy="19.6" r=".98"/><circle cx="9.4" cy="19.6" r=".98"/><circle cx="12" cy="19.6" r=".98"/><circle cx="14.6" cy="19.6" r=".98"/></g><circle cx="17.2" cy="19.6" r=".98" fill="#D71921"/></svg>
+    <div id="ok">
+      <p class="k" data-t="kicker">Te han invitado a</p>
+      <h1 data-t="title">un workspace de ZenCalendar</h1>
+      <div class="strip" aria-hidden="true"><i></i><i></i><i></i></div>
+      <p class="lead" data-t="lead">Un calendario compartido para apuntar planes y tareas juntos. Se guarda para todos.</p>
+      <div class="acts">
+        <a class="btn pri" id="open" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="4"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span data-t="open">Abrir en la app</span></a>
+        <a class="btn sec" id="get" href="../#descargar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 19.5h14"/></svg><span data-t="get">Descargar ZenCalendar</span></a>
+        <a class="btn ghost" id="web" href="../app/"><span data-t="web">Abrir en el navegador</span></a>
+      </div>
+      <p class="status" id="status"></p>
+      <div class="steps" id="steps" hidden>
+        <b data-t="stepsT">¿Aún no tienes la app?</b>
+        <ol><li data-t="s1">Descárgala e instálala.</li><li data-t="s2">Vuelve a tocar el enlace de la invitación.</li><li data-t="s3">Conecta tu cuenta de Google y toca «Entrar».</li></ol>
+      </div>
+    </div>
+    <div id="bad" class="bad" hidden>
+      <p class="k">ZenCalendar</p>
+      <h1 data-t="badT">Este enlace no está completo</h1>
+      <p class="lead" data-t="badL">Pide que te lo vuelvan a mandar entero (o cópialo tal cual, con todo lo que va detrás de «#»).</p>
+      <div class="acts"><a class="btn sec" href="../" data-t="home">Conocer ZenCalendar</a></div>
+    </div>
+  </section>
+  <footer><span data-t="safe">Gratis, sin anuncios y de código abierto.</span> <a href="../" data-t="more">Qué es ZenCalendar</a> · <button class="dz" id="dz" type="button">Dot</button></footer>
+</main>
+<script>
+(function () {
+  'use strict';
+  var T = {
+    es: {},
+    ca: { kicker: "T'han convidat a", title: 'un workspace de ZenCalendar', lead: 'Un calendari compartit per apuntar plans i tasques junts. Es desa per a tothom.', open: "Obrir a l'app", get: 'Descarregar ZenCalendar', web: 'Obrir al navegador', stepsT: "Encara no tens l'app?", s1: 'Descarrega-la i instal·la-la.', s2: "Torna a tocar l'enllaç de la invitació.", s3: 'Connecta el teu compte de Google i toca «Entrar».', badT: 'Aquest enllaç no està complet', badL: "Demana que te'l tornin a enviar sencer (o copia'l tal qual, amb tot el que va darrere de «#»).", home: 'Conèixer ZenCalendar', safe: 'Gratis, sense anuncis i de codi obert.', more: 'Què és ZenCalendar', trying: "Obrint ZenCalendar…", notOpened: "Si no s'ha obert, toca «Obrir a l'app» o descarrega-la.", docTitle: "T'han convidat a un workspace · ZenCalendar" },
+    en: { kicker: "You've been invited to", title: 'a ZenCalendar workspace', lead: "A shared calendar to add plans and tasks together. It's saved for everyone.", open: 'Open in the app', get: 'Download ZenCalendar', web: 'Open in the browser', stepsT: "Don't have the app yet?", s1: 'Download and install it.', s2: 'Tap the invite link again.', s3: 'Connect your Google account and tap “Join”.', badT: "This link isn't complete", badL: 'Ask them to send it again in full (or copy it exactly, with everything after the “#”).', home: 'Discover ZenCalendar', safe: 'Free, no ads and open source.', more: 'What is ZenCalendar', trying: 'Opening ZenCalendar…', notOpened: "If it didn't open, tap “Open in the app” or download it.", docTitle: "You've been invited to a workspace · ZenCalendar" },
+  };
+  var ES = { trying: 'Abriendo ZenCalendar…', notOpened: 'Si no se ha abierto, toca «Abrir en la app» o descárgala.' };
+  var l = (navigator.languages && navigator.languages[0]) || navigator.language || 'es';
+  var lang = /^ca\b/i.test(l) ? 'ca' : /^(es|gl|eu)\b/i.test(l) ? 'es' : /^en\b/i.test(l) ? 'en' : 'es';
+  document.documentElement.lang = lang;
+  var tr = function (k) { return (T[lang] && T[lang][k]) || ES[k] || ''; };
+  if (lang !== 'es') {
+    [].forEach.call(document.querySelectorAll('[data-t]'), function (el) { var v = T[lang][el.dataset.t]; if (v) el.textContent = v; });
+    document.title = T[lang].docTitle;
+  }
+
+  // el código: #<wid>.<token> (también ?join= o #join=)
+  var raw = decodeURIComponent((location.hash || '').replace(/^#/, '').replace(/^join=/, '')) || new URLSearchParams(location.search).get('join') || '';
+  var m = raw.match(/^([A-Za-z0-9_-]{1,64})\.([A-Za-z0-9_~-]{1,128})$/);
+  if (!m) { document.getElementById('ok').hidden = true; document.getElementById('bad').hidden = false; }
+  var code = m ? m[0] : '';
+
+  var ua = navigator.userAgent || '';
+  var android = /Android/i.test(ua), windows = /Windows NT/i.test(ua);
+  var REL = 'https://github.com/luckicla/zencalendar/releases/latest/download/';
+  var here = location.href.split('#')[0].split('?')[0];
+  var fallback = here + '?noapp=1#' + code;
+  var appURL = android
+    ? 'intent://join/#' + code + ';scheme=zencalendar;package=com.luckicla.zencalendar;S.browser_fallback_url=' + encodeURIComponent(fallback) + ';end'
+    : 'zencalendar://join/#' + code;
+  var open = document.getElementById('open'), get = document.getElementById('get'), web = document.getElementById('web');
+  var status = document.getElementById('status'), steps = document.getElementById('steps');
+  open.href = appURL;
+  web.href = '../app/?join=' + encodeURIComponent(code);
+  if (android) get.href = REL + 'ZenCalendar.apk';
+  else if (windows) get.href = REL + 'ZenCalendar-Instalador.exe';
+  else open.hidden = true; // (en iPhone, Mac o Linux no hay app: el navegador)
+  if (!android && !windows) { web.classList.remove('ghost'); web.classList.add('pri'); }
+
+  function tryApp() {
+    if (!code || open.hidden) return;
+    status.textContent = tr('trying');
+    var t0 = Date.now();
+    location.href = appURL;
+    setTimeout(function () {
+      // si seguimos aquí y la página no se escondió, seguramente no está instalada
+      if (!document.hidden && Date.now() - t0 < 4000) { status.textContent = tr('notOpened'); steps.hidden = false; }
+    }, 1800);
+  }
+  open.addEventListener('click', function (e) { e.preventDefault(); tryApp(); });
+  // a la primera, se intenta solo (salvo si venimos de vuelta porque no estaba instalada)
+  var noapp = /[?&]noapp=1/.test(location.search);
+  if (code && !noapp) setTimeout(tryApp, 350);
+  if (noapp) { status.textContent = tr('notOpened'); steps.hidden = false; }
+
+  // Zen / Dot
+  var dz = document.getElementById('dz');
+  var paintDz = function () { dz.textContent = document.documentElement.dataset.design === 'dot' ? 'Zen' : 'Dot'; };
+  paintDz();
+  dz.addEventListener('click', function () {
+    var d = document.documentElement.dataset.design === 'dot' ? 'zen' : 'dot';
+    document.documentElement.dataset.design = d;
+    try { localStorage.setItem('zc.site.design', d); } catch (e) {}
+    paintDz();
+  });
+})();
+</script>
+</body>
+</html>

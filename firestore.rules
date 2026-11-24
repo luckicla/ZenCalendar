@@ -1,0 +1,164 @@
+rules_version = '2';
+
+// ZenCalendar · reglas de Firestore para los workspaces compartidos.
+// Se pegan tal cual en la consola de Firebase → Firestore Database → Reglas (docs/FIREBASE-SETUP.md).
+//
+// Quién puede qué:
+//  - Un workspace solo lo ven sus miembros (y quien tiene su correo en la lista de invitados).
+//  - Todos los miembros añaden, cambian y borran eventos y tareas (los borrados son «lápidas»).
+//  - Solo el dueño cambia el nombre, el color, el emoji y el fondo, invita por correo, cambia el enlace,
+//    echa a alguien y borra el workspace. Cada uno puede salirse cuando quiera.
+//  - Para entrar con un enlace hay que saber su clave (inviteToken): quien entra deja en joins/{su uid}
+//    la clave y, en la misma escritura, se añade a members/memberIds. Cambiar la clave invalida los enlaces viejos.
+//  - Nadie puede listar los workspaces de otros ni leer nada sin haber iniciado sesión con Google.
+// web/js/core/ws-mock.js repite estas reglas para las pruebas: si cambias algo aquí, cámbialo también allí.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function myMail() { return request.auth.token.get('email', ''); }
+    function mailOk() { return request.auth.token.get('email_verified', false) == true && myMail() != ''; }
+    function wsPath(wid) { return /databases/$(database)/documents/workspaces/$(wid); }
+    function ws(wid) { return get(wsPath(wid)).data; }
+    function isMember(wid) { return signedIn() && me() in ws(wid).memberIds; }
+    function isOwner(wid) { return signedIn() && ws(wid).owner == me(); }
+    function invitedTo(d) { return signedIn() && mailOk() && myMail() in d.get('invitedEmails', []); }
+
+    function isColor(v) { return v is string && v.matches('^#[0-9a-fA-F]{6}$'); }
+    function shortText(v, n) { return v is string && v.size() <= n; }
+
+    function validMember(m) {
+      return m is map && m.keys().hasOnly(['name', 'email', 'photo', 'joined'])
+        && shortText(m.get('name', ''), 80) && shortText(m.get('email', ''), 200) && shortText(m.get('photo', ''), 1000);
+    }
+
+    function validWs(d) {
+      return d.keys().hasOnly(['name', 'color', 'emoji', 'bg', 'owner', 'members', 'memberIds', 'invitedEmails', 'inviteToken', 'createdAt', 'updatedAt'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 60
+        && isColor(d.color)
+        && shortText(d.emoji, 16)
+        && d.bg is map && d.bg.keys().hasOnly(['kind', 'value']) && d.bg.kind in ['none', 'color', 'image', 'anim'] && shortText(d.bg.get('value', ''), 64)
+        && d.owner is string
+        && d.memberIds is list && d.memberIds.size() <= 50
+        && d.members is map && d.members.keys().toSet() == d.memberIds.toSet()
+        && d.invitedEmails is list && d.invitedEmails.size() <= 50
+        && d.inviteToken is string && d.inviteToken.size() >= 16 && d.inviteToken.size() <= 64;
+    }
+
+    function validItem(d, id, wid) {
+      return d.keys().hasOnly(['id', 'kind', 'title', 'notes', 'location', 'color', 'emoji', 'allDay', 'start', 'end', 'rrule', 'exdates',
+          'recurrenceOf', 'recurrenceDate', 'reminders', 'checklist', 'done', 'doneAt', 'doneDates', 'alarm', 'alarmTime',
+          'created', 'deleted', 'createdBy', 'updatedBy', 'assignee', 'updated'])
+        && d.id == id
+        && d.createdBy is string && d.updatedBy == me() && d.updated == request.time
+        && d.get('deleted', false) is bool
+        && d.get('kind', 'event') in ['event', 'task']
+        && shortText(d.get('title', ''), 500) && shortText(d.get('notes', ''), 5000) && shortText(d.get('location', ''), 500)
+        && shortText(d.get('start', ''), 16) && shortText(d.get('end', ''), 16)
+        && d.get('exdates', []) is list && d.get('exdates', []).size() <= 1000
+        && d.get('reminders', []) is list && d.get('reminders', []).size() <= 20
+        && d.get('checklist', []) is list && d.get('checklist', []).size() <= 200
+        && (d.get('assignee', null) == null || d.get('assignee', null) in ws(wid).memberIds);
+    }
+
+    match /workspaces/{wid} {
+      function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+      function membersChanged() { return resource.data.members.diff(request.resource.data.members).affectedKeys(); }
+      function removed() { return resource.data.memberIds.toSet().difference(request.resource.data.memberIds.toSet()); }
+      function joinPath() { return /databases/$(database)/documents/workspaces/$(wid)/joins/$(me()); }
+
+      // el dueño: nombre, color, emoji, fondo, invitados, enlace, sus datos y echar (nunca añadir a nadie a mano)
+      function ownerEdit() {
+        return resource.data.owner == me()
+          && me() in request.resource.data.memberIds
+          && request.resource.data.memberIds.toSet().difference(resource.data.memberIds.toSet()).size() == 0
+          && changed().hasOnly(['name', 'color', 'emoji', 'bg', 'invitedEmails', 'inviteToken', 'members', 'memberIds', 'updatedAt'])
+          && membersChanged().difference(removed().union([me()].toSet())).size() == 0
+          && validMember(request.resource.data.members[me()]);
+      }
+      // un miembro se va (el dueño no: él lo borra)
+      function leaving() {
+        return resource.data.owner != me() && me() in resource.data.memberIds
+          && changed().hasOnly(['members', 'memberIds', 'updatedAt'])
+          && request.resource.data.memberIds.toSet() == resource.data.memberIds.toSet().difference([me()].toSet())
+          && membersChanged().hasOnly([me()]) && !(me() in request.resource.data.members);
+      }
+      // alguien entra: con la clave del enlace (joins/{uid} en la misma escritura) o porque su correo está invitado
+      function joining() {
+        return !(me() in resource.data.memberIds)
+          && changed().hasOnly(['members', 'memberIds', 'invitedEmails', 'updatedAt'])
+          && request.resource.data.memberIds.toSet() == resource.data.memberIds.toSet().union([me()].toSet())
+          && request.resource.data.memberIds.size() == resource.data.memberIds.size() + 1
+          && membersChanged().hasOnly([me()]) && validMember(request.resource.data.members[me()])
+          && (
+            (existsAfter(joinPath()) && getAfter(joinPath()).data.token == resource.data.inviteToken
+              && request.resource.data.invitedEmails == resource.data.invitedEmails)
+            || (invitedTo(resource.data)
+              && request.resource.data.invitedEmails.toSet() == resource.data.invitedEmails.toSet().difference([myMail()].toSet()))
+          );
+      }
+      // un invitado por correo dice que no
+      function declining() {
+        return !(me() in resource.data.memberIds) && invitedTo(resource.data)
+          && changed().hasOnly(['invitedEmails', 'updatedAt'])
+          && request.resource.data.invitedEmails.toSet() == resource.data.invitedEmails.toSet().difference([myMail()].toSet());
+      }
+
+      allow get, list: if signedIn() && (me() in resource.data.memberIds || invitedTo(resource.data));
+      allow create: if signedIn() && validWs(request.resource.data)
+        && request.resource.data.owner == me()
+        && request.resource.data.memberIds == [me()]
+        && validMember(request.resource.data.members[me()])
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if signedIn() && validWs(request.resource.data)
+        && request.resource.data.owner == resource.data.owner
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && (ownerEdit() || leaving() || joining() || declining());
+      allow delete: if signedIn() && resource.data.owner == me();
+
+      // eventos y tareas: todos los miembros (con lápidas para lo borrado; borrar de verdad, solo el dueño)
+      match /items/{id} {
+        allow read: if isMember(wid);
+        allow create: if isMember(wid) && validItem(request.resource.data, id, wid) && request.resource.data.createdBy == me();
+        allow update: if isMember(wid) && validItem(request.resource.data, id, wid) && request.resource.data.createdBy == resource.data.createdBy;
+        allow delete: if isOwner(wid);
+      }
+
+      // la foto de fondo (comprimida, < 900 KB)
+      match /assets/{name} {
+        allow read: if isMember(wid);
+        allow create, update: if isOwner(wid) && name == 'bg'
+          && request.resource.data.keys().hasOnly(['data', 'updatedAt'])
+          && request.resource.data.data is string && request.resource.data.data.size() < 900000
+          && request.resource.data.data.matches('data:image/(webp|jpeg|png);base64,.+')
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if isOwner(wid);
+      }
+
+      // lo que ve quien abre un enlace antes de entrar (nombre, color…): solo con la clave buena
+      match /invite/{tok} {
+        allow get: if signedIn() && exists(wsPath(wid)) && tok == ws(wid).inviteToken;
+        allow create, update: if signedIn() && getAfter(wsPath(wid)).data.owner == me() && tok == getAfter(wsPath(wid)).data.inviteToken
+          && request.resource.data.keys().hasOnly(['name', 'color', 'emoji', 'bg', 'ownerName', 'count'])
+          && shortText(request.resource.data.name, 60) && isColor(request.resource.data.color)
+          && shortText(request.resource.data.emoji, 16) && shortText(request.resource.data.ownerName, 80)
+          && request.resource.data.count is int && request.resource.data.bg is map;
+        allow delete: if isOwner(wid);
+      }
+
+      // la «llave» de quien entra con un enlace
+      match /joins/{uid} {
+        allow get: if signedIn() && (uid == me() || isOwner(wid));
+        allow create, update: if signedIn() && uid == me()
+          && request.resource.data.keys().hasOnly(['token', 'name', 'email', 'photo', 'at'])
+          && request.resource.data.token == ws(wid).inviteToken
+          && shortText(request.resource.data.name, 80) && shortText(request.resource.data.email, 200) && shortText(request.resource.data.photo, 1000)
+          && request.resource.data.at == request.time;
+        allow delete: if signedIn() && (uid == me() || isOwner(wid));
+      }
+    }
+  }
+}

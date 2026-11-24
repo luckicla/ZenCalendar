@@ -15,6 +15,8 @@
     <string name="stop">Parar</string>
     <string name="alarm">Alarma</string>
     <string name="channel_alarms">Alarmas</string>
+    <string name="channel_ws">Workspaces</string>
+    <string name="channel_ws_desc">Lo que cambian los demás en tus workspaces</string>
     <string name="channel_alarms_desc">Los eventos con alarma: suenan como un despertador aunque el móvil esté en silencio</string>
     <string name="pick_image">Elige una imagen</string>
     <string name="take_photo">Hacer una foto</string>

@@ -29,6 +29,8 @@ public class AlarmReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context c, Intent intent) {
         String action = intent.getAction();
         if (action == null) return;
+        // (aviso de un workspace quitado: se empieza de cero)
+        if (Workspaces.ACTION_DISMISS.equals(action)) { Workspaces.opened(c, intent.getStringExtra("wid"), false); return; }
         JSONObject item;
         try { item = new JSONObject(intent.getStringExtra("item")); } catch (Exception e) { return; }
         int code = intent.getIntExtra("code", Alarms.code(item.optString("id")));

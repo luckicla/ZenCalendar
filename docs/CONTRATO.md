@@ -384,3 +384,126 @@ con un Google Calendar de mentira en memoria (y `available()` da `true`). Sin cu
 un calendario de solo lectura y festivos/cumpleaños desactivados, y una tercera para «Añadir cuenta»). Formato de cuentas y
 lo que se puede simular (`setAuthError`, `offline`, `delay`, `addEvent`, `updateEvent`, `deleteEvent`, `denyAdd`, `pick`,
 `expireSyncTokens`, `fail`…) en la cabecera de `web/js/core/gcal-mock.js`. `ZC.gcal._mock(false)` lo apaga.
+
+## Workspaces: lo nativo (1.4.0)
+
+El diseño completo está en `docs/WORKSPACES.md`. Aquí, lo que Android y Windows le dan a la página.
+
+### Abrir la app con un enlace de invitación
+- Enlace: `zencalendar://join/#<wid>.<token>`. También vale `zencalendar://join?code=<wid>.<token>` (o `?join=`).
+  El código tiene que cumplir `^[A-Za-z0-9_-]{1,64}\.[A-Za-z0-9_~-]{1,128}$` (si no, se ignora el enlace).
+- Llega como `ZC.platform.onOpen({ action: 'join', code: '<wid>.<token>' })`, también si la app estaba cerrada
+  (se guarda hasta que la página escucha, como lo de las notificaciones).
+- Android: `intent-filter` `VIEW` + `BROWSABLE` con `scheme="zencalendar" host="join"` en `MainActivity`; la página
+  `docs/w/` lo abre con `intent://join/#<código>;scheme=zencalendar;package=com.luckicla.zencalendar;S.browser_fallback_url=…;end`.
+  Al volver desde «Recientes» no se repite.
+- Windows: el instalador registra el protocolo (`build.protocols` en `desktop/package.json`) y la app también al
+  arrancar (`app.setAsDefaultProtocolClient`, que en la portable apunta al `.exe` de verdad). El enlace llega por la
+  línea de órdenes: al arrancar o, con la app ya abierta, por `second-instance`.
+
+### Aviso de un workspace tocado
+- `ZC.platform.onOpen({ action: 'workspace', wid, id: wid })` → la página cambia a ese workspace (`ZC.ws.switchTo(wid)`).
+
+### `ZC.platform.wsCreds(creds | null)` → credenciales para los avisos con la app cerrada
+La página las manda al conectarse a Firebase y cada vez que cambien (otra cuenta, idioma); `null` al salir de la cuenta
+o al desconectar Google (entonces se borran y se quitan los avisos de workspaces que queden).
+```js
+{
+  apiKey, projectId,            // los de ZC.config (firebaseApiKey, firebaseProjectId)
+  uid,                          // auth.currentUser.uid
+  refreshToken,                 // auth.currentUser.refreshToken
+  idToken, expiresAt,           // (opcional) el ID token que ya tiene y cuándo caduca, en ms: ahorra una renovación
+  since,                        // (opcional) ms: avisar de lo cambiado desde entonces en los workspaces aún no vistos
+                                //   (por defecto, desde que llegan las credenciales)
+  strings: {                    // (opcional) textos en el idioma de la app; {who} = quién, {title} = título, {n} = número
+    added: '{who}: {title}', changed: '{who} ha cambiado «{title}»', deleted: '{who} ha borrado «{title}»',
+    assigned: '{who} te ha asignado «{title}»', done: '{who} ha completado «{title}»', more: 'y {n} más',
+    someone: 'Alguien', untitled: '(sin título)',
+    channel: 'Workspaces', channelDesc: 'Lo que cambian los demás en tus workspaces',   // (Android: el canal)
+  },
+}
+```
+- Android: `ZCAndroid.wsCreds(JSON.stringify(creds))` / `ZCAndroid.wsCreds('')`. Se guardan cifradas (AES-GCM con una
+  clave del Android Keystore) en las preferencias privadas de la app (sin copia de seguridad: `allowBackup="false"`).
+- Windows: `zcDesktop.wsCreds(creds)` / `zcDesktop.wsCreds(null)`. Cifradas con `safeStorage` en `workspaces.bin`.
+- Lo que hace el nativo con ellas (Android: `JobScheduler` cada ~15 min con red, persistente tras reiniciar; Windows:
+  cada 5 min desde el proceso principal, y a los 30 s de arrancar): renueva el ID token
+  (`POST securetoken.googleapis.com/v1/token?key=…`), busca los workspaces con `memberIds array-contains uid`
+  (`runQuery` en `workspaces`, como mucho 30) y en cada uno `runQuery` de `items` con `updated > lo último visto`, en
+  orden, de 50 en 50. Los que tienen `updatedBy` distinto de `uid` dan una línea; el nombre sale de
+  `members[updatedBy].name` (o la parte del correo antes de la @). Una notificación por workspace (título: emoji +
+  nombre; Android: canal «Workspaces», estilo bandeja de entrada con las últimas 6 líneas, que se van juntando hasta
+  que se toca o se quita; Windows: las últimas 4 líneas y «y N más»).
+  Qué texto: `deleted: true` → `deleted`; recién creado (fecha de creación del documento ≈ `updated`) con
+  `assignee == uid` → `assigned`; recién creado → `added`; tarea con `done: true` → `done`; si no, `changed`.
+- **Con la app a la vista no avisa el nativo** (solo apunta lo visto): avisa la página con sus toasts. En Android y
+  Windows la página **no** debe sacar notificaciones del sistema por cambios de workspaces (las saca el nativo, también
+  con la ventana de Windows escondida en la bandeja aunque la página siga viva).
+- Sesión de Firebase caducada o revocada (`TOKEN_EXPIRED`, `INVALID_REFRESH_TOKEN`, `USER_DISABLED`…): se olvidan
+  las credenciales y se para la comprobación hasta que la página mande otras.
+- Lo necesario en las reglas: que un miembro pueda hacer esa consulta de `workspaces` (`memberIds array-contains`) y leer
+  `items`. `updated` tiene que ser un `serverTimestamp()` (las consultas filtran y ordenan por él: índice de un solo
+  campo, el que Firestore crea solo).
+
+### `ZC.platform.share({ title, text, url, app })`
+- `app: 'whatsapp'`: Android abre WhatsApp directamente (`com.whatsapp`, si no `com.whatsapp.w4b`, si no `wa.me` en el
+  navegador); Windows abre `https://wa.me/?text=…`. `app: 'email'` (Windows): `mailto:`. Sin `app`: Android, la hoja de
+  compartir del sistema; Windows, copia al portapapeles y devuelve `'copied'`.
+- Android: `ZCAndroid.shareTo(JSON.stringify({ title, text, url, app }))` (el `ZCAndroid.share(title, text)` de antes
+  sigue igual). El `url` se añade al final de `text` si no está ya.
+- Windows: `await zcDesktop.share({ title, text, url, app })` → `'whatsapp' | 'email' | 'copied' | false`.
+
+## Workspaces: el núcleo web (1.4.0)
+
+Encargo en `docs/WORKSPACES.md`; reglas en `firestore.rules`; configuración en `docs/FIREBASE-SETUP.md`.
+Núcleo en `web/js/core/ws.js` (se carga después de `gcal.js`); `web/js/core/ws-mock.js` es un Firebase simulado
+(Auth + Firestore en memoria, con las mismas reglas portadas a JS) que solo carga `ZC.ws._mock()` y las pruebas.
+
+### `ZC.ws`
+- `available()` → hay `firebaseApiKey/AppId/ProjectId` en `ZC.config` (y no es el widget). Si no, no hace nada.
+- `state()` → `{ available, signedIn, user: { uid, name, email, photo }, connecting, error, current, count, invites }`.
+- `await connect()` → carga el SDK (v10, `import()` de gstatic) y entra en Firebase con el token de Google de `ZC.drive`
+  (`ZC.drive._token(interactive)`, nuevo); en la web, si Drive no está conectado, con la ventanita de Firebase. En Android
+  y Windows, sin Drive conectado, conecta primero Google (`ZC.drive.connect()`). `await signOut()`.
+- `list()` · `get(wid)` · `current()` (null = mi calendario) · `await switchTo(wid | null)` · `setDim(on)` / `dim()`
+  (ver también lo tuyo atenuado) · `members(wid)` · `isOwner(wid)` · `user()`.
+  Cada workspace: `{ id, name, color, emoji, bg: { kind: 'none'|'color'|'image'|'anim', value }, owner, isOwner,
+  members: [{ uid, name, email, photo, joined, owner }], memberIds, invitedEmails, inviteToken, createdAt, updatedAt }`.
+- `await create({ name, color, emoji, bg })` · `await update(wid, patch)` (dueño) · `await setBackground(wid, file | dataURL | null)`
+  (la reduce a 1600 px y < 600 KB) · `bgURL(wid)` (dataURL o null; si no está, la baja y avisa con `change`) · `await bgData(wid)`.
+- `inviteLink(wid)` → `https://luckicla.github.io/zencalendar/w/#<wid>.<token>` · `await regenerateLink(wid)` ·
+  `await inviteEmail(wid, email)` · `await uninviteEmail(wid, email)` · `parseCode(texto)` → `{ wid, token } | null`
+  (vale el enlace entero, `#…`, `?join=…` o `zencalendar://join/#…`) · `await peek(code)` (lo que se ve antes de entrar) ·
+  `await join(code)` · `pendingInvites()` · `await acceptInvite(wid)` · `await declineInvite(wid)`.
+- Extra en Firestore (además de lo de `docs/WORKSPACES.md`): `workspaces/{wid}/invite/{token}` = `{ name, color, emoji, bg,
+  ownerName, count }`, lo que ve quien abre un enlace antes de entrar (solo se puede leer con la clave buena); el dueño lo
+  cambia con el nombre/color/fondo y al cambiar el enlace. La lápida de un item lleva `title` (para el aviso).
+- `await leave(wid)` (el dueño no) · `await removeMember(wid, uid)` (y cambia el enlace) · `await remove(wid)` (dueño: borra todo).
+- `unread(wid?)` · `markSeen(wid)` · `on('change' | 'state' | 'items' | 'notice', fn)`.
+  `notice`: `{ kind: 'add'|'edit'|'delete'|'assign'|'done'|'invite'|'removed'|'error', wid, id, who, whoId, title, ws, here, hidden }`
+  (solo lo que cambian los demás; la interfaz enseña el toast y, solo en la web y con la pestaña escondida, una notificación).
+- Errores con `message` ya escrito para enseñar (en español; la interfaz lo pasa por `t()`).
+- Las credenciales para los avisos nativos (`ZC.platform.wsCreds`, con `strings` traducidos) se mandan al entrar y al
+  cambiar de idioma (`ZC.ws.refreshCreds()`), y `null` al salir.
+
+### `ZC.store` con workspaces
+- Los items de los workspaces viven en una capa en memoria (nunca en IndexedDB, Drive ni `exportJSON()`); cada workspace es
+  un calendario `{ id: 'ws:<wid>', name, color, emoji, wsId, source: 'ws', order < 0 }` y cada item lleva
+  `calendarId: 'ws:<wid>'`, `createdBy`, `updatedBy`, `assignee`.
+- `events(scope)`, `calendars(scope)`, `occurrences(from, to, { scope })`: `'view'` (por defecto: en un workspace, solo él, y
+  con `dim` también lo tuyo, con `dim: true` en las apariciones), `'personal'` y `'all'` (lo tuyo y todos los workspaces).
+  Los avisos (`ZC.reminders`) usan `'all'`; los widgets, `'personal'`; `ZC.gcal` mira `calendars('personal')`.
+- `saveEvent/deleteEvent/saveEventOccurrence/toggleDone` funcionan igual: lo de un calendario `ws:` va a Firestore
+  (`ZC.ws._write`) y se ve al momento (sin conexión se manda al volver). Pasar algo de lo tuyo a un workspace (o al revés)
+  lo rehace con otro id y deja lápida donde estaba. `saveCalendar({ id: 'ws:…' })` cambia nombre/color si eres el dueño;
+  `deleteCalendar('ws:…')` no hace nada.
+- `defaultCalendarId()` (en un workspace, el workspace) · `inWorkspace()` → wid | null · `isWsId(id)` · `_wsSet(…)` (de ZC.ws).
+- `ZC.ai`: en un workspace, lo que crea va al workspace.
+
+### `ZC.platform` (web)
+- `share({ title, text, url, app })` → Android `ZCAndroid.shareTo(json)`, Windows `zcDesktop.share(o)`; en la web,
+  `app: 'whatsapp'` → `wa.me`, `'email'` → `mailto:`, si no `navigator.share` o copiar.
+- `wsCreds(c | null)` → `ZCAndroid.wsCreds(json | '')` / `zcDesktop.wsCreds(c | null)` (en la web no hace nada).
+- `notify({ title, body, tag, data })` → solo en la web (Notification / service worker).
+- Web: `app/?join=<código>` (o `#join=`) → `onOpen({ action: 'join', code })`. La interfaz atiende también
+  `{ action: 'workspace', wid }`.

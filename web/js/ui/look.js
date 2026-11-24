@@ -279,7 +279,10 @@
     imgId = id; imgEl = null; imgPal = null;
     if (!id) return;
     try {
-      const url = await ZC.store.blobURL(id);
+      // 'ws:<wid>:<versión>' = la foto de fondo de un workspace (la da ZC.ws)
+      const wsImg = String(id).startsWith('ws:') ? String(id).split(':')[1] : null;
+      const url = wsImg ? (ZC.ws && (ZC.ws.bgURL(wsImg) || await ZC.ws.bgData(wsImg).catch(() => null))) : await ZC.store.blobURL(id);
+      if (!url && wsImg) imgId = null;
       if (!url) return;
       const im = new Image();
       await new Promise((res, rej) => { im.onload = res; im.onerror = rej; im.src = url; });
@@ -288,12 +291,61 @@
     } catch (e) { console.warn('fondo', e); }
   }
 
+  // ---------- aspecto de un workspace ----------
+  // En un workspace el aspecto es: lo tuyo + lo del workspace (su color y su fondo, igual para todos) + lo que
+  // tú le hayas retocado a ese workspace (prefs.wsLook[wid], solo la diferencia). Al salir, lo tuyo tal cual.
+  let userLook = {}, scope = null;   // scope: { wid, defaults: base => patch }
+  const scopeBase = () => { const b = { ...LOOK0, ...userLook }; return scope ? { ...b, ...(scope.defaults(b) || {}) } : b; };
+  const wsOwn = () => (scope && ((ZC.store.getPrefs() || {}).wsLook || {})[scope.wid]) || {};
+  function compose() { L = scope ? { ...scopeBase(), ...wsOwn() } : { ...LOOK0, ...userLook }; }
+
   function save() {
     clearTimeout(saveT);
-    saveT = setTimeout(() => { saveT = 0; try { ZC.store.setPrefs({ look: { ...L } }); } catch (e) { console.error(e); } }, 250);
+    saveT = setTimeout(() => {
+      saveT = 0;
+      try {
+        if (scope) {
+          // (el diseño Zen/Dot es de toda la app, no de un workspace)
+          const base = scopeBase(), diff = {};
+          for (const k of Object.keys(L)) if (k !== 'design' && JSON.stringify(L[k]) !== JSON.stringify(base[k])) diff[k] = L[k];
+          if (String(diff.bgImage || '').startsWith('ws:')) delete diff.bgImage;
+          const all = { ...((ZC.store.getPrefs() || {}).wsLook || {}) };
+          if (Object.keys(diff).length) all[scope.wid] = diff; else delete all[scope.wid];
+          ZC.store.setPrefs({ wsLook: all });
+        } else { userLook = { ...L }; ZC.store.setPrefs({ look: { ...L } }); }
+      } catch (e) { console.error(e); }
+    }, 250);
+  }
+  /** setScope(wid, defaults) entra en el aspecto de un workspace; setScope(null) vuelve al tuyo */
+  async function setScope(wid, defaults) {
+    const key = wid ? wid + JSON.stringify(defaults ? defaults({ ...LOOK0, ...userLook }) : {}) : '';
+    if (key === (scope ? scope.key : '') && !held) return;
+    const was = !!scope;
+    scope = wid ? { wid, defaults: defaults || (() => ({})), key } : null;
+    if (held) { held = null; }
+    compose();
+    if (was !== !!scope && UI.anim()) { root.classList.add('look-swap'); setTimeout(() => root.classList.remove('look-swap'), 520); }
+    await loadImage();
+    apply();
+  }
+  async function resetScope() {
+    if (!scope) return;
+    const all = { ...((ZC.store.getPrefs() || {}).wsLook || {}) };
+    delete all[scope.wid];
+    await ZC.store.setPrefs({ wsLook: all });
+    compose(); await loadImage(); apply();
   }
   function set(patch, { silent } = {}) {
     if (held) { Object.assign(L, patch); apply(); return; }
+    // en un workspace, el diseño Zen/Dot se cambia para toda la app (el color del workspace se recalcula)
+    if (scope && 'design' in patch && patch.design !== L.design) {
+      userLook = { ...userLook, design: patch.design };
+      if (!silent) ZC.store.setPrefs({ look: { ...LOOK0, ...userLook } });
+      const rest = { ...patch }; delete rest.design;
+      compose(); Object.assign(L, rest);
+      apply(); if (!silent && Object.keys(rest).length) save();
+      return;
+    }
     const presetKeys = PRESETS.find(p => p.id === L.preset);
     Object.assign(L, patch);
     // si se toca algo que define el estilo, deja de ser ese estilo
@@ -305,7 +357,8 @@
   function preview(patch) { if (!held) held = JSON.stringify(L); Object.assign(L, patch); apply(); }
   function endPreview() { if (!held) return; L = JSON.parse(held); held = null; apply(); }
   async function load(look) {
-    L = { ...LOOK0, ...(look || {}) };
+    userLook = { ...(look || {}) };
+    compose();
     await loadImage();
     apply();
   }
@@ -319,6 +372,7 @@
   UI.look = {
     THEMES, ACCENTS, BGS, FONTS_UI, FONTS_TITLE, PRESETS, LOOK0,
     get: () => L, palette, scheme, bgKind, effAnim, isDot, apply, set, preview, endPreview, previewing: () => !!held, load, applyPreset,
+    setScope, resetScope, scope: () => (scope ? scope.wid : null), scopeOwn: () => ({ ...wsOwn() }), userLook: () => ({ ...LOOK0, ...userLook }),
     onChange: fn => listeners.push(fn),
     themeIn: (id, sc) => (THEMES[id] || THEMES.nube)[sc],
     color: { mix, readable, textOn, lum, contrast, hex2rgb, rgb2hsl, hsl },
@@ -327,12 +381,12 @@
       const old = L.bgImage;
       const id = await ZC.store.putBlob(blob, { name: 'fondo' + (file.name ? '-' + file.name : '') });
       set({ bgImage: id, bg: 'imagen' });
-      if (old) try { await ZC.store.deleteBlob(old); } catch {}
+      if (old && !String(old).startsWith('ws:') && !(scope && old === userLook.bgImage)) try { await ZC.store.deleteBlob(old); } catch {}
     },
     async removeImage() {
       const old = L.bgImage;
       set({ bgImage: null, bg: L.bg === 'imagen' ? 'theme' : L.bg });
-      if (old) try { await ZC.store.deleteBlob(old); } catch {}
+      if (old && !String(old).startsWith('ws:') && !(scope && old === userLook.bgImage)) try { await ZC.store.deleteBlob(old); } catch {}
     },
     imageURL: () => imgEl ? imgEl.src : '',
   };

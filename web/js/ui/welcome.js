@@ -48,11 +48,12 @@
         html = `<div class="wl-card" data-step="2">
           <div class="wl-art ok">${UI.icon('check', 46)}</div>
           <h1>${t('¡Todo listo!')}</h1>
-          <p class="lead">${t('Tres cosas para sacarle partido:')}</p>
+          <p class="lead">${UI.wsui && UI.wsui.available() ? t('Cuatro cosas para sacarle partido:') : t('Tres cosas para sacarle partido:')}</p>
           <div class="wl-tips stagger">
             <div style="--i:0">${UI.icon('sparkles', 22)}<span><b>${t('Escribe como hablas')}</b><small>${t('«Dentista el martes a las 5» y se apunta solo, con fecha y hora.')}</small></span></div>
             <div style="--i:1">${UI.icon('bolt', 22)}<span><b>${t('Pídeselo al asistente')}</b><small>${UI.touchy() ? t('Toca los destellos de arriba: «¿qué tengo mañana?», o hazle una foto a un cartel.') : t('{m} + K: «¿qué tengo mañana?», «mueve la reunión al jueves»…', { m: mod })}</small></span></div>
             <div style="--i:2">${UI.icon('palette', 22)}<span><b>${t('Hazlo tuyo')}</b><small>${t('Temas, fondos animados, transparencias, letras… todo en Ajustes.')}</small></span></div>
+            ${UI.wsui && UI.wsui.available() ? `<div style="--i:3" class="wl-ws">${UI.icon('users', 22)}<span><b>${t('Compártelo con tus amigos')}</b><small>${t('Arriba, en «Mi calendario», crea un workspace e invita por WhatsApp. Planes y tareas para todos.')}</small></span></div>` : ''}
           </div>
           <div class="wl-acts"><button class="btn ghost" data-go="1">${t('Atrás')}</button><button class="btn pri lg" data-a="done">${t('Empezar a usarlo')}</button></div></div>`;
       }

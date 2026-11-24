@@ -29,6 +29,7 @@
       "main.js",
       "preload.js",
       "google.js",
+      "workspaces.js",
       "package.json"
     ],
     "extraResources": [
@@ -64,6 +65,9 @@
     "portable": {
       "artifactName": "ZenCalendar-Portable.${ext}"
     },
+    "protocols": [
+      { "name": "ZenCalendar", "schemes": ["zencalendar"] }
+    ],
     "copyright": "© 2026 luckicla",
     "afterPack": "build/afterPack.js",
     "publish": [

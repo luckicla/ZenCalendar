@@ -445,5 +445,6 @@
     return Promise.resolve();
   }
 
-  ZC.drive = { available, state, connect, disconnect, sync, on, init, prepare, _fetchBlob };
+  // _token(interactive): el token de Google de la cuenta principal (lo usa ZC.ws para entrar en Firebase)
+  ZC.drive = { available, state, connect, disconnect, sync, on, init, prepare, _fetchBlob, _token: interactive => getToken(interactive) };
 })(typeof window !== 'undefined' ? window : globalThis);
