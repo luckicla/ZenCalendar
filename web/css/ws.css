@@ -341,3 +341,9 @@ html[data-design="dot"] #periodTitle.ws-title { position: relative; padding-righ
   .ws-chip .wsc-tx { display: none; }
   .ws-chip { padding-right: 6px; gap: 3px; }
 }
+
+/* «Mi calendario» con tu foto de Google (o tu inicial) */
+.wsc-me, .wsm-me { overflow: hidden; }
+.wsc-me .me-ph, .wsm-me .me-ph { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wsm-me:has(.me-ph) { border-radius: 50%; }
+.me-ini { font-weight: 700; font-size: .85em; line-height: 1; }

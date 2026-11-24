@@ -82,6 +82,20 @@
     }
     return chip;
   }
+  // «Mi calendario»: tu foto de Google (la de Drive o, si no, la de una cuenta de Google Calendar);
+  // sin foto, tu inicial; sin Google conectado, el muñequito de siempre
+  function me() {
+    let d = {}; try { d = (ZC.drive && ZC.drive.state()) || {}; } catch {}
+    let photo = d.photo || '', name = d.name || d.email || '';
+    if (!photo) { try { const a = ((ZC.gcal && ZC.gcal.accounts && ZC.gcal.accounts()) || []).find(x => x.photo); if (a) { photo = a.photo; name = name || a.name || a.email || ''; } } catch {} }
+    return { photo, name };
+  }
+  function meAvatar(size) {
+    const m = me();
+    const ini = m.name ? esc(m.name.trim().charAt(0).toUpperCase()) : '';
+    if (m.photo) return `<img class="me-ph" src="${esc(m.photo)}" alt="" width="${size}" height="${size}" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('${ini}'))">`;
+    return ini ? `<b class="me-ini">${ini}</b>` : UI.icon('user', size <= 16 ? 16 : 18);
+  }
   function paintChip() {
     const chip = ensureChip(); if (!chip) return;
     const w = curWs();
@@ -91,7 +105,7 @@
     chip.style.setProperty('--wc', w ? w.color : 'var(--a1)');
     chip.setAttribute('aria-label', t('Calendario: {x}. Toca para cambiar', { x: label }));
     chip.title = t('Cambiar de calendario');
-    const html = `<span class="wsc-ic">${w ? badge(w, 24) : `<span class="wsc-me">${UI.icon('user', 16)}</span>`}</span><span class="wsc-tx">${esc(label)}</span>${UI.icon('chevD', 15, 'wsc-chev')}${un ? `<i class="wsc-dot" aria-label="${esc(t('Novedades'))}"></i>` : ''}`;
+    const html = `<span class="wsc-ic">${w ? badge(w, 24) : `<span class="wsc-me">${meAvatar(28)}</span>`}</span><span class="wsc-tx">${esc(label)}</span>${UI.icon('chevD', 15, 'wsc-chev')}${un ? `<i class="wsc-dot" aria-label="${esc(t('Novedades'))}"></i>` : ''}`;
     if (chip._html === html) return;
     chip._html = html;
     const ghost = chip._ghost && chip._ghost.isConnected ? chip._ghost : null;
@@ -200,7 +214,7 @@
   function switcherHTML() {
     const s = st(), w = curWs();
     const rows = [];
-    rows.push(`<button type="button" class="wsm-row ${w ? '' : 'on'}" data-wsgo="">${`<span class="wsm-me">${UI.icon('user', 18)}</span>`}<span class="wsm-tx"><b>${t('Mi calendario')}</b><small>${t('Lo tuyo, solo para ti')}</small></span>${w ? '' : UI.icon('check', 18, 'wsm-ok')}</button>`);
+    rows.push(`<button type="button" class="wsm-row ${w ? '' : 'on'}" data-wsgo="">${`<span class="wsm-me">${meAvatar(34)}</span>`}<span class="wsm-tx"><b>${t('Mi calendario')}</b><small>${t('Lo tuyo, solo para ti')}</small></span>${w ? '' : UI.icon('check', 18, 'wsm-ok')}</button>`);
     if (s.signedIn) {
       for (const x of W().list()) {
         const un = W().unread(x.id);
@@ -782,6 +796,9 @@
     UI.settings.addSection('ws', 'Workspaces', 'users', 'Calendarios compartidos con amigos', settingsSection, 'drive');
     wrapLookSections();
     W().on('change', refreshAll);
+    // (tu foto llega cuando Drive o Google Calendar terminan de conectar)
+    try { ZC.drive && ZC.drive.on && ZC.drive.on('state', () => paintChip()); } catch {}
+    try { ZC.gcal && ZC.gcal.on && ZC.gcal.on('state', () => paintChip()); } catch {}
     W().on('state', () => { paintChip(); if (pop) pop.repaint(); try { if (UI.settings.isOpen() && UI.settings.current() === 'ws') UI.settings.refresh(); } catch {} });
     W().on('notice', onNotice);
     try { ZC.i18n && document.addEventListener('zc-lang', () => W().refreshCreds()); } catch {}
