@@ -153,11 +153,12 @@
 
   var ua = navigator.userAgent || '';
   var android = /Android/i.test(ua), windows = /Windows NT/i.test(ua);
-  var REL = 'https://github.com/luckicla/zencalendar/releases/latest/download/';
+  var REL = 'https://github.com/luckicla/ZenCalendar/releases/latest/download/';
   var here = location.href.split('#')[0].split('?')[0];
   var fallback = here + '?noapp=1#' + code;
   var appURL = android
-    ? 'intent://join/#' + code + ';scheme=zencalendar;package=com.luckicla.zencalendar;S.browser_fallback_url=' + encodeURIComponent(fallback) + ';end'
+    // (en un intent:// lo que va tras «#» tiene que empezar por «Intent;»: el código va en la ruta)
+    ? 'intent://join/' + code + '#Intent;scheme=zencalendar;package=com.luckicla.zencalendar;S.browser_fallback_url=' + encodeURIComponent(fallback) + ';end'
     : 'zencalendar://join/#' + code;
   var open = document.getElementById('open'), get = document.getElementById('get'), web = document.getElementById('web');
   var status = document.getElementById('status'), steps = document.getElementById('steps');

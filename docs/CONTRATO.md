@@ -395,7 +395,7 @@ El diseño completo está en `docs/WORKSPACES.md`. Aquí, lo que Android y Windo
 - Llega como `ZC.platform.onOpen({ action: 'join', code: '<wid>.<token>' })`, también si la app estaba cerrada
   (se guarda hasta que la página escucha, como lo de las notificaciones).
 - Android: `intent-filter` `VIEW` + `BROWSABLE` con `scheme="zencalendar" host="join"` en `MainActivity`; la página
-  `docs/w/` lo abre con `intent://join/#<código>;scheme=zencalendar;package=com.luckicla.zencalendar;S.browser_fallback_url=…;end`.
+  `docs/w/` lo abre con `intent://join/<código>#Intent;scheme=zencalendar;package=com.luckicla.zencalendar;S.browser_fallback_url=…;end` (lo que va tras «#» tiene que empezar por «Intent;»).
   Al volver desde «Recientes» no se repite.
 - Windows: el instalador registra el protocolo (`build.protocols` en `desktop/package.json`) y la app también al
   arrancar (`app.setAsDefaultProtocolClient`, que en la portable apunta al `.exe` de verdad). El enlace llega por la

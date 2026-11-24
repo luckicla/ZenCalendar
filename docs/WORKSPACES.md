@@ -34,7 +34,7 @@ push de pago ni Cloud Functions, plan Spark gratuito, sin Firebase Storage porqu
 ## Enlaces de invitación
 - Enlace: `https://luckicla.github.io/ZenCalendar/w/#<wid>.<token>` (corto, se ve bien en WhatsApp con su vista previa:
   `docs/w/index.html` con Open Graph «Te han invitado a <nombre> en ZenCalendar» genérico, porque la página es estática).
-- La página `docs/w/` intenta abrir la app: Android con `intent://join/#…;scheme=zencalendar;package=com.luckicla.zencalendar;S.browser_fallback_url=…;end`,
+- La página `docs/w/` intenta abrir la app: Android con `intent://join/<código>#Intent;scheme=zencalendar;package=com.luckicla.zencalendar;S.browser_fallback_url=…;end`,
   Windows con `zencalendar://join/#…`, y si no, botones «Abrir en la app» / «Descargar ZenCalendar» / «Abrir en el navegador»
   (`../app/?join=<wid>.<token>`).
 - Compartir: botón «Invitar» → hoja con «Copiar enlace», «WhatsApp» (`https://wa.me/?text=`), «Correo» (`mailto:` con el
