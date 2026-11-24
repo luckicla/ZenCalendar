@@ -292,7 +292,8 @@ html.zc-switching::view-transition-new(root) {
       const file = typeof shotMap[key] === 'string' && shotMap[key] ? shotMap[key] : '';
       let img = frame.querySelector(':scope > img');
       if (!file) { if (img) img.remove(); frame.classList.remove('has-shot'); return; }
-      if (!img) { img = new Image(); img.loading = 'lazy'; img.decoding = 'async'; }
+      // (sin loading='lazy': una imagen perezosa que aún no está en la página no se carga nunca)
+      if (!img) { img = new Image(); img.decoding = 'async'; }
       const cap = fig.querySelector('figcaption');
       img.alt = 'Captura de ZenCalendar: ' + (cap ? cap.textContent.replace(/\.$/, '').toLowerCase() : fig.dataset.shot);
       img.onload = () => { if (!img.isConnected) frame.appendChild(img); frame.classList.add('has-shot'); };

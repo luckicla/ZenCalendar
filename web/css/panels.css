@@ -467,3 +467,65 @@ select.in.sm { padding-right: 32px; background-position: right 9px center; }
    anchas no cambia nada. */
 .fld, .dlg-in, .dlg-choices, .ed-sec, .ed-dates, .ed-custom, .ed-check, .ed-imgs, .dt-body, .sr-acts, .ai-acts, .ai-col, .ai-ttl, .ai-act-tx,
 .next-rem, .kbd-list, .wl-tips, .drive, .about, .sn-grp, .set-nav, .dev-model, .prov, .ub-tx, .dp-tx, .upd-md { grid-template-columns: minmax(0, 1fr); }
+
+/* ---------- alarmas (1.2.0) ---------- */
+.al-mk { display: inline-flex; flex: none; vertical-align: -2px; margin-right: 3px; color: inherit; }
+.al-mk .ic { width: 1em; height: 1em; stroke-width: 2.2; }
+.task-row .tt b .al-mk { margin: 0 0 0 5px; color: var(--a2t); }
+.ag-main .mi.al { color: var(--a2t); font-weight: 650; font-variant-numeric: tabular-nums; }
+.ed-al { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.ed-al .ed-sw { min-height: 44px; }
+.ed-al > small { font-size: .8rem; line-height: 1.35; margin-top: -6px; }
+.ed-al-t { display: flex; align-items: center; gap: 10px; margin-top: 4px; font-size: .88rem; font-weight: 600; }
+.ed-al-t .in { width: auto; min-width: 110px; }
+.ed-alarm.on > .ed-ic { color: var(--a2t); }
+.al-tip { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 6px; padding: 9px 10px 9px 12px; border-radius: var(--r-m); text-align: left; font-size: .86rem; color: var(--fg); background: color-mix(in srgb, var(--a2) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--a2) 40%, transparent); animation: popIn var(--t-med) var(--spring) backwards; }
+.al-tip > .ic { flex: none; color: var(--a2t); }
+.al-tip span { flex: 1; min-width: 0; }
+.al-tip b { flex: none; padding: 5px 11px; border-radius: 999px; background: var(--a2t); color: #fff; font-size: .8rem; font-weight: 700; white-space: nowrap; }
+.al-tip:hover b { filter: brightness(1.08); }
+.dt-alarm > .ic { color: var(--a2t) !important; }
+.dt-alarm small { width: 100%; font-size: .8rem; }
+.chip.al .ic { color: var(--a2t); }
+.qa-chips .chip.al { cursor: pointer; }
+.qa-chips .chip.al .ic { color: var(--a2t); }
+.qa-chips .chip.al.on { background: color-mix(in srgb, var(--a2) 24%, transparent); color: var(--a2t); }
+.qa-chips .chip.al.on .ic:last-child { width: 13px; height: 13px; opacity: .7; margin-right: -4px; }
+.qa-chips .chip.al.sug { background: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--a2) 60%, transparent); border-style: dashed; animation: popIn var(--t-med) var(--spring) backwards, alPulse 2.4s var(--soft) 1s 2; }
+@keyframes alPulse { 50% { box-shadow: inset 0 0 0 1.5px var(--a2t), 0 0 0 4px color-mix(in srgb, var(--a2) 18%, transparent); } }
+
+/* asistente: borrados agrupados y sugerencias */
+.ai-act.alarm .ai-act-ic { background: color-mix(in srgb, var(--a2) 26%, transparent); color: var(--a2t); }
+.ai-act-tx b .al-mk { margin: 0 0 0 5px; color: var(--a2t); }
+.ai-grp { border-radius: var(--r-m); background: color-mix(in srgb, var(--s1) 78%, transparent); box-shadow: 0 0 0 1px var(--line), inset 4px 0 0 #ff8aa2; animation: popIn var(--t-med) var(--spring) backwards; overflow: hidden; }
+.ai-grp.off { opacity: .5; }
+.ai-grp-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 10px 10px 12px; text-align: left; color: inherit; }
+.ai-grp-head .ai-act-ic { background: color-mix(in srgb, #ff7a90 22%, transparent); color: #c93b62; }
+[data-scheme=dark] .ai-grp-head .ai-act-ic, [data-scheme=dark] .ai-act.delete .ai-act-ic { color: #ff9db3; }
+.ai-grp-head .ai-act-tx b { white-space: normal; }
+.ai-grp-chev { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; color: var(--mut); transition: transform var(--t-med) var(--spring), background var(--t-fast); }
+.ai-grp-head:hover .ai-grp-chev { background: var(--hover); }
+.ai-grp.open .ai-grp-chev { transform: rotate(180deg); }
+.ai-grp-list { display: grid; padding: 0 8px 8px 12px; max-height: 300px; overflow: auto; border-top: 1px solid var(--line); }
+.ai-grp-it { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 4px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.ai-grp-it:last-child { border-bottom: 0; }
+.ai-grp-it .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.ai-grp-it > span { flex: 1; min-width: 0; display: grid; }
+.ai-grp-it b { font-weight: 600; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ai-grp-it small { font-size: .78rem; color: var(--mut); }
+.ai-grp-it.off b { text-decoration: line-through; color: var(--mut); }
+.ck { appearance: none; -webkit-appearance: none; flex: none; width: 22px; height: 22px; margin: 0; border-radius: 7px; box-shadow: inset 0 0 0 1.8px rgb(var(--fg-rgb) / .3); display: grid; place-items: center; cursor: pointer; transition: background var(--t-fast), box-shadow var(--t-fast); }
+.ck::after { content: ""; width: 10px; height: 5px; border: solid #fff; border-width: 0 0 2.2px 2.2px; transform: translateY(-1px) rotate(-45deg) scale(0); transition: transform var(--t-fast) var(--spring); }
+.ck:checked { background: #e2557a; box-shadow: none; }
+.ck:checked::after { transform: translateY(-1px) rotate(-45deg) scale(1); }
+.ck:focus-visible { outline: 2px solid var(--a1); outline-offset: 2px; }
+.ck:disabled { cursor: default; opacity: .6; }
+.ai-sug { display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 12px; border-radius: var(--r-m); background: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--a2) 45%, transparent); animation: popIn var(--t-med) var(--spring) backwards; transition: background var(--t-fast), box-shadow var(--t-fast); }
+.ai-sug .ai-act-ic { background: color-mix(in srgb, var(--a2) 20%, transparent); color: var(--a2t); }
+.ai-sug.on { background: color-mix(in srgb, var(--a2) 14%, transparent); box-shadow: inset 0 0 0 1.5px var(--a2t); }
+.ai-sug .ai-act-tx em { font-style: normal; font-size: .82rem; line-height: 1.35; margin-top: 3px; color: var(--fg); opacity: .8; }
+.ai-sug:not(.on) .ai-act-tx b { color: var(--mut); }
+.ai-btns .btn[disabled] { opacity: .5; pointer-events: none; }
+@media (max-width: 760px) { .ai-grp-list { max-height: 42vh; } }
+.ai-log.still .ai-act, .ai-log.still .ai-grp, .ai-log.still .ai-sug, .ai-log.still .msg, .ai-log.still .bub { animation: none !important; }
+.nr.al > .ic { color: var(--a2t); }

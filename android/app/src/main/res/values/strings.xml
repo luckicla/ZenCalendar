@@ -12,6 +12,10 @@
     <string name="empty">Nada a la vista ✿</string>
     <string name="snooze">Posponer 10 min</string>
     <string name="done">Hecho</string>
+    <string name="stop">Parar</string>
+    <string name="alarm">Alarma</string>
+    <string name="channel_alarms">Alarmas</string>
+    <string name="channel_alarms_desc">Los eventos con alarma: suenan como un despertador aunque el móvil esté en silencio</string>
     <string name="pick_image">Elige una imagen</string>
     <string name="take_photo">Hacer una foto</string>
     <string name="updated_title">ZenCalendar actualizado</string>

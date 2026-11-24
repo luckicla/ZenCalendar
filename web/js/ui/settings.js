@@ -121,6 +121,7 @@
       + row(t('La semana empieza en'), '', seg('cal.firstDay', [[1, t('Lunes')], [0, t('Domingo')], [6, t('Sábado')]]))
       + row(t('Formato de hora'), '', seg('cal.timeFormat', [['24', '13:00'], ['12', '1:00 pm']]))
       + row(t('Números de semana'), '', sw('cal.weekNumbers'))
+      + row(t('Días de otros meses'), t('En la vista Mes, enseñar en clarito los del mes anterior y el siguiente'), sw('cal.otherMonthDays'))
       + row(t('Vista al abrir'), '', `<select class="in" data-k="cal.defaultView">${['month', 'week', 'day', 'agenda', 'year'].map(v => `<option value="${v}">${t(UI.views[v].label)}</option>`).join('')}</select>`))
       + card(h3(t('Eventos nuevos'))
         + row(t('Duración'), '', `<select class="in" data-k="cal.defaultDuration">${[15, 30, 45, 60, 90, 120].map(m => `<option value="${m}">${C.durText(m)}</option>`).join('')}</select>`)
@@ -142,7 +143,7 @@
       let next = []; try { next = (ZC.reminders && ZC.reminders.next && ZC.reminders.next(6)) || []; } catch {}
       return card(h3(t('Avisos'), t('ZenCalendar te avisa de tus eventos y tareas aunque esté cerrado.'))
         + row(t('Permiso de notificaciones'), perm === 'granted' ? t('Concedido') : perm === 'denied' ? t('Bloqueado: actívalo en los ajustes del sistema o del navegador.') : t('Aún no lo has concedido.'), `<button type="button" class="btn ${perm === 'granted' ? 'soft' : 'pri'} sm" data-act="perm">${perm === 'granted' ? UI.icon('check', 16) + t('Permitido') : t('Permitir avisos')}</button>`))
-        + card(h3(t('Próximos avisos')) + (next.length ? `<div class="next-rem">${next.map(r => { const ev = r.ev || (r.eventId && ZC.store.get(r.eventId)) || (r.id && ZC.store.get(r.id)) || null; const at = r.at ? new Date(r.at) : null; return `<div class="nr">${UI.icon('bell', 16)}<b>${esc(ev ? C.titleOf(ev) : (r.title || t('Sin título')))}</b><small>${at ? esc(ZC.i18n.D.short(at) + ', ' + C.fmtT(at)) : ''}</small></div>`; }).join('')}</div>` : `<p class="note">${t('No hay avisos programados.')}</p>`));
+        + card(h3(t('Próximos avisos')) + (next.length ? `<div class="next-rem">${next.map(r => { const ev = r.ev || (r.eventId && ZC.store.get(r.eventId)) || (r.id && ZC.store.get(r.id)) || null; const at = r.at ? new Date(r.at) : null; return `<div class="nr ${r.alarm ? 'al' : ''}" ${r.alarm ? `title="${esc(t('Alarma'))}"` : ''}>${UI.icon(r.alarm ? 'alarm' : 'bell', 16)}<b>${esc(ev ? C.titleOf(ev) : (r.title || t('Sin título')))}</b><small>${at ? esc(ZC.i18n.D.short(at) + ', ' + C.fmtT(at)) : ''}</small></div>`; }).join('')}</div>` : `<p class="note">${t('No hay avisos programados.')}</p>`));
     },
     ai: aiSection,
     drive: driveSection,

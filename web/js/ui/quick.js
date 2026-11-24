@@ -27,14 +27,16 @@
     (p.reminders || []).forEach(m => out.push(['bell', esc(C.remText(m))]));
     return out;
   }
-  function eventFrom(p, text) {
+  // alarma: la pide la frase (p.alarm), la sugiere (p.alarmSuggested) o el usuario la cambia con el chip (al = true/false)
+  const wantsAlarm = (p, al) => al != null ? al : !!(p && p.alarm);
+  function eventFrom(p, text, al) {
     const cal = C.prefsCal(), cals = ZC.store.calendars();
     const calId = (cals.find(c => c.visible !== false) || cals[0] || { id: 'personal' }).id;
     const d = C.today();
     const start = p && p.start ? p.start : C.ymd(UI.app.state.view === 'month' ? UI.app.state.sel : d);
     const allDay = p && p.start ? !!p.allDay : true;
     const kind = (p && p.kind) || 'event';
-    return { kind, title: (p && p.title) || text.trim(), calendarId: (p && p.calendarId && ZC.store.calendar(p.calendarId)) ? p.calendarId : calId, emoji: (p && p.emoji) || null, allDay, start, end: kind === 'task' ? start : (p && p.end) || start, location: (p && p.location) || '', rrule: (p && p.rrule) || null, reminders: p && p.reminders && p.reminders.length ? p.reminders : (kind === 'task' ? [0] : [...(cal.defaultReminders || [])]) };
+    return { kind, title: (p && p.title) || text.trim(), calendarId: (p && p.calendarId && ZC.store.calendar(p.calendarId)) ? p.calendarId : calId, emoji: (p && p.emoji) || null, allDay, start, end: kind === 'task' ? start : (p && p.end) || start, location: (p && p.location) || '', rrule: (p && p.rrule) || null, alarm: wantsAlarm(p, al), reminders: p && p.reminders && p.reminders.length ? p.reminders : (kind === 'task' ? [0] : [...(cal.defaultReminders || [])]) };
   }
 
   // ---------- barra de añadir rápido (PC) ----------
@@ -42,15 +44,18 @@
     const box = document.getElementById('quick'); if (!box) return;
     box.innerHTML = `<form class="qa" autocomplete="off">${UI.icon('sparkles', 19)}<input id="qaIn" placeholder="${esc(t('Añade algo: «café con Ana mañana a las 10 en La Pepita»'))}" aria-label="${esc(t('Añadir rápido'))}" enterkeyhint="done"><kbd>Q</kbd></form><div class="qa-chips" hidden></div>`;
     const inp = box.querySelector('#qaIn'), chips = box.querySelector('.qa-chips'), kbd = box.querySelector('kbd');
-    let p = null;
+    let p = null, al = null;
     const paint = debounce(() => {
       const v = inp.value;
       kbd.hidden = !!v;
-      if (!v.trim()) { chips.hidden = true; p = null; return; }
+      if (!v.trim()) { chips.hidden = true; p = null; al = null; return; }
       p = parseText(v);
       const ch = chipsFor(p || { title: v.trim() });
+      const on = wantsAlarm(p, al);
+      const alChip = on ? `<button type="button" class="chip al on" data-q="alarm" style="--i:${ch.length}" aria-pressed="true" title="${esc(t('Quitar la alarma'))}">${UI.icon('alarm', 15)}${t('Alarma')}${UI.icon('x', 13)}</button>`
+        : (p && p.alarmSuggested && p.start) ? `<button type="button" class="chip al sug" data-q="alarm" style="--i:${ch.length}" aria-pressed="false">${UI.icon('alarm', 15)}${t('¿Le pongo alarma?')}</button>` : '';
       chips.hidden = false;
-      chips.innerHTML = `<span class="lbl">${t('Entendido')}</span>${ch.map(([ic, tx], i) => `<span class="chip" style="--i:${i}">${UI.icon(ic, 15)}${tx}</span>`).join('')}
+      chips.innerHTML = `<span class="lbl">${t('Entendido')}</span>${ch.map(([ic, tx], i) => `<span class="chip" style="--i:${i}">${UI.icon(ic, 15)}${tx}</span>`).join('')}${alChip}
         <span class="go"><button type="button" class="btn sm ghost" data-q="more">${t('Abrir en el editor')}</button><button type="button" class="btn sm pri" data-q="save">${t('Añadir al calendario')} <kbd>Intro</kbd></button></span>`;
     }, 120);
     inp.addEventListener('input', paint);
@@ -60,7 +65,8 @@
     async function save() {
       const v = inp.value.trim(); if (!v) return;
       p = parseText(v);
-      const ev = eventFrom(p, v);
+      const ev = eventFrom(p, v, al);
+      al = null;
       const saved = await ZC.store.saveEvent(ev);
       inp.value = ''; chips.hidden = true; kbd.hidden = false;
       UI.haptic('ok');
@@ -70,8 +76,9 @@
     chips.addEventListener('pointerdown', e => e.preventDefault());
     chips.addEventListener('click', e => {
       const b = e.target.closest('[data-q]'); if (!b) return;
+      if (b.dataset.q === 'alarm') { al = !wantsAlarm(p, al); UI.haptic('tick'); paint(); inp.focus(); return; }
       if (b.dataset.q === 'save') save();
-      else { const v = inp.value.trim(); const ev = eventFrom(parseText(v), v); inp.value = ''; chips.hidden = true; UI.editor.open({ prefill: ev, kind: ev.kind, start: ev.allDay ? null : parse(ev.start), end: ev.allDay ? null : parse(ev.end), date: parse(ev.start), allDay: ev.allDay }); }
+      else { const v = inp.value.trim(); const pp = parseText(v); const ev = eventFrom(pp, v, al); inp.value = ''; chips.hidden = true; al = null; UI.editor.open({ prefill: ev, alarmSuggested: !!(pp && pp.alarmSuggested), kind: ev.kind, start: ev.allDay ? null : parse(ev.start), end: ev.allDay ? null : parse(ev.end), date: parse(ev.start), allDay: ev.allDay }); }
     });
   }
   function focus() {
@@ -147,7 +154,7 @@
       if (a.dataset.a === 'today') UI.app.goToday();
       if (a.dataset.a === 'goto') UI.app.goToDate();
       if (a.dataset.a === 'ai') UI.aipanel.open(v);
-      if (a.dataset.a === 'new') { const ev = v ? eventFrom(parseText(v), v) : null; UI.editor.open(ev ? { prefill: ev, kind: ev.kind, date: parse(ev.start), start: ev.allDay ? null : parse(ev.start), end: ev.allDay ? null : parse(ev.end), allDay: ev.allDay } : { date: UI.app.state.date }); }
+      if (a.dataset.a === 'new') { const pp = v ? parseText(v) : null; const ev = v ? eventFrom(pp, v) : null; UI.editor.open(ev ? { prefill: ev, alarmSuggested: !!(pp && pp.alarmSuggested), kind: ev.kind, date: parse(ev.start), start: ev.allDay ? null : parse(ev.start), end: ev.allDay ? null : parse(ev.end), allDay: ev.allDay } : { date: UI.app.state.date }); }
     }, true);
     empty();
   }

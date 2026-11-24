@@ -183,6 +183,7 @@
   const COLOR_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
   const T_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
   const D_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const ALARM_TIME_RE = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
   function fixDate(s, allDay) {
     const u = U();
@@ -202,6 +203,7 @@
       id: u.uid(), kind: 'event', title: '', notes: '', location: '', calendarId: 'personal', color: null, emoji: null,
       allDay: false, start: null, end: null, rrule: null, exdates: [], recurrenceOf: null,
       reminders: (cal.defaultReminders || []).slice(), attachments: [], checklist: [], done: false, doneAt: null,
+      alarm: false, alarmTime: null,
       created: now, updated: 0, deleted: false,
     };
     const e = Object.assign({}, base, p);
@@ -229,6 +231,9 @@
     e.rrule = ZC.recur ? ZC.recur.normRule(e.rrule) : (e.rrule || null);
     e.exdates = [...new Set((e.exdates || []).map(x => String(x).slice(0, 10)).filter(x => D_RE.test(x)))].sort();
     e.reminders = [...new Set((e.reminders || []).map(Number).filter(n => isFinite(n) && n >= 0))].sort((a, b) => a - b);
+    // alarma (suena como un despertador a la hora de inicio; todo el día: a alarmTime o a las 09:00)
+    e.alarm = e.alarm === true || e.alarm === 'true';
+    e.alarmTime = ALARM_TIME_RE.test(String(e.alarmTime || '')) ? String(e.alarmTime) : null;
     e.attachments = Array.isArray(e.attachments) ? e.attachments : [];
     e.checklist = Array.isArray(e.checklist) ? e.checklist : [];
     e.done = !!e.done;

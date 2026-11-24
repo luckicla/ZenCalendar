@@ -55,7 +55,7 @@ self.addEventListener('notificationclick', e => {
   n.close();
   e.waitUntil((async () => {
     const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    const msg = e.action === 'snooze' || e.action === 'done'
+    const msg = e.action === 'snooze' || e.action === 'done' || e.action === 'stop'
       ? { type: 'zc-action', data: { type: e.action, minutes: 10, reminder: data.reminder, eventId: data.id, date: data.date } }
       : { type: 'zc-open', data: { action: 'open', id: data.id, date: data.date } };
     if (list.length) {

@@ -16,7 +16,12 @@
 
   function build(d) {
     const cal = C.prefsCal(), { start, weeks, end } = gridRange(d);
-    const list = C.occ(start, end);
+    // por defecto solo los días de este mes (los del anterior y el siguiente, en blanco);
+    // Ajustes → Calendario → «Días de otros meses» los vuelve a enseñar en clarito
+    const only = cal.otherMonthDays !== true;
+    document.documentElement.classList.toggle('mo-only', only);
+    const mFirst = new Date(d.getFullYear(), d.getMonth(), 1), mLast = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    const list = only ? C.occ(mFirst, addDays(mLast, 1)) : C.occ(start, end);
     const hol = C.holidays(start, end);
     const wn = !!cal.weekNumbers, tdy = C.today();
     const mobile = UI.isMobile();
@@ -38,7 +43,9 @@
       row.appendChild(cells);
       row.appendChild(UI.h('<div class="mv-bars"></div>'));
       row._ws = ws;
-      row._items = list.filter(o => sod(o.start) < addDays(ws, 7) && lastDay(o) >= ws);
+      row._lo = only ? Math.max(0, C.daysBetween(ws, mFirst)) : 0;
+      row._hi = only ? Math.min(6, C.daysBetween(ws, mLast)) : 6;
+      row._items = list.filter(o => sod(o.start) <= addDays(ws, row._hi) && lastDay(o) >= addDays(ws, row._lo));
       grid.appendChild(row);
     }
     el.appendChild(grid);
@@ -52,13 +59,13 @@
     const mobile = UI.isMobile();
     el.querySelectorAll('.mv-week').forEach(row => {
       const bars = row.querySelector('.mv-bars'); bars.innerHTML = '';
-      const ws = row._ws, items = row._items || [];
+      const ws = row._ws, items = row._items || [], lo = row._lo || 0, hi = row._hi == null ? 6 : row._hi;
       const H = row.clientHeight, headH = mobile ? 24 : 32, laneH = mobile ? 17 : 22;
       const maxLanes = Math.max(1, Math.floor((H - headH - 2) / laneH));
       // orden: varios días primero (más largos antes), luego por hora
       const segs = items.map(o => {
-        const a = Math.max(0, C.daysBetween(ws, o.start)), b = Math.min(6, C.daysBetween(ws, lastDay(o)));
-        return { o, a, b, multi: multiDay(o) || o.allDay, cont: sod(o.start) < ws, more: lastDay(o) > addDays(ws, 6) };
+        const a = Math.max(lo, C.daysBetween(ws, o.start)), b = Math.min(hi, C.daysBetween(ws, lastDay(o)));
+        return { o, a, b, multi: multiDay(o) || o.allDay, cont: sod(o.start) < addDays(ws, lo), more: lastDay(o) > addDays(ws, hi) };
       }).sort((x, y) => (y.multi - x.multi) || ((y.b - y.a) - (x.b - x.a)) || (x.a - y.a) || (x.o.start - y.o.start) || (x.o.isTask - y.o.isTask));
       const lanes = [];
       for (const s of segs) {
@@ -80,7 +87,7 @@
         bar.style.cssText = `${C.evVars(o)};left:calc(${s.a} * 100% / 7 + 2px);width:calc(${s.b - s.a + 1} * 100% / 7 - 4px);top:${headH + s.lane * laneH}px;--i:${k++}`;
         bar.dataset.key = o.key;
         const time = !o.allDay && !s.multi && !mobile ? `<span class="tm">${C.fmtT(o.start)}</span>` : '';
-        bar.innerHTML = (o.isTask ? `<i class="tk ${o.done ? 'on' : ''}"></i>` : (!s.multi && !mobile ? '<i class="dt"></i>' : '')) + time + `<span class="tl">${esc(C.titleOf(o.ev))}</span>`;
+        bar.innerHTML = (o.isTask ? `<i class="tk ${o.done ? 'on' : ''}"></i>` : (!s.multi && !mobile ? '<i class="dt"></i>' : '')) + time + C.alarmMark(o.ev, 11) + `<span class="tl">${esc(C.titleOf(o.ev))}</span>`;
         bar.title = C.titleOf(o.ev) + '\n' + C.whenText(o);
         bar._o = o;
         frag.appendChild(bar);

@@ -81,6 +81,7 @@ public class MainActivity extends Activity {
         super.onCreate(saved);
         current = new WeakReference<>(this);
         Alarms.ensureChannel(this);
+        Alarms.ensureAlarmChannel(this);
         edgeToEdge();
 
         box = new FrameLayout(this);

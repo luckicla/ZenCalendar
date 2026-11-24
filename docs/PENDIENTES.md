@@ -362,3 +362,63 @@ TextView y ListView, `res/font/zendot.ttf` es un nombre válido y `ResourcesComp
 - Icono `dot` en el lanzador (máscaras y iconos con tema de Android 13) y en la bandeja/accesos de Windows.
 - Windows: quitar y volver a poner la Mica al cambiar de diseño; ventana opaca negra/blanca sin parpadeo.
 - La vibración `'glyph'` y el rendimiento del fondo «glyph» en un móvil modesto (se para con la pestaña oculta).
+
+## IA/alarmas → para front
+
+La API del núcleo ya está (versión 1.2.0, ver `docs/IA-ALARMAS.md` y `docs/CONTRATO.md` → «IA que borra y alarmas»):
+- Eventos y tareas: `alarm: true|false` (por defecto `false`) y `alarmTime: 'HH:mm'|null` (solo cuenta en los de todo el día;
+  `null` = 09:00). `ZC.store.saveEvent({ ..., alarm: true })` y listo: `ZC.reminders` la programa sola.
+- `ZC.nlp.parse(text)` devuelve siempre `alarm` y `alarmSuggested` (booleanos). «Despiértame a las 7» → `title: 'Despertarse'`,
+  07:00 de mañana (o de hoy si aún no han dado), 15 min, `reminders: []`, `alarm: true`.
+- `ZC.nlp.parseCommand(text, { now, lang })` → `{ intent: 'delete', filter: { from, to, calendarId, text, kind }, all, weak }` o `null`.
+- `ZC.ai.run(...)` puede devolver:
+  - varias `{ type: 'delete', id, mode?: 'all'|'one'|'future', date?: 'YYYY-MM-DD' }` (en una serie, `mode: 'one'` + `date` = solo esa repetición);
+  - sugerencias: cualquier acción con `suggest: true` y `why: 'texto'`. La de alarma es
+    `{ type: 'update', ref: <índice del create>, refId: <cid del create>, changes: { alarm: true }, suggest: true, why }`
+    (los `create` llevan `cid`). Para aceptarla, quítale `suggest` y pásala a `apply` con las demás;
+    si se queda con `suggest: true`, `apply` se la salta. Puedes quitar acciones de la lista: `ref` se resuelve por `refId`.
+  - `confirmMany: true` cuando hay más de 20 borrados (`ZC.ai.MANY_DELETES` = 20): pide confirmación antes de `apply`.
+- `ZC.ai.apply(actions)` devuelve lo borrado como estaba antes: `deleted: true` (entero; incluye las copias sueltas «solo esta»
+  de una serie borrada entera, para que «Deshacer» las devuelva también) o `removedDate`/`removedMode` (solo una repetición:
+  para deshacer basta con volver a guardar ese evento tal cual, que trae los `exdates` de antes).
+- `ZC.reminders.next(n)` incluye las alarmas con `alarm: true` (por si quieres enseñarlas con el icono de despertador).
+
+## IA/alarmas: hecho por back
+
+- Núcleo: `nlp.parse` (`alarm`, `alarmSuggested`, «despiértame a las 7»), `nlp.parseCommand` (borrar en ES/CA/EN), `ZC.ai`
+  (integrado que borra en bloque y sugiere alarma; prompt y `validate` con `suggest`/`why`/`ref`/`refId`/`cid`/`mode`/`date`;
+  `confirmMany` con más de 20 borrados; `apply` con todo eso), `ZC.store` (`alarm`, `alarmTime`), `ZC.reminders` (alarmas,
+  acción `stop`, posponer con la hora que da la plataforma). Pruebas: `tests/core/alarm.test.js` (29).
+- Android: canal «Alarmas», `setAlarmClock`, notificación `CATEGORY_ALARM` insistente y fija con «Posponer 10 min»/«Parar»,
+  `AlarmActivity` en pantalla completa encima del bloqueo (si `canUseFullScreenIntent()`), alarmas pospuestas guardadas para
+  después de reiniciar, y ya no se repite un aviso/alarma que acaba de sonar si la página reprograma en el mismo minuto.
+  Compila contra los *stubs* (ampliados en `/tmp/zdot/jc/stubs`).
+- Windows: notificación `timeoutType: 'never'` + `urgency: 'critical'`, ventanita encima de todo con pitido en bucle y
+  «Posponer 10 min»/«Parar» (se calla sola a los 10 min), y enseña la ventana si estaba en la bandeja. Web: `requireInteraction`,
+  `vibrate` y botón «Parar» (`web/sw.js` reenvía la acción `stop`).
+- Queda para un móvil de verdad: ver la lista del informe (sonido con el móvil en silencio y en «No molestar», pantalla
+  completa en Android 14 con el permiso quitado, reinicio con una alarma pospuesta, el `gradle assembleRelease` en Actions).
+
+## IA/alarmas: hecho por front
+
+- **Editor**: interruptor «Alarma» con su explicación; en los de todo el día, «Suena a las» (`alarmTime`, 09:00 si no hay).
+  Al apagarla o quitar el «todo el día», `alarmTime` se guarda como `null`. Si la frase del título o de añadir rápido da
+  `alarmSuggested`, sale la tarjeta «Parece importante. ¿Le pongo alarma?» con el botón «Poner alarma».
+- **Icono de despertador** (`alarm` en `icons.js`, `C.alarmMark/alarmText/alarmTime` en `cal.js`): barras del Mes, Semana/Día,
+  tarjetas de Agenda/lista del día (también en Dot), filas de tareas, el detalle («Alarma a las 08:00» + etiqueta) y
+  Ajustes → Próximos avisos (si `next()` trae `alarm: true`).
+- **Añadir rápido**: chip «Alarma» si `parse` da `alarm` (se toca para quitarla) y la sugerencia «¿Le pongo alarma?» si da
+  `alarmSuggested` (se toca para ponerla). «Abrir en el editor» se lleva las dos cosas.
+- **Asistente**: si hay 2 borrados o más, van en un solo grupo («Borrar · 4 eventos de mañana / del vie, 4 dic / del 3 al 7»),
+  que se despliega y tiene una casilla por evento (abierto si son ≤ 5). En la lista basta con la hora cuando todo es del mismo día.
+  El botón dice lo que hace («Borrar 3 eventos», «Crear evento con alarma», «Poner alarma»). Las sugerencias salen como tarjetas
+  desmarcadas con su `why` y un interruptor. La interfaz no se fía de `ref`: mete las aceptadas en su `create` antes de llamar a `apply`.
+  Con `confirmMany` (o más de 20 borrados) pide confirmación. «Deshacer» devuelve todo lo borrado, también lo que `apply` devuelve
+  con `deleted: true`. `autoApply` nunca se salta la vista previa si hay borrados en bloque o sugerencias. Ejemplos nuevos: «Despiértame a las 7» y
+  «Quita todo lo de mañana».
+- ES/CA/EN en `i18n-dict.js` (bloque «IA que borra y alarmas»). Zen y Dot, claro y oscuro, 360 px y PC.
+- **Pruebas**: `node tests/ui/ai-alarm.js` (puerto 8911) prueba con respuestas simuladas y con el proveedor `rules` de verdad: borrar lo de mañana
+  (con una repetición de una serie), deshacer, «despiértame a las 7» y la sugerencia de la cita médica. Capturas en
+  `tests/ui/out/ai-alarm-*.png`. Siguen pasando `interact, regress, gestures, updates, dot, welcome, fab` y `QUICK=1 overlap.js` (0 problemas).
+- Para backend (no corre prisa): «cita importante con el médico el jueves a las 10» deja «importante» en el título
+  («Cita importante con el médico»). Estaría mejor quitarlo, igual que se quitan las palabras de fecha.

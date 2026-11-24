@@ -11,6 +11,8 @@
 // También refresca los datos de los widgets de Android.
 //
 // Aviso = { id, eventId, date, at (ms), title, body, minutes, task }
+// Alarma = lo mismo con alarm: true (y minutes: 0): suena como un despertador a la hora de
+// inicio del evento (todo el día: a ev.alarmTime o a las 09:00). id = '<key>#alarm'.
 (function (root) {
   const ZC = root.ZC = root.ZC || {};
   const U = () => ZC.util;
@@ -26,13 +28,13 @@
     let lang = 'es';
     try { const p = ZC.store.getPrefs().cal.lang; lang = p && p !== 'auto' ? p : String(navigator.language || 'es').slice(0, 2); } catch (e) {}
     return {
-      es: { now: 'Ahora', inM: 'En %n min', inH: 'En %n h', today: 'Hoy', tomorrow: 'Mañana', allDay: 'Todo el día', task: 'Tarea', empty: 'Nada a la vista ✿', snooze: 'Posponer 10 min', done: 'Hecho' },
-      ca: { now: 'Ara', inM: "D'aquí %n min", inH: "D'aquí %n h", today: 'Avui', tomorrow: 'Demà', allDay: 'Tot el dia', task: 'Tasca', empty: 'Res a la vista ✿', snooze: 'Posposa 10 min', done: 'Fet' },
-      en: { now: 'Now', inM: 'In %n min', inH: 'In %n h', today: 'Today', tomorrow: 'Tomorrow', allDay: 'All day', task: 'Task', empty: 'Nothing coming up ✿', snooze: 'Snooze 10 min', done: 'Done' },
+      es: { now: 'Ahora', inM: 'En %n min', inH: 'En %n h', today: 'Hoy', tomorrow: 'Mañana', allDay: 'Todo el día', task: 'Tarea', empty: 'Nada a la vista ✿', snooze: 'Posponer 10 min', done: 'Hecho', stop: 'Parar', alarm: 'Alarma', alarmChannel: 'Alarmas' },
+      ca: { now: 'Ara', inM: "D'aquí %n min", inH: "D'aquí %n h", today: 'Avui', tomorrow: 'Demà', allDay: 'Tot el dia', task: 'Tasca', empty: 'Res a la vista ✿', snooze: 'Posposa 10 min', done: 'Fet', stop: 'Atura', alarm: 'Alarma', alarmChannel: 'Alarmes' },
+      en: { now: 'Now', inM: 'In %n min', inH: 'In %n h', today: 'Today', tomorrow: 'Tomorrow', allDay: 'All day', task: 'Task', empty: 'Nothing coming up ✿', snooze: 'Snooze 10 min', done: 'Done', stop: 'Stop', alarm: 'Alarm', alarmChannel: 'Alarms' },
     }[lang] || null;
   };
   // textos en el idioma de la app (español si no se sabe)
-  const T = () => L() || { now: 'Ahora', inM: 'En %n min', inH: 'En %n h', today: 'Hoy', tomorrow: 'Mañana', allDay: 'Todo el día', task: 'Tarea', empty: 'Nada a la vista ✿', snooze: 'Posponer 10 min', done: 'Hecho' };
+  const T = () => L() || { now: 'Ahora', inM: 'En %n min', inH: 'En %n h', today: 'Hoy', tomorrow: 'Mañana', allDay: 'Todo el día', task: 'Tarea', empty: 'Nada a la vista ✿', snooze: 'Posponer 10 min', done: 'Hecho', stop: 'Parar', alarm: 'Alarma', alarmChannel: 'Alarmas' };
 
   function fmtTime(d) {
     const u = U();
@@ -64,16 +66,28 @@
     for (const o of occ) {
       if (o.isTask && o.done) continue;
       const rem = o.ev.reminders || [];
+      const title = (o.ev.emoji ? o.ev.emoji + ' ' : '') + (o.ev.title || (o.isTask ? T().task : 'ZenCalendar'));
+      // la alarma (aparte de los avisos)
+      let alarmAt = null;
+      if (o.ev.alarm) {
+        const hm = /^(\d{2}):(\d{2})$/.exec(o.ev.alarmTime || '') || [0, 9, 0];
+        const base = o.allDay ? new Date(o.start.getFullYear(), o.start.getMonth(), o.start.getDate(), +hm[1], +hm[2]) : o.start;
+        const id = o.key + '#alarm';
+        if (base.getTime() >= now - 60000 && !dismissed.has(id)) {
+          alarmAt = base.getTime();
+          out.push({ id, eventId: o.id, date: o.date, at: alarmAt, minutes: 0, task: o.isTask, alarm: true, title, body: body(o), color: o.color });
+        }
+      }
       for (const m of rem) {
         const base = o.allDay ? new Date(o.start.getFullYear(), o.start.getMonth(), o.start.getDate(), 9, 0) : o.start;
         const at = base.getTime() - m * 60000;
         if (at < now - 60000) continue;
+        if (at === alarmAt) continue; // (a la misma hora ya suena la alarma)
         const id = o.key + '#' + m;
         if (dismissed.has(id)) continue;
         out.push({
           id, eventId: o.id, date: o.date, at, minutes: m, task: o.isTask,
-          title: (o.ev.emoji ? o.ev.emoji + ' ' : '') + (o.ev.title || (o.isTask ? T().task : 'ZenCalendar')),
-          body: body(o), color: o.color,
+          title, body: body(o), color: o.color,
         });
       }
     }
@@ -81,7 +95,11 @@
     const snoozed = (ZC.store.local('reminders.snoozed') || []).filter(s => s.at > now - 60000);
     for (const s of snoozed) out.push(s);
     out.sort((a, b) => a.at - b.at);
-    return out.slice(0, MAX);
+    if (out.length <= MAX) return out;
+    // (si hay demasiados, las alarmas de dentro del horizonte no se quedan fuera)
+    const keep = out.slice(0, MAX);
+    const extra = out.slice(MAX).filter(r => r.alarm).slice(0, 20);
+    return keep.concat(extra);
   }
 
   // ---------- datos para los widgets de Android ----------
@@ -123,7 +141,7 @@
     const A = root.ZCAndroid, D = root.zcDesktop;
     try {
       if (A && A.setReminders) A.setReminders(JSON.stringify({ items: list, strings: T() }));
-      else if (D && D.setReminders) D.setReminders(list);
+      else if (D && D.setReminders) D.setReminders(list, T());
       else webSchedule();
     } catch (e) { console.warn('[ZC] no se pudieron programar los avisos', e); }
     refreshWidgets();
@@ -162,10 +180,17 @@
     if (!root.Notification || Notification.permission !== 'granted') return;
     const data = { action: 'open', id: r.eventId, date: r.date, reminder: r };
     const opts = { body: r.body, tag: r.id, icon: 'img/icon-192.png', badge: 'img/icon-192.png', data, renotify: true };
+    if (r.alarm) {
+      // alarma: no se va sola y vibra largo (el sonido lo pone el sistema)
+      opts.requireInteraction = true;
+      opts.vibrate = [800, 400, 800, 400, 800, 400, 800];
+      opts.silent = false;
+      opts.body = '⏰ ' + (r.body || T().alarm);
+    }
     try {
       const reg = root.navigator && navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
       if (reg) {
-        opts.actions = [{ action: 'snooze', title: T().snooze }, { action: 'done', title: T().done }];
+        opts.actions = [{ action: 'snooze', title: T().snooze }, r.alarm ? { action: 'stop', title: T().stop } : { action: 'done', title: T().done }];
         await reg.showNotification(r.title, opts);
         return;
       }
@@ -177,12 +202,26 @@
   }
 
   // ---------- posponer / hecho ----------
-  async function snooze(r, minutes) {
+  // (at: la hora exacta que ya decidió la plataforma, p. ej. Android al posponer con la app cerrada;
+  //  así el id coincide con el que ya tiene programado y no suena dos veces)
+  async function snooze(r, minutes, atFixed) {
     minutes = minutes || 10;
-    const at = Date.now() + minutes * 60000;
-    const s = (ZC.store.local('reminders.snoozed') || []).filter(x => x.at > Date.now());
-    s.push(Object.assign({}, r, { id: r.id.split('~')[0] + '~' + at, at }));
+    if (atFixed && atFixed < Date.now() - 60000) return; // (ya sonó en la plataforma mientras la app estaba cerrada)
+    const at = atFixed ? +atFixed : Date.now() + minutes * 60000;
+    const base = String(r.id).split('~')[0];
+    const s = (ZC.store.local('reminders.snoozed') || []).filter(x => x.at > Date.now() && String(x.id).split('~')[0] !== base);
+    s.push(Object.assign({}, r, { id: base + '~' + at, at }));
     ZC.store.local('reminders.snoozed', s.slice(-50));
+    deliver();
+  }
+
+  // «Parar» una alarma: no vuelve a sonar (ni aunque la página reprograme en el mismo minuto)
+  function dismiss(r) {
+    const d = new Set(ZC.store.local('reminders.dismissed') || []);
+    d.add(String(r.id || '').split('~')[0]);
+    ZC.store.local('reminders.dismissed', [...d].slice(-300));
+    const s = (ZC.store.local('reminders.snoozed') || []).filter(x => String(x.id).split('~')[0] !== String(r.id || '').split('~')[0]);
+    ZC.store.local('reminders.snoozed', s);
     deliver();
   }
 
@@ -204,8 +243,9 @@
     if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { return; } }
     if (!a) return;
     const r = a.reminder || { id: a.id || (a.eventId + '@' + a.date), eventId: a.eventId, date: a.date, title: a.title || '', body: a.body || '' };
-    if (a.type === 'done') await done(r);
-    else if (a.type === 'snooze') await snooze(r, a.minutes || 10);
+    if (a.type === 'stop') dismiss(r);
+    else if (a.type === 'done') await done(r);
+    else if (a.type === 'snooze') await snooze(r, a.minutes || 10, a.at);
   }
 
   // ---------- arranque ----------

@@ -69,6 +69,19 @@
   const TIME = HOURW + '(?:[:.h](\\d{2}))?(?:\\s*' + AMPM + '(?![a-z]))?' + FRAC + '?' + DP + '?';
   const TIME_GROUPS = 7;
 
+  // alarmas (sobre el texto en minúsculas y sin tildes)
+  const WAKE_RE = '[,;]?\\s*\\b(?:(?:tengo\\s+que|necesito|quiero|hay\\s+que|i\\s+(?:need|have|want)\\s+to|have\\s+to|he\\s+de|haig\\s+de|vull)\\s+)?' +
+    '(?:despiertame|despiertenme|despertadme|despertarme|despierta\\s+me|levantarme|para\\s+despertarme|despertador|' +
+    'wake\\s+me\\s+up|wake\\s+me|wake\\s+up|get\\s+up|wake-?up\\s+call|desperta\'?m|desperta-me|despertar-me|llevar-me)(?![a-z])';
+  const ALARM_RE = '[,;]?\\s*\\b(?:(?:y\\s+|and\\s+|i\\s+)?(?:ponme|pon|poner|pongas|set|posa\'?m|posa|posar)\\s+(?:me\\s+)?(?:una\\s+|la\\s+|an\\s+|a\\s+|the\\s+)?(?:alarma|alarm)|(?:con|with|amb)\\s+(?:una\\s+|an\\s+|a\\s+)?(?:alarma|alarm)|que\\s+(?:me\\s+)?suene|que\\s+(?:em\\s+)?soni|alarma|alarm)(?![a-z])(?:\\s+(?:para|per|for|to)\\b)?';
+  const MUST_RE = '[,;]?\\s*\\b(?:sin\\s+falta|si\\s+o\\s+si|no\\s+me\\s+lo\\s+puedo\\s+perder|no\\s+me\\s+la\\s+puedo\\s+perder|no\\s+puedo\\s+faltar|no\\s+puedo\\s+llegar\\s+tarde|que\\s+no\\s+se\\s+me\\s+(?:olvide|pase)|can\'?t\\s+miss(?:\\s+it)?|cannot\\s+miss(?:\\s+it)?|must\\s+not\\s+miss(?:\\s+it)?|don\'?t\\s+let\\s+me\\s+(?:miss|forget)(?:\\s+it)?|sense\\s+falta|no\\s+m\'?ho\\s+puc\\s+perdre|no\\s+puc\\s+faltar)(?![a-z])';
+  // palabras que hacen pensar en una alarma (se quedan en el título)
+  const IMPORTANT_WORDS = /\b(importante|importantisimo|importantisima|urgente|imprescindible|crucial|important|urgent|vital)\b/;
+  // planes a una hora concreta que suelen merecer alarma
+  const ALARM_HINT_WORDS = /\b(vuelo|avion|aeropuerto|examen|entrevista|oposicion|oposiciones|selectividad|juicio|operacion|cirugia|flight|plane|airport|exam|interview|surgery|avio|aeroport|examen|entrevista)\b/;
+  const WAKE_TITLE = { es: 'Despertarse', en: 'Wake up', ca: 'Despertar-se' };
+  const ALARM_TITLE = { es: 'Alarma', en: 'Alarm', ca: 'Alarma' };
+
   const num = s => {
     if (s == null) return NaN;
     s = String(s).trim();
@@ -232,6 +245,13 @@
       R.reminders = (R.reminders || []).concat(Math.round(n * ui.min));
     }, true);
     take(S, '[,;]?\\s*\\b(?:avisame|avisa|aviso|remind\\s+me|alert\\s+me)\\s+(?:a\\s+la\\s+hora|en\\s+el\\s+momento|al\\s+empezar|at\\s+the\\s+time|when\\s+it\\s+starts)\\b', () => { R.reminders = (R.reminders || []).concat(0); });
+
+    // 2b) alarmas: «despiértame a las 7», «pon una alarma», «que suene», «wake me up», «desperta'm»…
+    //     y lo que pide una alarma sin decirlo («importante», «sin falta», «no me lo puedo perder»…)
+    take(S, WAKE_RE, m => { R.alarm = true; R.wake = true; R.alarmLang = /wake|get\s+up/.test(m[0]) ? 'en' : /desperta'?m|desperta-me|despertar-me|llevar-me/.test(m[0]) ? 'ca' : null; }, true);
+    take(S, ALARM_RE, m => { R.alarm = true; if (!R.alarmLang) R.alarmLang = /alarm(?!a)/.test(m[0]) ? 'en' : /posa|amb\s|soni/.test(m[0]) ? 'ca' : null; }, true);
+    take(S, MUST_RE, () => { R.must = true; }, true);
+    take(S, '[,;]\\s*(?:(?:es|muy|it\'s|it\\s+is|very|es\\s+muy)\\s+)*(?:importante|importantisimo|urgente|important|urgent)(?![a-z])', () => { R.must = true; }, true);
 
     // 3) repeticiones
     const setRule = r => { if (!R.rrule) R.rrule = Object.assign({ interval: 1, byDay: null, monthMode: 'day', until: null, count: null }, r); };
@@ -493,8 +513,10 @@
 
     // 13) el título: lo que queda
     let title = cleanTitle(S);
+    // «despiértame a las 7»: si no queda nada, «Despertarse»; «pon una alarma a las 8»: «Alarma»
+    if (!title && R.alarm) title = (R.wake ? WAKE_TITLE : ALARM_TITLE)[R.alarmLang || (WAKE_TITLE[lang] ? lang : 'es')];
     const ft = u.fold(title);
-    if (R.kind !== 'task' && /^(recordar|comprar|llamar|pagar|enviar|mandar|devolver|recoger|renovar|reservar|pedir|escribir|contestar|responder|buy|call|pay|send|pick\s+up|return|renew|book|order|email|reply|trucar|comprar|enviar)\b/.test(ft)) R.kind = 'task';
+    if (R.kind !== 'task' && !R.wake && /^(recordar|comprar|llamar|pagar|enviar|mandar|devolver|recoger|renovar|reservar|pedir|escribir|contestar|responder|buy|call|pay|send|pick\s+up|return|renew|book|order|email|reply|trucar|comprar|enviar)\b/.test(ft)) R.kind = 'task';
     let calendarId, emoji;
     if (/\b(cumple|cumpleanos|birthday|bday|aniversari|aniversario)\b/.test(ft)) {
       calendarId = 'birthdays'; emoji = '🎂';
@@ -523,7 +545,7 @@
     } else if (R.date || R.time) {
       let date = R.date;
       const fo = u.fold(orig);
-      const hint = AM_WORDS.test(fo) ? 'am' : PM_WORDS.test(fo) ? 'pm' : null;
+      const hint = R.wake || AM_WORDS.test(fo) ? 'am' : PM_WORDS.test(fo) ? 'pm' : null;
       let t = guessHour(R.time, hint);
       if (!date || u.sameDay(date, today)) {
         // la hora ya pasó hoy: si podía ser por la tarde, por la tarde; si no, mañana (si no se ha dicho «hoy»)
@@ -563,7 +585,7 @@
     if (R.weekendRange && !allDay) end = null;
     if (!end) {
       if (allDay) end = R.dur && R.dur >= 1440 ? u.addDays(start, Math.round(R.dur / 1440) - 1) : start;
-      else end = u.addMinutes(start, R.dur || opts.defaultDuration || 60);
+      else end = u.addMinutes(start, R.dur || (R.wake ? 15 : 0) || opts.defaultDuration || 60);
     }
     let rrule = null;
     if (R.rrule) {
@@ -580,7 +602,12 @@
     }
     let reminders = R.reminders;
     if (reminders) reminders = [...new Set(reminders)].sort((a, b) => a - b);
+    // con alarma no hace falta además el aviso «a la hora» (sonaría dos veces); al despertarse, ninguno
+    if (R.alarm && !reminders && (R.wake || R.kind === 'task')) reminders = [];
     if (R.kind === 'task' && !reminders && !allDay && hadTime) reminders = [0];
+    const fo2 = u.fold(orig);
+    const alarm = !!R.alarm;
+    const alarmSuggested = !alarm && (!!R.must || IMPORTANT_WORDS.test(fo2) || (!allDay && hadTime && ALARM_HINT_WORDS.test(fo2)));
 
     let confidence = 0.3;
     if (hadDate || R.rrule) confidence += 0.3;
@@ -593,9 +620,10 @@
 
     const out = {
       kind: R.kind, title, start: u.toLocal(start, allDay), end: R.kind === 'task' ? u.toLocal(start, allDay) : u.toLocal(end, allDay),
-      allDay, location, reminders, rrule, confidence,
+      allDay, location, reminders, rrule, confidence, alarm, alarmSuggested,
     };
     if (calendarId) out.calendarId = calendarId;
+    if (opts._meta) { out._hadDate = hadDate; out._hadTime = hadTime; out._range = !!R.date2; }
     if (emoji) out.emoji = emoji;
     return out;
   }
@@ -681,5 +709,156 @@
     return s;
   }
 
-  ZC.nlp = { parse, _normalize: normalize };
+  // ---------- órdenes: borrar ----------
+  // parseCommand(text, { now, lang, calendars, firstDay }) →
+  //   { intent: 'delete', filter: { from, to, calendarId, text, kind }, all, weak } o null
+  //   from/to: Date (to exclusivo) o null · all: «todo», «todos los…», «lo de…», «vacía…»
+  //   weak: empieza por un infinitivo («borrar el disco duro el lunes» puede ser una tarea):
+  //         quien lo use puede tratarlo como tarea si no encuentra nada que borrar.
+  const DEL_VERBS = ['quitame', 'quitamelo', 'quitamela', 'quitamelos', 'quitar', 'quitarme', 'quita', 'quitalo', 'quitala', 'quitalos', 'quitalas',
+    'borra', 'borrame', 'borralo', 'borrala', 'borralos', 'borralas', 'borrar', 'borrarme',
+    'elimina', 'eliminame', 'eliminalo', 'eliminala', 'eliminalos', 'eliminalas', 'eliminar',
+    'cancela', 'cancelame', 'cancelalo', 'cancelala', 'cancelalos', 'cancelalas', 'cancelar', 'anula', 'anulalo', 'anulala', 'anular',
+    'delete', 'remove', 'cancel', 'erase', 'get rid of',
+    'esborra', "esborra'm", 'esborra-ho', 'esborra-los', 'esborra-les', 'esborra-la', "esborra'l", 'esborrar', 'elimina-ho', 'elimina-los',
+    'treu', "treu-ho", "treu-me", "treu'm", 'treure', 'cancel·la', 'cancel-la', 'anul·la'];
+  const CLEAR_VERBS = ['limpia', 'limpiame', 'limpiar', 'vacia', 'vaciame', 'vaciar', 'despeja', 'despejame', 'despejar', 'libera', 'liberame', 'liberar',
+    'clear', 'wipe', 'empty', 'free up', 'buida', 'buidar', "buida'm", 'neteja', 'netejar', 'allibera'];
+  const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s+');
+  const VERB_RE = new RegExp('^\\s*(?:(?:oye|oiga|hey|vale|ok|porfa|por\\s+favor|please|si\\s+us\\s+plau|sisplau)[,\\s]+)?(?:(?:puedes|podrias|me\\s+puedes|me\\s+podrias|can\\s+you|could\\s+you|pots|podries|em\\s+pots)\\s+)?(?:(?:me\\s+)?)?(' +
+    DEL_VERBS.concat(CLEAR_VERBS).sort((a, b) => b.length - a.length).map(reEsc).join('|') + ')(?![a-z\'·-])(?:\\s+(?:por\\s+favor|please))?');
+  const INF = /^(quitar|borrar|eliminar|cancelar|anular|limpiar|vaciar|despejar|liberar|esborrar|treure|buidar|netejar)/;
+  const FULL_MONTHS = 'enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|gener|febrer|marc|maig|juny|juliol|agost|setembre|novembre|desembre';
+  const CAL_ALIASES = { work: ['trabajo', 'work', 'feina', 'curro', 'oficina'], personal: ['personal'], birthdays: ['cumpleanos', 'cumples', 'cumple', 'birthdays', 'birthday', 'aniversaris', 'aniversari', 'cumpleanys'] };
+  const FILL = new Set(['lo', 'la', 'el', 'los', 'las', 'de', 'del', 'que', 'hay', 'tengo', 'tenga', 'tenia', 'mi', 'mis', 'my', 'the', 'of', 'for', 'on', 'en', 'a', 'al', 'y', 'and', 'i', 'dia', 'day', 'dias', 'days',
+    'agenda', 'calendario', 'calendar', 'calendari', 'cosas', 'cosa', 'things', 'thing', 'stuff', 'planes', 'plans', 'eso', 'esto', 'ho', 'it', 'that', 'this', 'programado', 'scheduled', 'apuntado',
+    'have', 'got', 'les', 'els', 'meu', 'meus', 'meva', 'meves', 'que', 'hi', 'ha', 'tinc', 'para', 'per', 'from', 'in', 'entero', 'entera', 'whole', 'sencer', 'sencera', 'todo', 'tot']);
+
+  function calendarList(opts) {
+    if (opts.calendars) return opts.calendars;
+    try { if (ZC.store && ZC.store.calendars) return ZC.store.calendars(); } catch (e) {}
+    return [{ id: 'personal', name: 'Personal' }, { id: 'work', name: 'Trabajo' }, { id: 'birthdays', name: 'Cumpleaños' }];
+  }
+  /** nombre (ya en minúsculas y sin tildes) → id de calendario */
+  function findCalendar(name, cals) {
+    const n = String(name || '').trim().replace(/[.,;:!?]+$/, '');
+    if (!n) return null;
+    const f = s => U().fold(String(s || '')).trim();
+    const c = cals.find(x => f(x.name) === n);
+    if (c) return c.id;
+    for (const id of Object.keys(CAL_ALIASES)) if (CAL_ALIASES[id].includes(n) && cals.some(x => x.id === id)) return id;
+    return null;
+  }
+
+  function parseCommand(text, opts) {
+    const u = U();
+    opts = opts || {};
+    const orig = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
+    if (!orig) return null;
+    const S = makeState(orig);
+    const vm = VERB_RE.exec(S.n);
+    if (!vm) return null;
+    const verb = vm[1].replace(/\s+/g, ' ');
+    const clear = CLEAR_VERBS.includes(verb);
+    const weak = INF.test(verb);
+    consume(S, 0, vm[0].length);
+    const now = opts.now ? new Date(opts.now) : new Date();
+    const today = u.startOfDay(now);
+    let firstDay = opts.firstDay;
+    if (firstDay == null) { try { firstDay = ZC.store.getPrefs().cal.firstDay; } catch (e) {} }
+    if (firstDay == null) firstDay = 1;
+    const cals = calendarList(opts);
+    const F = { from: null, to: null, calendarId: null, text: null, kind: null };
+    let all = clear;
+
+    // «todo», «todos», «lo de…», «everything»
+    take(S, '\\b(?:absolutamente\\s+|completamente\\s+)?(?:todo|todos|todas|toda|everything|all|tot|tots|totes|cualquier\\s+cosa|anything)\\b', () => { all = true; }, true);
+    take(S, '\\b(?:lo|todo\\s+lo|allo|el)\\s+(?:que\\s+(?:hay|tengo|tenga|tenia|hi\\s+ha|tinc)\\s+)?(?=(?:de|del|para|en|d\'|per)(?:\\s|$))', () => { all = true; });
+    take(S, '\\b(?:lo\\s+)?que\\s+(?:hay|tengo|tenga|hi\\s+ha|tinc)\\b|\\bwhat(?:ever)?\\s+(?:i\\s+have|there\\s+is|is)\\b|\\b(?:the\\s+|my\\s+)?(?:stuff|things)\\b', () => { all = true; });
+    // tipo: eventos / tareas (en plural, todos)
+    take(S, '\\b(?:los\\s+|las\\s+|mis\\s+|el\\s+|la\\s+|mi\\s+|the\\s+|my\\s+|els\\s+|les\\s+|meus\\s+|meves\\s+|l\')?(eventos?|citas?|events?|esdeveniments?|tareas?|recordatorios?|pendientes|tasks?|to-?dos?|reminders?|tasques|tasca|recordatoris?)\\b', m => {
+      const w = m[1];
+      F.kind = /^(event|cita|esdeveniment)/.test(w) ? 'event' : 'task';
+      if (/s$/.test(w)) all = true;
+    });
+    // calendario con nombre: «del calendario Trabajo», «from my work calendar»
+    take(S, '\\b(?:(?:del?|en\\s+el|from|in|on|of)\\s+(?:the\\s+|my\\s+|mi\\s+)?)?(?:calendario|calendar|calendari)\\s+(?:de\\s+|del\\s+|d\')?([^\\s,.;' + X + ']+(?:\\s+[^\\s,.;' + X + ']+)?)', m => {
+      const words = m[1].split(/\s+/);
+      let id = findCalendar(m[1], cals);
+      if (!id && words.length > 1) {
+        id = findCalendar(words[0], cals);
+        if (id) { const cut = m.index + m[0].length - (m[1].length - words[0].length); consume(S, m.index + (m[0].length - m[0].trimStart().length), cut); F.calendarId = id; return false; }
+      }
+      if (!id) return false;
+      F.calendarId = id;
+    });
+    if (!F.calendarId) take(S, '\\b(?:(?:from|in|on)\\s+)?(?:the\\s+|my\\s+)?([a-z]+)\\s+calendar\\b', m => { const id = findCalendar(m[1], cals); if (!id) return false; F.calendarId = id; });
+
+    // fechas que son un rango: esta semana, la semana que viene, este mes, el finde, «de diciembre»…
+    const sow = u.startOfWeek(today, firstDay);
+    const setRange = (a, b) => { if (F.from) return false; F.from = a; F.to = b; };
+    take(S, '\\b(?:(?:de|del|para|en|durante|for|d\'|per|of)\\s+)?(?:esta|this|aquesta)\\s+(?:semana|week|setmana)\\b', () => setRange(sow, u.addDays(sow, 7)));
+    take(S, '\\b(?:(?:de|para|en|for|d\'|per|of)\\s+)?(?:la\\s+|the\\s+)?(?:semana\\s+que\\s+viene|proxima\\s+semana|siguiente\\s+semana|semana\\s+proxima|next\\s+week|setmana\\s+que\\s+ve|propera\\s+setmana)\\b', () => setRange(u.addDays(sow, 7), u.addDays(sow, 14)));
+    take(S, '\\b(?:(?:de|del|para|en|durante|for|d\'|per|of)\\s+)?(?:este|this|aquest)\\s+(?:mes|month)\\b', () => setRange(new Date(today.getFullYear(), today.getMonth(), 1), new Date(today.getFullYear(), today.getMonth() + 1, 1)));
+    take(S, '\\b(?:(?:de|del|para|en|for|d\'|per|of)\\s+)?(?:el\\s+|the\\s+)?(?:mes\\s+que\\s+viene|proximo\\s+mes|siguiente\\s+mes|next\\s+month|mes\\s+que\\s+ve|proper\\s+mes)\\b', () => setRange(new Date(today.getFullYear(), today.getMonth() + 1, 1), new Date(today.getFullYear(), today.getMonth() + 2, 1)));
+    take(S, '\\b(?:(?:de|del|para|en|for|d\'|per|of)\\s+)?(?:este|el|this|aquest|el\\s+proximo|next|el\\s+que\\s+viene)\\s+(?:finde|fin\\s+de\\s+semana|weekend|cap\\s+de\\s+setmana)(?:\\s+que\\s+viene|\\s+que\\s+ve)?\\b', m => {
+      const next = /proximo|next|viene|que\s+ve/.test(m[0]);
+      let sat = nextWeekday(today, 6, 'this');
+      if (today.getDay() === 0 && !next) return setRange(today, u.addDays(today, 1));
+      if (next && (today.getDay() === 6 || today.getDay() === 0)) sat = u.addDays(sat, 7);
+      return setRange(sat, u.addDays(sat, 2));
+    });
+    // «del 3 al 7» (sin mes: este mes o el que viene)
+    take(S, '\\b(?:del?|desde\\s+el|from\\s+the|from)\\s+(?:dia\\s+)?(\\d{1,2})\\s+(?:al?|hasta\\s+el|to|till|until)\\s+(?:dia\\s+|the\\s+)?(\\d{1,2})\\b(?!\\s*(?:de\\s+|of\\s+)?(?:' + alt(MONTHS) + ')\\b|\\s*[:/.h])', m => {
+      const d1 = +m[1], d2 = +m[2];
+      if (!d1 || !d2 || d2 < d1 || d2 > 31) return false;
+      // este mes; si ya ha pasado entero, el que viene
+      const k = d2 < today.getDate() ? 1 : 0;
+      const y = today.getFullYear(), mo = today.getMonth() + k;
+      const a = mkDate(y + Math.floor(mo / 12), mo % 12, d1), b = mkDate(y + Math.floor(mo / 12), mo % 12, d2);
+      if (!a || !b) return false;
+      return setRange(a, u.addDays(b, 1));
+    });
+    // un mes entero: «de diciembre», «in march» (no «el 3 de diciembre»)
+    take(S, '\\b(?:de|del|en|in|for|of|d\'|durante|per|el\\s+mes\\s+de|the\\s+month\\s+of)\\s+(' + FULL_MONTHS + ')(?:\\s+(?:de\\s+|del\\s+)?(\\d{4}))?\\b', m => {
+      if (/\d{1,2}(?:st|nd|rd|th)?\s*$/.test(S.n.slice(0, m.index))) return false;
+      const mo = MONTHS[m[1]];
+      let y = m[2] ? +m[2] : today.getFullYear();
+      if (!m[2] && mo < today.getMonth()) y++;
+      return setRange(new Date(y, mo, 1), new Date(y, mo + 1, 1));
+    });
+
+    // el resto: un día suelto con el parser de siempre («mañana», «el viernes», «el 3 de diciembre», «del 3 al 7 de dic.»)
+    let rest = '';
+    for (let i = 0; i < S.orig.length; i++) rest += S.used[i] ? ' ' : S.orig[i];
+    rest = rest.replace(/\s+/g, ' ').trim();
+    if (rest) {
+      const p = parse(rest, { now, lang: opts.lang, _meta: true });
+      if (p && p._hadDate && !F.from) {
+        const s = u.startOfDay(u.parse(p.start));
+        const e = p.allDay ? u.addDays(u.parse(p.end), 1) : u.addDays(u.startOfDay(u.parse(p.start)), 1);
+        F.from = s; F.to = e > s ? e : u.addDays(s, 1);
+      }
+      let title = p ? (p.title || '') : rest;
+      // (si el parser no ha encontrado fecha, el texto entero)
+      if (p && !p._hadDate && !p._hadTime) title = cleanTitle(makeState(rest));
+      const words = u.fold(title).replace(/[,.;:!?¿¡"«»“”]/g, ' ').split(/\s+/).filter(Boolean);
+      if (words.length && words.every(w => FILL.has(w))) title = '';
+      title = title.replace(/^[¿¡"«“\s]+|[?!"»”\s]+$/g, '').trim();
+      if (title) {
+        // ¿es un calendario? («quita los cumpleaños», «borra todo lo de trabajo de mañana»)
+        const tw = words.filter(w => !FILL.has(w)).join(' ');
+        const id = !F.calendarId && findCalendar(tw, cals);
+        if (id) { F.calendarId = id; if (id === 'birthdays' && /s$/.test(tw)) all = true; }
+        else F.text = title;
+      }
+    }
+    // «limpia la cocina el sábado» no es borrar: vaciar es solo para días o calendarios
+    if (clear && F.text) return null;
+    if (clear && !F.from && !F.calendarId && !F.kind) return null;
+    if (weak && !all && !F.from && !F.calendarId && !F.text) return null;
+    return { intent: 'delete', filter: F, all, weak };
+  }
+
+  ZC.nlp = { parse, parseCommand, _normalize: normalize };
 })(typeof window !== 'undefined' ? window : globalThis);

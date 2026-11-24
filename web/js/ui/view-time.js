@@ -25,7 +25,7 @@
     }
     el.appendChild(UI.h(hd + '</div>'));
     // todo el día
-    const ad = UI.h(`<div class="tg-allday ${top.length ? '' : 'empty'}"><div class="tg-gutter"><span>${t('todo el día')}</span></div><div class="tg-adl"></div></div>`);
+    const ad = UI.h(`<div class="tg-allday ${top.length ? '' : 'ad-empty'}"><div class="tg-gutter"><span>${t('todo el día')}</span></div><div class="tg-adl"></div></div>`);
     const adl = ad.querySelector('.tg-adl');
     const segs = top.map(o => ({ o, a: Math.max(0, C.daysBetween(from, o.start)), b: Math.min(n - 1, C.daysBetween(from, lastDay(o))), cont: sod(o.start) < from, more: lastDay(o) >= to }))
       .sort((x, y) => ((y.b - y.a) - (x.b - x.a)) || (x.a - y.a) || (x.o.start - y.o.start));
@@ -36,7 +36,7 @@
     segs.forEach((s, i) => {
       if (s.lane >= showL) return;
       const o = s.o;
-      const b = UI.h(`<button class="mv-ev bar ${o.isTask ? 'task' : ''} ${o.done ? 'done' : ''} ${s.cont ? 'cont' : ''} ${s.more ? 'more' : ''}" data-key="${esc(o.key)}" style="${C.evVars(o)};left:calc(${s.a} * 100% / ${n} + 2px);width:calc(${s.b - s.a + 1} * 100% / ${n} - 4px);top:${3 + s.lane * 24}px;--i:${i}">${o.isTask ? `<i class="tk ${o.done ? 'on' : ''}"></i>` : ''}<span class="tl">${esc(C.titleOf(o.ev))}</span></button>`);
+      const b = UI.h(`<button class="mv-ev bar ${o.isTask ? 'task' : ''} ${o.done ? 'done' : ''} ${s.cont ? 'cont' : ''} ${s.more ? 'more' : ''}" data-key="${esc(o.key)}" style="${C.evVars(o)};left:calc(${s.a} * 100% / ${n} + 2px);width:calc(${s.b - s.a + 1} * 100% / ${n} - 4px);top:${3 + s.lane * 24}px;--i:${i}">${o.isTask ? `<i class="tk ${o.done ? 'on' : ''}"></i>` : ''}${C.alarmMark(o.ev, 11)}<span class="tl">${esc(C.titleOf(o.ev))}</span></button>`);
       b._o = o; adl.appendChild(b);
     });
     if (lanes.length > 3) {
@@ -71,7 +71,7 @@
         const w = it.n > 1 ? (it.c === it.n - 1 ? 1 / it.n : 1.6 / it.n) : 1;
         const short = hpx < 40;
         const ev = UI.h(`<button class="tg-ev ${o.isTask ? 'task' : ''} ${o.done ? 'done' : ''} ${short ? 'short' : ''} ${o.end < new Date() ? 'past' : ''}" data-key="${esc(o.key)}" style="${C.evVars(o)};top:${it.s / 60 * H + 1}px;height:${hpx}px;left:calc(${it.c / it.n * 100}% + 2px);width:calc(${Math.min(w, 1 - it.c / it.n) * 100}% - 5px);z-index:${2 + it.c};--i:${i}">
-          ${o.isTask ? `<i class="tk ${o.done ? 'on' : ''}"></i>` : ''}<span class="tl">${esc(C.titleOf(o.ev))}</span><span class="tm">${o.isTask || short ? C.fmtT(o.start) : C.fmtT(o.start) + ' – ' + C.fmtT(o.end)}</span>${o.ev.location && hpx > 64 ? `<span class="lc">${UI.icon('pin', 12)}${esc(o.ev.location)}</span>` : ''}
+          ${o.isTask ? `<i class="tk ${o.done ? 'on' : ''}"></i>` : ''}<span class="tl">${C.alarmMark(o.ev, 12)}${esc(C.titleOf(o.ev))}</span><span class="tm">${o.isTask || short ? C.fmtT(o.start) : C.fmtT(o.start) + ' – ' + C.fmtT(o.end)}</span>${o.ev.location && hpx > 64 ? `<span class="lc">${UI.icon('pin', 12)}${esc(o.ev.location)}</span>` : ''}
           ${o.isTask ? '' : '<i class="rz" aria-hidden="true"></i>'}</button>`);
         ev._o = o; ev._s = it.s; ev._e = it.e;
         col.appendChild(ev);

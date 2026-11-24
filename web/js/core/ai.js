@@ -3,8 +3,12 @@
 //
 // run(texto, { images, history, onToken }) → { reply, actions, provider }
 //   No aplica nada: el frontend enseña la vista previa y luego llama a apply().
-//   Acciones: { type: 'create', event } · { type: 'update', id, changes } ·
-//             { type: 'delete', id } · { type: 'complete', id }
+//   Acciones: { type: 'create', event, cid } · { type: 'update', id | ref, changes } ·
+//             { type: 'delete', id, mode?, date? } · { type: 'complete', id }
+//   Cualquiera puede llevar suggest: true + why: 'texto' (sugerencia: el frontend la
+//   enseña desmarcada; apply() se salta las que sigan con suggest). ref = índice de la
+//   acción create de la misma respuesta (refId = su cid, por si se quitan acciones).
+//   confirmMany: true en la respuesta cuando se borran más de 20 cosas de golpe.
 //
 // Proveedores:
 //   rules      → el parser integrado (ZC.nlp), sin internet
@@ -97,9 +101,9 @@
         if (seen.has(ev.id)) continue;
         seen.add(ev.id);
         const next = occ.filter(x => x.id === ev.id && x.endEx >= now).slice(0, 3).map(x => u.toLocal(x.start, ev.allDay));
-        lines.push([ev.id, ev.start, ev.end, ev.title, ev.calendarId, ev.location || '', 'serie: ' + ZC.recur.describe(ev.rrule, 'es', ev.start) + (next.length ? ' (próximas: ' + next.join(', ') + ')' : ''), ev.kind === 'task' ? 'tarea' : ''].join(' | '));
+        lines.push([ev.id, ev.start, ev.end, ev.title, ev.calendarId, ev.location || '', 'serie: ' + ZC.recur.describe(ev.rrule, 'es', ev.start) + (next.length ? ' (próximas: ' + next.join(', ') + ')' : ''), (ev.kind === 'task' ? 'tarea' : '') + (ev.alarm ? ' alarma' : '')].join(' | '));
       } else {
-        lines.push([ev.id, ev.start, ev.end, ev.title, ev.calendarId, ev.location || '', '', ev.kind === 'task' ? (ev.done ? 'tarea hecha' : 'tarea') : ''].join(' | '));
+        lines.push([ev.id, ev.start, ev.end, ev.title, ev.calendarId, ev.location || '', '', (ev.kind === 'task' ? (ev.done ? 'tarea hecha' : 'tarea') : '') + (ev.alarm ? ' alarma' : '')].join(' | '));
       }
       if (lines.length >= maxLines) break;
     }
@@ -122,22 +126,27 @@
       'Ahora es ' + fecha + ', ' + u.hm(now) + ' (zona ' + (u.timeZone() || 'local') + ', UTC' + offsetText(now) + ').',
       'Próximos días: ' + days.join(', ') + '.',
       'Calendarios (id: nombre): ' + cals + '.',
-      'Eventos y tareas (de hace 7 días a dentro de 60). Formato: id | inicio | fin | título | calendario | lugar | repetición | tipo',
+      'Eventos y tareas (de hace 7 días a dentro de 60). Formato: id | inicio | fin | título | calendario | lugar | repetición | tipo (tarea, alarma)',
       ev.length ? ev.join('\n') : '(ninguno)',
       '',
       'Responde SOLO con un objeto JSON, sin nada antes ni después:',
       '{"reply": "frase corta y amable para el usuario, en su idioma", "actions": [ ... ]}',
       'Acciones:',
-      '- {"type":"create","event":{"kind":"event","title":"…","start":"YYYY-MM-DDTHH:mm","end":"YYYY-MM-DDTHH:mm","allDay":false,"location":"","notes":"","calendarId":"personal","reminders":[10],"rrule":null}}',
+      '- {"type":"create","event":{"kind":"event","title":"…","start":"YYYY-MM-DDTHH:mm","end":"YYYY-MM-DDTHH:mm","allDay":false,"location":"","notes":"","calendarId":"personal","reminders":[10],"rrule":null,"alarm":false}}',
       '- {"type":"update","id":"<id de la lista>","changes":{solo los campos que cambian}}',
-      '- {"type":"delete","id":"<id de la lista>"}',
+      '- {"type":"update","ref":<índice en "actions" de un create de esta misma respuesta>,"changes":{…}}',
+      '- {"type":"delete","id":"<id de la lista>"} · si se repite: "mode":"all" (toda la serie), "mode":"one" con "date":"YYYY-MM-DD" (solo ese día) o "mode":"future" con "date" (ese día y los siguientes)',
       '- {"type":"complete","id":"<id de una tarea>"}',
       'Reglas:',
       '- Fechas locales sin zona. Todo el día: "allDay":true, "start":"YYYY-MM-DD" y "end" = último día incluido.',
       '- kind "task" para recordatorios y cosas por hacer (end = start).',
       '- rrule: {"freq":"daily|weekly|monthly|yearly","interval":1,"byDay":["MO","WE"],"until":"YYYY-MM-DD"|null,"count":null}.',
       '- Sin duración: 1 hora. Con día pero sin hora: todo el día. reminders = minutos antes (todo el día: antes de las 9:00).',
-      '- Solo ids de la lista. Cambiar o borrar algo que se repite afecta a toda la serie.',
+      '- Solo ids de la lista. Cambiar algo que se repite afecta a toda la serie.',
+      '- Borrar en bloque: si piden quitar varias cosas («quita todo lo de mañana», «borra las reuniones de esta semana», «vacía el viernes»), una acción delete por cada evento o tarea de la lista que encaje, sin inventar ninguno. Si una serie solo cae una vez en lo que piden, "mode":"one" con esa "date"; si la serie entera está dentro, "mode":"all". En "reply" di cuántas cosas vas a borrar. Si no encaja nada, dilo sin acciones.',
+      '- Alarmas: "alarm":true hace que el evento suene como un despertador a su hora de inicio, aunque el móvil esté en silencio (todo el día: a las 09:00 o a "alarmTime":"HH:mm"). Ponla directamente cuando el usuario quiere que algo le despierte o le suene sí o sí. «Despiértame a las 7» = evento «Despertarse» a las 07:00 (de mañana, o de hoy si aún no han dado), de 15 minutos, "alarm":true y "reminders":[].',
+      '- Recomendar alarma: si algo parece importante y es a una hora concreta (cita médica, vuelo, tren, examen, entrevista, juicio, levantarse temprano…) y el usuario no la ha pedido, no la pongas en el evento: añade {"type":"update","ref":<índice del create>,"changes":{"alarm":true},"suggest":true,"why":"motivo muy corto"} (o con "id" si el evento ya existe). Sin pasarse: solo para lo importante, nunca para todo.',
+      '- Cualquier acción puede llevar "suggest":true y "why":"…" para proponerla sin hacerla: el usuario decide si la acepta.',
       '- Si solo preguntan (¿qué tengo mañana?), contesta en "reply" con "actions": [].',
       '- Si algo no está claro, pregunta en "reply" sin acciones.',
       '- Con fotos (carteles, entradas, horarios, invitaciones): un evento por cada fecha que veas, con lugar y detalles útiles en "notes". Si falta el año, el próximo que encaje.',
@@ -411,7 +420,7 @@
     return null;
   }
 
-  const KEYS = ['kind', 'title', 'notes', 'location', 'calendarId', 'color', 'emoji', 'allDay', 'start', 'end', 'rrule', 'reminders', 'checklist', 'done'];
+  const KEYS = ['kind', 'title', 'notes', 'location', 'calendarId', 'color', 'emoji', 'allDay', 'start', 'end', 'rrule', 'reminders', 'checklist', 'done', 'alarm', 'alarmTime'];
   function cleanEvent(e, isUpdate, prev) {
     const u = U();
     if (!e || typeof e !== 'object') return null;
@@ -444,6 +453,11 @@
     if ('rrule' in out) out.rrule = out.rrule ? ZC.recur.normRule(typeof out.rrule === 'string' ? (ZC.ics ? ZC.ics.parseRRule(out.rrule.replace(/^RRULE:/i, '')) : null) : out.rrule) : null;
     if ('checklist' in out) out.checklist = Array.isArray(out.checklist) ? out.checklist.filter(Boolean).map(x => ({ id: u.uid(), text: String(x.text || x), done: !!x.done })) : [];
     if ('done' in out) out.done = !!out.done;
+    if ('alarm' in out) out.alarm = out.alarm === true || out.alarm === 'true';
+    if ('alarmTime' in out) {
+      const m = /^(\d{1,2}):(\d{2})/.exec(String(out.alarmTime || ''));
+      if (m && +m[1] < 24 && +m[2] < 60) out.alarmTime = u.pad(+m[1]) + ':' + m[2]; else if (out.alarmTime === null) out.alarmTime = null; else delete out.alarmTime;
+    }
     if (!isUpdate) {
       if (!out.start) return null;
       if (!out.title) out.title = out.kind === 'task' ? 'Tarea' : 'Evento';
@@ -477,32 +491,77 @@
     const base = id.split('@')[0];
     return ZC.store.get(base) ? base : null;
   }
+  const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const MODES = ['all', 'one', 'future'];
 
+  /** Comprueba y limpia las acciones (de la IA o del frontend). Devuelve { actions, dropped }. */
   function validate(actions) {
     const out = [];
+    const at = new Map(); // índice original → índice en out
     let dropped = 0;
-    for (const a of (actions || [])) {
-      if (!a || typeof a !== 'object') { dropped++; continue; }
+    const list = Array.isArray(actions) ? actions : [];
+    list.forEach((a, i) => {
+      if (!a || typeof a !== 'object') { dropped++; return; }
       const type = TYPES[String(a.type || a.action || '').toLowerCase()];
+      let item = null;
       if (type === 'create') {
         const ev = cleanEvent(a.event || a.data || a.evento || a, false);
-        if (ev) out.push({ type, event: ev }); else dropped++;
+        if (ev) item = { type, event: ev, cid: typeof a.cid === 'string' && a.cid ? a.cid.slice(0, 40) : 'c' + i };
+      } else if (type === 'update' && (a.ref != null || a.refId) && !a.id) {
+        // cambia algo que se crea en esta misma respuesta (p. ej. la alarma sugerida)
+        let target = null;
+        if (a.refId) target = out.find(x => x.type === 'create' && x.cid === a.refId);
+        if (!target && a.ref != null && at.has(+a.ref)) target = out[at.get(+a.ref)];
+        const ch = target && target.type === 'create' ? cleanEvent(a.changes || a.event || a.data || {}, true, null) : null;
+        if (ch && Object.keys(ch).length) item = { type, ref: -1, refId: target.cid, changes: ch };
       } else if (type === 'update') {
         const id = findId(a.id || (a.event && a.event.id));
         const prev = id && ZC.store.get(id);
         const ch = prev ? cleanEvent(a.changes || a.event || a.data || {}, true, prev) : null;
-        if (prev && ch && Object.keys(ch).length) out.push({ type, id, changes: ch }); else dropped++;
+        if (prev && ch && Object.keys(ch).length) item = { type, id, changes: ch };
       } else if (type === 'delete') {
         const id = findId(a.id);
-        if (id) out.push({ type, id }); else dropped++;
+        const ev = id && ZC.store.get(id);
+        if (ev) {
+          let mode = MODES.includes(a.mode) ? a.mode : null;
+          let date = a.date != null ? String(a.date).slice(0, 10) : null;
+          if (date && (!YMD_RE.test(date) || !U().parse(date))) date = null;
+          // «id@YYYY-MM-DD» (una aparición) sin modo: solo esa
+          const at2 = /@(\d{4}-\d{2}-\d{2})$/.exec(String(a.id));
+          if (!mode && at2 && ev.rrule) { mode = 'one'; date = at2[1]; }
+          if (!ev.rrule) { mode = null; date = null; }
+          else if (!mode) mode = 'all';
+          if (mode && mode !== 'all' && !date) mode = null; // «solo una» sin fecha: no se sabe cuál
+          if (!ev.rrule || mode) {
+            item = { type, id };
+            if (mode) item.mode = mode;
+            if (mode && mode !== 'all') item.date = date;
+            // repetidos: si ya se borra la serie entera, lo demás de esa serie sobra
+            const same = out.filter(x => x.type === 'delete' && x.id === id && !x._skip);
+            if (same.some(x => !x.mode || x.mode === 'all' || (x.mode === item.mode && x.date === item.date))) item = 'skip';
+            else if (item.mode === 'all') same.forEach(x => { x._skip = true; });
+          }
+        }
       } else if (type === 'complete') {
         const id = findId(a.id);
         const ev = id && ZC.store.get(id);
-        if (ev && ev.kind === 'task') out.push({ type, id }); else dropped++;
-      } else dropped++;
-    }
-    return { actions: out, dropped };
+        if (ev && ev.kind === 'task') item = { type, id };
+      }
+      if (item === 'skip') return;
+      if (!item) { dropped++; return; }
+      if (a.suggest === true || a.suggest === 'true') item.suggest = true;
+      if (a.why != null && String(a.why).trim()) item.why = String(a.why).trim().slice(0, 160);
+      at.set(i, out.length);
+      out.push(item);
+    });
+    const res = out.filter(x => !x._skip);
+    for (const x of res) if (x.refId) x.ref = res.findIndex(y => y.type === 'create' && y.cid === x.refId);
+    return { actions: res, dropped };
   }
+
+  /** ¿hace falta pedir confirmación? (más de 20 borrados de golpe) */
+  const MANY = 20;
+  const manyDeletes = actions => (actions || []).filter(a => a && a.type === 'delete' && !a.suggest).length > MANY;
 
   // ---------- frases de respuesta (en el idioma de la interfaz) ----------
   const SAY = {
@@ -510,17 +569,35 @@
       empty: 'Escribe qué quieres apuntar, por ejemplo «mañana a las 5 dentista».', askDel: '¿Borro «%s» (%w)?', noEv: 'No encuentro ese evento.',
       markDone: 'Marco «%s» como hecha.', noTask: 'No encuentro esa tarea.', free: 'El %d no tienes nada. ✿', day: 'El %d: ',
       what: 'No lo he entendido. Prueba con algo como «cena con Marta el viernes a las 21:30».', noPhotos: 'El integrado no entiende fotos: para eso elige Gemini (gratis) u otro con visión en Ajustes → IA. ',
-      unsure: 'No he sabido qué hacer con eso. ¿Me lo dices de otra forma?', dropped: ' (La IA propuso cambios que no tenían sentido y los he quitado.)' },
+      unsure: 'No he sabido qué hacer con eso. ¿Me lo dices de otra forma?', dropped: ' (La IA propuso cambios que no tenían sentido y los he quitado.)',
+      found: 'He encontrado %n %k%w para borrar: %l.', none: 'No encuentro nada%w para borrar.', more: ' y %n más',
+      whatDel: '¿Qué borro? Dime, por ejemplo, «quita todo lo de mañana» o «borra la reunión del lunes».',
+      many: ' Son muchas: confírmalo antes de borrar.', delOne: 'borrar «%s» del %d', alarmOn: ' (con alarma)',
+      alarmAsk: ' ¿Le pongo alarma?', alarmWhy: 'Parece importante: la alarma suena como un despertador aunque el móvil esté en silencio.',
+      k: { event: ['evento', 'eventos'], task: ['tarea', 'tareas'], any: ['cosa', 'cosas'] },
+      r: { today: ' de hoy', tomorrow: ' de mañana', week: ' de esta semana', nextWeek: ' de la semana que viene', month: ' de %m', day: ' del %d', range: ' del %a al %b', cal: ' del calendario %c' } },
     en: { loc: 'en-GB', at: ' at ', on: ' on ', ok: 'OK: ', change: 'change “%s”', del: 'delete “%s”', done: 'mark “%s” as done',
       empty: 'Type what you want to add, for example “dentist tomorrow at 5”.', askDel: 'Delete “%s” (%w)?', noEv: "I can't find that event.",
       markDone: 'Marking “%s” as done.', noTask: "I can't find that task.", free: 'Nothing on %d. ✿', day: '%d: ',
       what: "I didn't get that. Try something like “dinner with Marta on Friday at 9:30pm”.", noPhotos: "The built-in assistant can't read photos: choose Gemini (free) or another one with vision in Settings → AI. ",
-      unsure: "I didn't know what to do with that. Could you say it another way?", dropped: ' (The AI suggested changes that made no sense and I removed them.)' },
+      unsure: "I didn't know what to do with that. Could you say it another way?", dropped: ' (The AI suggested changes that made no sense and I removed them.)',
+      found: 'I found %n %k%w to delete: %l.', none: 'I found nothing%w to delete.', more: ' and %n more',
+      whatDel: 'What should I delete? Try “delete everything tomorrow” or “delete the meeting on Monday”.',
+      many: " That's a lot: please confirm before deleting.", delOne: 'delete “%s” on %d', alarmOn: ' (with alarm)',
+      alarmAsk: ' Shall I set an alarm?', alarmWhy: 'Looks important: the alarm rings like an alarm clock even if your phone is on silent.',
+      k: { event: ['event', 'events'], task: ['task', 'tasks'], any: ['item', 'items'] },
+      r: { today: ' today', tomorrow: ' tomorrow', week: ' this week', nextWeek: ' next week', month: ' in %m', day: ' on %d', range: ' from %a to %b', cal: ' in the %c calendar' } },
     ca: { loc: 'ca-ES', at: ' a les ', on: ' el ', ok: "D'acord: ", change: 'canviar «%s»', del: 'esborrar «%s»', done: 'marcar «%s» com a feta',
       empty: 'Escriu què vols apuntar, per exemple «demà a les 5 dentista».', askDel: 'Esborro «%s» (%w)?', noEv: 'No trobo aquest esdeveniment.',
       markDone: 'Marco «%s» com a feta.', noTask: 'No trobo aquesta tasca.', free: 'El %d no tens res. ✿', day: 'El %d: ',
       what: 'No ho he entès. Prova amb alguna cosa com «sopar amb la Marta divendres a les 21:30».', noPhotos: "L'integrat no entén fotos: per a això tria Gemini (gratis) o un altre amb visió a Ajustos → IA. ",
-      unsure: "No he sabut què fer-ne. M'ho dius d'una altra manera?", dropped: " (La IA va proposar canvis que no tenien sentit i els he tret.)" },
+      unsure: "No he sabut què fer-ne. M'ho dius d'una altra manera?", dropped: " (La IA va proposar canvis que no tenien sentit i els he tret.)",
+      found: 'He trobat %n %k%w per esborrar: %l.', none: 'No trobo res%w per esborrar.', more: ' i %n més',
+      whatDel: "Què esborro? Digues, per exemple, «esborra-ho tot de demà» o «esborra la reunió de dilluns».",
+      many: ' Són moltes: confirma-ho abans d\'esborrar.', delOne: 'esborrar «%s» del %d', alarmOn: ' (amb alarma)',
+      alarmAsk: ' Hi poso alarma?', alarmWhy: "Sembla important: l'alarma sona com un despertador encara que el mòbil estigui en silenci.",
+      k: { event: ['esdeveniment', 'esdeveniments'], task: ['tasca', 'tasques'], any: ['cosa', 'coses'] },
+      r: { today: " d'avui", tomorrow: ' de demà', week: " d'aquesta setmana", nextWeek: ' de la setmana que ve', month: ' de %m', day: ' del %d', range: ' del %a al %b', cal: ' del calendari %c' } },
   };
   let sayLang = 'es';
   const say = () => SAY[sayLang] || SAY.es;
@@ -545,9 +622,14 @@
   function describeActions(actions) {
     const S = say(), parts = [];
     for (const a of actions) {
-      if (a.type === 'create') parts.push('«' + a.event.title + '»' + S.on + when(a.event) + (a.event.rrule ? ' (' + ZC.recur.describe(a.event.rrule, sayLang, a.event.start).toLowerCase() + ')' : ''));
-      else if (a.type === 'update') { const e = ZC.store.get(a.id); parts.push(S.change.replace('%s', e ? e.title : '')); }
-      else if (a.type === 'delete') { const e = ZC.store.get(a.id); parts.push(S.del.replace('%s', e ? e.title : '')); }
+      if (a.suggest) continue;
+      if (a.type === 'create') parts.push('«' + a.event.title + '»' + S.on + when(a.event) + (a.event.rrule ? ' (' + ZC.recur.describe(a.event.rrule, sayLang, a.event.start).toLowerCase() + ')' : '') + (a.event.alarm ? S.alarmOn : ''));
+      else if (a.type === 'update') { const e = a.id ? ZC.store.get(a.id) : null; if (e) parts.push(S.change.replace('%s', e.title)); }
+      else if (a.type === 'delete') {
+        const e = ZC.store.get(a.id);
+        if (a.date && a.mode === 'one') parts.push(S.delOne.replace('%s', e ? e.title : '').replace('%d', when({ start: a.date, allDay: true })));
+        else parts.push(S.del.replace('%s', e ? e.title : ''));
+      }
       else if (a.type === 'complete') { const e = ZC.store.get(a.id); parts.push(S.done.replace('%s', e ? e.title : '')); }
     }
     return parts.length ? S.ok + parts.join('; ') + '.' : '';
@@ -569,18 +651,121 @@
     return list[0] || null;
   }
 
+  // ---- borrar en bloque (integrado) ----
+  function textMatches(ev, text) {
+    const u = U();
+    if (!text) return true;
+    const hay = u.fold((ev.title || '') + ' ' + (ev.location || ''));
+    const words = u.fold(text).replace(/[,.;:!?¿¡"«»“”()]/g, ' ').split(/\s+/).filter(w => w.length > 1 && !/^(de|del|la|el|los|las|lo|en|the|of|on|at|a|al|y|and|i|les|els|con|with|amb)$/.test(w));
+    if (!words.length) return true;
+    return words.every(w => hay.includes(w) || (w.length > 4 && /es$/.test(w) && hay.includes(w.slice(0, -2))) || (w.length > 3 && /s$/.test(w) && hay.includes(w.slice(0, -1))));
+  }
+  /** ¿toda la serie cae dentro de [from, to)? */
+  function seriesInside(ev, from, to) {
+    const u = U();
+    const r = ev.rrule;
+    if (!r) return true;
+    if (!r.until && !r.count) return false;
+    const s = u.parse(ev.start);
+    if (!s || s < from) return false;
+    const lim = r.until ? u.addDays(u.parse(r.until), 2) : u.addDays(s, 3660);
+    const list = ZC.recur.expand(ev, u.startOfDay(s), lim);
+    return list.every(o => o.start >= from && o.start < to);
+  }
+  function rangeText(F) {
+    const u = U(), S = say(), R = S.r;
+    if (!F.from || !F.to) return '';
+    const today = u.startOfDay(new Date());
+    const days = u.daysBetween(F.from, F.to);
+    let firstDay = 1;
+    try { firstDay = ZC.store.getPrefs().cal.firstDay; } catch (e) {}
+    const sow = u.startOfWeek(today, firstDay == null ? 1 : firstDay);
+    if (days === 1 && u.sameDay(F.from, today)) return R.today;
+    if (days === 1 && u.sameDay(F.from, u.addDays(today, 1))) return R.tomorrow;
+    if (days === 7 && u.sameDay(F.from, sow)) return R.week;
+    if (days === 7 && u.sameDay(F.from, u.addDays(sow, 7))) return R.nextWeek;
+    if (F.from.getDate() === 1 && F.to.getDate() === 1 && (F.to.getMonth() - F.from.getMonth() + 12) % 12 === 1) {
+      let m = '';
+      try { m = new Intl.DateTimeFormat(S.loc, { month: 'long' }).format(F.from); } catch (e) { m = String(F.from.getMonth() + 1); }
+      if (F.from.getFullYear() !== today.getFullYear()) m += ' ' + F.from.getFullYear();
+      return sayLang === 'ca' && /^[aeiouàèéíòóú]/i.test(m) ? " d'" + m : R.month.replace('%m', m);
+    }
+    const d = x => when({ start: u.ymd(x), allDay: true });
+    if (days === 1) return R.day.replace('%d', d(F.from));
+    return R.range.replace('%a', d(F.from)).replace('%b', d(u.addDays(F.to, -1)));
+  }
+  function filterText(F) {
+    const S = say();
+    let w = '';
+    if (F.text) w += ' «' + F.text + '»';
+    w += rangeText(F);
+    if (F.calendarId) { const c = ZC.store.calendar(F.calendarId); if (c) w += S.r.cal.replace('%c', c.name); }
+    return w;
+  }
+
+  /** La orden de borrar → acciones delete (o null si no hay que hacer nada y es una tarea). */
+  function rulesDelete(cmd) {
+    const u = U(), S = say(), F = cmd.filter;
+    const now = new Date();
+    if (!F.from && !F.calendarId && !F.text && !F.kind) return cmd.weak ? null : { reply: S.whatDel, actions: [] };
+    const okEv = ev => (!F.calendarId || ev.calendarId === F.calendarId) && (!F.kind || ev.kind === F.kind) && textMatches(ev, F.text);
+    const actions = [];
+    const seen = new Set();
+    if (F.from && F.to) {
+      let occ = [];
+      try { occ = ZC.store.occurrences(F.from, F.to, { includeHidden: !!F.calendarId, includeTasks: true }); } catch (e) {}
+      for (const o of occ) {
+        if (o.start < F.from || o.start >= F.to || !okEv(o.ev)) continue;
+        if (o.ev.rrule) {
+          if (seriesInside(o.ev, F.from, F.to)) { if (!seen.has(o.id)) { seen.add(o.id); actions.push({ type: 'delete', id: o.id, mode: 'all' }); } }
+          else actions.push({ type: 'delete', id: o.id, mode: 'one', date: o.date });
+        } else if (!seen.has(o.id)) { seen.add(o.id); actions.push({ type: 'delete', id: o.id }); }
+      }
+    } else {
+      const dist = ev => {
+        if (ev.rrule && (!ev.rrule.until || u.parse(ev.rrule.until) >= u.startOfDay(now))) return 0;
+        return Math.abs(u.parse(ev.start) - now);
+      };
+      let list = ZC.store.events().filter(okEv);
+      if (!F.calendarId) list = list.filter(ev => { const c = ZC.store.calendar(ev.calendarId); return !c || c.visible !== false; });
+      list.sort((a, b) => dist(a) - dist(b));
+      // «borra el dentista»: el que más se acerca a hoy; «borra todas las reuniones»: todas
+      if (!cmd.all && F.text) list = list.slice(0, 1);
+      for (const ev of list) actions.push(ev.rrule ? { type: 'delete', id: ev.id, mode: 'all' } : { type: 'delete', id: ev.id });
+    }
+    if (!actions.length) return cmd.weak ? null : { reply: S.none.replace('%w', filterText(F)), actions: [] };
+    if (actions.length === 1) {
+      const a = actions[0], ev = ZC.store.get(a.id);
+      const w = a.date ? when(Object.assign({}, ev, { start: a.date + (ev.allDay ? '' : ev.start.slice(10)) }))
+        : ev.rrule ? ZC.recur.describe(ev.rrule, sayLang, ev.start).toLowerCase() : when(ev);
+      return { reply: S.askDel.replace('%s', ev.title).replace('%w', w), actions };
+    }
+    const evs = actions.map(a => ZC.store.get(a.id));
+    const tasks = evs.filter(e => e && e.kind === 'task').length;
+    const k = tasks === evs.length ? S.k.task : tasks === 0 ? S.k.event : S.k.any;
+    // los nombres, sin repetir («Gimnasio ×5»)
+    const count = new Map();
+    for (const e of evs) { const n = (e && e.title) || '·'; count.set(n, (count.get(n) || 0) + 1); }
+    const names = [...count].map(([n, c]) => c > 1 ? n + ' ×' + c : n);
+    const l = names.slice(0, 5).join(', ') + (names.length > 5 ? S.more.replace('%n', names.length - 5) : '');
+    let reply = S.found.replace('%n', actions.length).replace('%k', k[actions.length === 1 ? 0 : 1]).replace('%w', filterText(F)).replace('%l', l);
+    const out = { reply, actions };
+    if (manyDeletes(actions)) { out.confirmMany = true; out.reply += S.many; }
+    return out;
+  }
+
   function runRules(text) {
     const u = U();
     const t = String(text || '').trim();
     const f = u.fold(t);
     const S = say();
     if (!t) return { reply: S.empty, actions: [] };
-    let m = /^(?:borra|borrar|elimina|eliminar|quita|quitar|cancela|cancelar|delete|remove|cancel|esborra)\s+(?:el\s+|la\s+|los\s+|las\s+|mi\s+|the\s+|my\s+)?(.+)$/.exec(f);
-    if (m) {
-      const ev = bestMatch(t.slice(t.length - m[1].length));
-      return ev ? { reply: S.askDel.replace('%s', ev.title).replace('%w', when(ev)), actions: [{ type: 'delete', id: ev.id }] } : { reply: S.noEv, actions: [] };
+    const cmd = ZC.nlp.parseCommand ? ZC.nlp.parseCommand(t, { lang: sayLang }) : null;
+    if (cmd && cmd.intent === 'delete') {
+      const r = rulesDelete(cmd);
+      if (r) return r;
     }
-    m = /^(?:he\s+hecho|ya\s+he|hecho:?|completa|completar|marca(?:r)?(?:\s+como\s+hecha?)?|tacha(?:r)?|done:?|complete|finished|i\s+did)\s+(?:el\s+|la\s+|lo\s+de\s+|the\s+)?(.+)$/.exec(f);
+    let m = /^(?:he\s+hecho|ya\s+he|hecho:?|completa|completar|marca(?:r)?(?:\s+como\s+hecha?)?|tacha(?:r)?|done:?|complete|finished|i\s+did)\s+(?:el\s+|la\s+|lo\s+de\s+|the\s+)?(.+)$/.exec(f);
     if (m) {
       const ev = bestMatch(t.slice(t.length - m[1].length), true);
       return ev ? { reply: S.markDone.replace('%s', ev.title), actions: [{ type: 'complete', id: ev.id }] } : { reply: S.noTask, actions: [] };
@@ -599,8 +784,14 @@
     if (p.reminders) ev.reminders = p.reminders;
     if (p.calendarId && ZC.store.calendar(p.calendarId)) ev.calendarId = p.calendarId;
     if (p.emoji) ev.emoji = p.emoji;
-    const actions = [{ type: 'create', event: ev }];
-    return { reply: describeActions(actions), actions, confidence: p.confidence };
+    if (p.alarm) ev.alarm = true;
+    const actions = [{ type: 'create', event: ev, cid: 'c0' }];
+    let reply = describeActions(actions);
+    if (p.alarmSuggested && !p.alarm) {
+      actions.push({ type: 'update', ref: 0, refId: 'c0', changes: { alarm: true }, suggest: true, why: S.alarmWhy });
+      reply += S.alarmAsk;
+    }
+    return { reply, actions, confidence: p.confidence };
   }
 
   // ---------- run ----------
@@ -613,7 +804,9 @@
     const fallback = why => {
       const fb = text ? runRules(text) : { actions: [] };
       const has = fb.actions && fb.actions.length;
-      return { reply: why + (has ? ' Mientras, con el integrado lo he entendido así: ' + (fb.reply || '') : ''), actions: has ? fb.actions : [], provider: p.id, error: why };
+      const res = { reply: why + (has ? ' Mientras, con el integrado lo he entendido así: ' + (fb.reply || '') : ''), actions: has ? fb.actions : [], provider: p.id, error: why };
+      if (fb.confirmMany) res.confirmMany = true;
+      return res;
     };
     try {
       if (p.id === 'rules') {
@@ -650,7 +843,9 @@
       let reply = parsed.reply.trim();
       if (!reply) reply = v.actions.length ? describeActions(v.actions) : say().unsure;
       if (v.dropped && !v.actions.length && !parsed.reply) reply += say().dropped;
-      return { reply, actions: v.actions, provider: p.id, dropped: v.dropped };
+      const res = { reply, actions: v.actions, provider: p.id, dropped: v.dropped };
+      if (manyDeletes(v.actions)) { res.confirmMany = true; res.reply += say().many; }
+      return res;
     } catch (e) {
       console.warn('[ZC] IA', e);
       return fallback(e && e.network ? 'Sin conexión con ' + p.name + '.' : (e && e.message) || 'La IA ha fallado.');
@@ -658,13 +853,33 @@
   }
 
   // ---------- aplicar ----------
+  // Devuelve lo afectado: lo creado/cambiado como queda, y lo borrado como estaba antes
+  // (deleted: true si se fue entero, con sus copias sueltas de «solo esta»; removedDate/removedMode
+  // si solo se quitó una repetición o de ahí en adelante). Se salta las sugerencias (suggest: true).
   async function apply(actions) {
     const out = [];
+    const made = new Map(); // cid → id del evento creado
+    const touched = new Set(); // series a las que ya se les ha quitado alguna repetición
     for (const a of validate(actions).actions) {
+      if (a.suggest) continue;
       try {
-        if (a.type === 'create') out.push(await ZC.store.saveEvent(a.event));
+        if (a.type === 'create') { const e = await ZC.store.saveEvent(a.event); made.set(a.cid, e.id); out.push(e); }
+        else if (a.type === 'update' && a.refId) { const id = made.get(a.refId); if (id) out.push(await ZC.store.saveEvent(Object.assign({}, a.changes, { id }))); }
         else if (a.type === 'update') out.push(await ZC.store.saveEvent(Object.assign({}, a.changes, { id: a.id })));
-        else if (a.type === 'delete') { const e = ZC.store.get(a.id); await ZC.store.deleteEvent(a.id, { mode: 'all' }); if (e) out.push(Object.assign({}, e, { deleted: true })); }
+        else if (a.type === 'delete') {
+          const e = ZC.store.get(a.id);
+          if (!e) continue; // (ya se fue con su serie)
+          if (e.rrule && (a.mode === 'one' || a.mode === 'future') && a.date) {
+            await ZC.store.deleteEvent(a.id, { mode: a.mode, date: a.date });
+            // (una vez por serie, como estaba antes del primer cambio: así «Deshacer» la deja igual)
+            if (!touched.has(a.id)) { touched.add(a.id); out.push(Object.assign({}, e, { removedDate: a.date, removedMode: a.mode })); }
+          } else {
+            const copies = e.rrule ? ZC.store.events().filter(x => x.recurrenceOf === e.id) : [];
+            await ZC.store.deleteEvent(a.id, { mode: 'all' });
+            out.push(Object.assign({}, e, { deleted: true }));
+            for (const x of copies) out.push(Object.assign({}, x, { deleted: true }));
+          }
+        }
         else if (a.type === 'complete') { const e = ZC.store.get(a.id); out.push(e && e.done ? e : await ZC.store.toggleDone(a.id)); }
       } catch (e) { console.warn('[ZC] no se pudo aplicar', a, e); }
     }
@@ -702,6 +917,6 @@
   ZC.ai = {
     providers: PROVIDERS, provider, getConfig, setConfig, setKey, hasKey, test, run, apply, device, ollamaModels,
     // para las pruebas y por si el frontend lo quiere
-    parseReply, validate, systemPrompt, runRules, describeActions,
+    parseReply, validate, systemPrompt, runRules, describeActions, MANY_DELETES: MANY,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

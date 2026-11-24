@@ -43,7 +43,7 @@
     if (o.ev) {
       const ev = JSON.parse(JSON.stringify(o.ev));
       if (o.occ && ev.rrule) { ev.start = toLocal(o.occ.start, ev.allDay); ev.end = toLocal(ev.allDay ? C.lastDay(o.occ) : o.occ.end, ev.allDay); }
-      ev.reminders = ev.reminders || []; ev.checklist = ev.checklist || []; ev.attachments = ev.attachments || []; ev.exdates = ev.exdates || [];
+      ev.alarm = !!ev.alarm; ev.reminders = ev.reminders || []; ev.checklist = ev.checklist || []; ev.attachments = ev.attachments || []; ev.exdates = ev.exdates || [];
       return ev;
     }
     const kind = o.kind || 'event';
@@ -57,7 +57,8 @@
       e = new Date(s.getTime() + (cal.defaultDuration || 60) * 60000);
     }
     const ev = { kind, title: '', notes: '', location: '', calendarId: o.calendarId || defCal, color: null, emoji: null, allDay,
-      start: toLocal(s, allDay), end: toLocal(allDay ? s : e, allDay), rrule: null, exdates: [], reminders: [...(cal.defaultReminders || [])], attachments: [], checklist: [], done: false, ...(o.prefill || {}) };
+      start: toLocal(s, allDay), end: toLocal(allDay ? s : e, allDay), rrule: null, exdates: [], reminders: [...(cal.defaultReminders || [])], alarm: false, attachments: [], checklist: [], done: false, ...(o.prefill || {}) };
+    ev.alarm = !!ev.alarm;
     if (kind === 'task') { ev.end = ev.start; ev.reminders = ev.reminders.length ? ev.reminders : [0]; }
     return ev;
   }
@@ -68,6 +69,7 @@
     const D = draftFrom(o);
     const orig = o.ev ? JSON.parse(JSON.stringify(o.ev)) : null;
     const addedBlobs = [], removedBlobs = [];
+    let alarmSuggested = !!o.alarmSuggested && !D.alarm;
     let nlpHint = null, nlpDismissed = false, datesTouched = !!(o.start || o.ev);
     let customOpen = false; // «Personalizado…» elegido a mano: se ve el panel aunque la regla coincida con un preset
     const L = UI.openLayer({ kind: 'modal', cls: 'ed-layer', panelCls: 'ed-panel', from: o.from, label: isNew ? t('Nuevo evento') : t('Editar'), html: '', dismissable: true, onClose: why => { if (why !== 'saved') cleanup(); } });
@@ -110,6 +112,12 @@
             <div class="ed-row top"><span class="ed-ic">${UI.icon('calendar', 20)}</span><div class="ed-cals">${cals.map(c => `<button type="button" class="chip cal-chip ${c.id === D.calendarId ? 'on' : ''}" data-cal="${esc(c.id)}" style="--cc:${esc(c.color)}"><i class="dot" style="background:${esc(c.color)}"></i>${esc(c.name)}</button>`).join('')}</div></div>
             <div class="ed-row"><span class="ed-ic">${UI.icon('palette', 20)}</span><div class="ed-colors"><button type="button" class="cdot sm ${!D.color ? 'on' : ''}" data-color="" style="--c:${esc(cal.color || '#B9A2FF')}" title="${t('Color del calendario')}"><span>A</span></button>${EV_COLORS.map(c => `<button type="button" class="cdot sm ${D.color && D.color.toLowerCase() === c.toLowerCase() ? 'on' : ''}" data-color="${c}" style="--c:${c}" aria-label="${c}"></button>`).join('')}</div></div>
             <div class="ed-row top"><span class="ed-ic">${UI.icon('bell', 20)}</span><div class="ed-rems">${D.reminders.slice().sort((a, b) => a - b).map(m => `<span class="chip">${esc(remLabel(m))}<button type="button" class="x" data-rem="${m}" aria-label="${t('Quitar aviso')}">${UI.icon('x', 14)}</button></span>`).join('')}<button type="button" class="chip add" data-act="addrem">${UI.icon('plus', 15)}${t('Aviso')}</button></div></div>
+            <div class="ed-row top ed-alarm ${D.alarm ? 'on' : ''}"><span class="ed-ic">${UI.icon('alarm', 20)}</span><div class="ed-al">
+              <label class="ed-sw"><span>${t('Alarma')}</span><button type="button" class="sw" role="switch" aria-checked="${!!D.alarm}" data-act="alarm" aria-label="${t('Alarma')}"></button></label>
+              <small class="mut">${D.allDay ? t('Suena como un despertador a la hora que elijas, aunque el móvil esté en silencio.') : t('Suena como un despertador a la hora del evento, aunque el móvil esté en silencio.')}</small>
+              ${D.alarm && D.allDay ? `<label class="ed-al-t"><span>${t('Suena a las')}</span><input class="in sm" type="time" name="alarmTime" value="${esc(/^\d{1,2}:\d{2}$/.test(D.alarmTime || '') ? D.alarmTime : '09:00')}" step="300"></label>` : ''}
+              ${alarmTip()}
+            </div></div>
           </div>
           <div class="ed-sec">
             <div class="ed-row"><span class="ed-ic">${UI.icon('pin', 20)}</span><div class="ed-loc"><input class="in" name="location" value="${esc(D.location || '')}" placeholder="${esc(t('Lugar'))}" autocomplete="off"><button type="button" class="ibtn" data-act="maps" ${D.location ? '' : 'hidden'} aria-label="${t('Abrir en Google Maps')}" title="${t('Abrir en Google Maps')}">${UI.icon('external', 18)}</button></div></div>
@@ -128,6 +136,11 @@
       autosize(body.querySelector('.ed-tin'));
       requestAnimationFrame(() => body.querySelectorAll('.seg').forEach(UI.paintSeg));
       if (nlpHint) showNlp(nlpHint);
+    }
+    // sugerencia de «añadir rápido» o del título: «¿Le pongo alarma?»
+    function alarmTip() {
+      if (D.alarm || !alarmSuggested) return '';
+      return `<button type="button" class="al-tip" data-act="alarmyes">${UI.icon('alarm', 16)}<span>${t('Parece importante. ¿Le pongo alarma?')}</span><b>${t('Poner alarma')}</b></button>`;
     }
     function remLabel(m) { if (D.allDay) { if (m === 0) return t('El mismo día (9:00)'); } return C.remText(m); }
     function durHint() {
@@ -166,6 +179,7 @@
         if (D.allDay) { D.start = sd.value; D.end = D.kind === 'task' ? sd.value : (ed && ed.value ? ed.value : sd.value); if (D.end < D.start) D.end = D.start; }
         else { D.start = sd.value + 'T' + (st && st.value ? st.value : '09:00'); D.end = D.kind === 'task' ? D.start : ((ed && ed.value ? ed.value : sd.value) + 'T' + (et && et.value ? et.value : '10:00')); }
       }
+      const at = f('alarmTime'); if (at && at.value) D.alarmTime = at.value;
       body.querySelectorAll('.ck-item').forEach(row => { const it = D.checklist.find(x => x.id === row.dataset.ck); if (it) it.text = row.querySelector('.ck-in').value; });
     }
 
@@ -174,7 +188,7 @@
       if (!isNew || nlpDismissed || !ZC.nlp) return;
       const v = (body.querySelector('[name=title]') || {}).value || '';
       let p = null; try { p = v.trim().length > 3 ? ZC.nlp.parse(v, { lang: lang() }) : null; } catch {}
-      if (p && (p.start || p.location || p.rrule || (p.reminders && p.reminders.length) || p.kind === 'task') && (p.confidence == null || p.confidence >= .35)) { nlpHint = p; showNlp(p); }
+      if (p && (p.start || p.location || p.rrule || (p.reminders && p.reminders.length) || p.kind === 'task' || p.alarm) && (p.confidence == null || p.confidence >= .35)) { nlpHint = p; showNlp(p); }
       else { nlpHint = null; const box = body.querySelector('.ed-nlp'); if (box) box.hidden = true; }
     }, 180);
     function nlpChips(p) {
@@ -184,6 +198,7 @@
       if (p.location) out.push([UI.icon('pin', 15), esc(p.location)]);
       if (p.rrule) out.push([UI.icon('repeat', 15), esc(describe(p.rrule, p.start))]);
       (p.reminders || []).forEach(m => out.push([UI.icon('bell', 15), esc(C.remText(m))]));
+      if (p.alarm) out.push([UI.icon('alarm', 15), t('Alarma')]);
       return out;
     }
     function showNlp(p) {
@@ -203,6 +218,7 @@
       if (p.reminders && p.reminders.length) D.reminders = [...new Set(p.reminders)];
       if (p.emoji && !D.emoji) D.emoji = p.emoji;
       if (p.calendarId && ZC.store.calendar(p.calendarId)) D.calendarId = p.calendarId;
+      if (p.alarm) { D.alarm = true; alarmSuggested = false; } else if (p.alarmSuggested && !D.alarm) alarmSuggested = true;
       nlpHint = null; nlpDismissed = true; datesTouched = true;
       paint();
       UI.haptic('ok');
@@ -278,6 +294,7 @@
       if (act === 'close') L.close();
       else if (act === 'save') save();
       else if (act === 'allday') { read(); D.allDay = !D.allDay; const s = parse(D.start); if (D.allDay) { D.start = ymd(s); D.end = D.kind === 'task' ? D.start : ymd(parse(D.end)); D.reminders = D.reminders.length ? [0] : []; } else { s.setHours(9, 0); D.start = toLocal(s); D.end = D.kind === 'task' ? D.start : toLocal(new Date(s.getTime() + 3600000)); D.reminders = [...(C.prefsCal().defaultReminders || [])]; } datesTouched = true; paint(); }
+      else if (act === 'alarm' || act === 'alarmyes') { read(); D.alarm = act === 'alarmyes' ? true : !D.alarm; if (D.alarm) alarmSuggested = false; UI.haptic('tick'); paint(); }
       else if (act === 'emoji') emojiPicker(b, em => { read(); D.emoji = em; paint(); });
       else if (act === 'addrem') { read(); remMenu(b); }
       else if (act === 'maps') { read(); openMaps(D.location); }
@@ -306,7 +323,7 @@
       }
       paint();
     }
-    function clean(ev) { ev.title = (ev.title || '').trim(); if (ev.kind === 'task') ev.end = ev.start; ev.reminders = [...new Set(ev.reminders)].sort((a, b) => a - b); ev.checklist = ev.checklist.filter(c => (c.text || '').trim()); return ev; }
+    function clean(ev) { ev.alarm = !!ev.alarm; if ((!ev.alarm || !ev.allDay) && ev.alarmTime) ev.alarmTime = null; ev.title = (ev.title || '').trim(); if (ev.kind === 'task') ev.end = ev.start; ev.reminders = [...new Set(ev.reminders)].sort((a, b) => a - b); ev.checklist = ev.checklist.filter(c => (c.text || '').trim()); return ev; }
 
     async function save() {
       read();
@@ -398,11 +415,12 @@
           ${ev.emoji ? `<div class="dt-emoji">${esc(ev.emoji)}</div>` : ''}
           <h2 class="${o.done ? 'done' : ''}">${esc(ev.title || (task ? t('Tarea sin título') : t('Sin título')))}</h2>
           <p class="dt-when">${esc(C.whenText(o, { withDate: true }))}</p>
-          <div class="dt-tags"><span class="chip"><i class="dot" style="background:${esc(cal.color || color)}"></i>${esc(cal.name || '')}</span>${ev.rrule ? `<span class="chip">${UI.icon('repeat', 14)}${esc(describe(ev.rrule, ev.start))}</span>` : ''}${task ? `<span class="chip">${UI.icon('tasks', 14)}${t('Tarea')}</span>` : ''}</div>
+          <div class="dt-tags"><span class="chip"><i class="dot" style="background:${esc(cal.color || color)}"></i>${esc(cal.name || '')}</span>${ev.rrule ? `<span class="chip">${UI.icon('repeat', 14)}${esc(describe(ev.rrule, ev.start))}</span>` : ''}${task ? `<span class="chip">${UI.icon('tasks', 14)}${t('Tarea')}</span>` : ''}${ev.alarm ? `<span class="chip al">${UI.icon('alarm', 14)}${t('Alarma')}</span>` : ''}</div>
         </div>
         <div class="dt-body">
           ${task ? `<button class="btn ${o.done ? 'soft' : 'pri'} block dt-done" data-act="done">${UI.icon('check', 18)}${o.done ? t('Marcar como pendiente') : t('Marcar como hecha')}</button>` : ''}
           ${ev.location ? `<div class="dt-row">${UI.icon('pin', 19)}<div><b>${esc(ev.location)}</b><button class="link" data-act="maps">${t('Abrir en Google Maps')}</button></div></div>` : ''}
+          ${ev.alarm ? `<div class="dt-row dt-alarm">${UI.icon('alarm', 19)}<div><b>${esc(C.alarmText(ev))}</b><small class="mut">${t('Suena como un despertador, aunque el móvil esté en silencio.')}</small></div></div>` : ''}
           ${rems.length ? `<div class="dt-row">${UI.icon('bell', 19)}<div>${rems.map(m => `<span class="chip">${esc(ev.allDay && m === 0 ? t('El mismo día (9:00)') : C.remText(m))}</span>`).join(' ')}</div></div>` : ''}
           ${ev.notes ? `<div class="dt-row">${UI.icon('notes', 19)}<div class="dt-notes">${linkify(ev.notes)}</div></div>` : ''}
           ${(ev.checklist || []).length ? `<div class="dt-row">${UI.icon('list', 19)}<div class="dt-check">${ev.checklist.map(c => `<div class="ck-item ${c.done ? 'done' : ''}" data-ck="${esc(c.id)}"><span class="tick ${c.done ? 'on' : ''}" role="checkbox" aria-checked="${!!c.done}" tabindex="0">${UI.icon('check', 14)}</span><span>${esc(c.text)}</span></div>`).join('')}<small class="mut">${ev.checklist.filter(c => c.done).length}/${ev.checklist.length}</small></div></div>` : ''}

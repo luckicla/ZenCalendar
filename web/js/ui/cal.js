@@ -249,5 +249,14 @@
     return { key: ev.id + '@' + ymd(parse(ev.start)), id: ev.id, ev, start: parse(ev.start), end: parse(ev.end || ev.start), allDay: ev.allDay, color: ev.color || (cal && cal.color), calendar: cal, isTask: ev.kind === 'task', done: !!ev.done };
   }
 
-  UI.cal = { CAL0, prefsCal, pad, ymd, parse, sod, addDays, addMonths, sameDay, daysBetween, sow, toLocal, isoWeek, today, lastDay, multiDay, occ, onDay, clearCache, holidays, whenText, durText, remText, titleOf, evVars, moveOccurrence, deleteOccurrence, toggleTask, askSeries, occOf, taskOcc, safeColor, fmtT, esc, shiftOf, applyShift, seriesShifted, splitSeries, snapshotSeries, holdBlobs, dropUnusedBlobs };
+  // alarma (suena como un despertador): a la hora del evento o, en los de todo el día, a alarmTime (09:00 si no hay)
+  function alarmTime(ev) {
+    if (!ev) return '';
+    if (ev.allDay || !/T\d/.test(ev.start || '')) { const [h, m] = (/^\d{1,2}:\d{2}$/.test(ev.alarmTime || '') ? ev.alarmTime : '09:00').split(':').map(Number); const d = new Date(2000, 0, 1, h, m); return fmtT(d); }
+    return fmtT(parse(ev.start));
+  }
+  const alarmText = ev => t('Alarma a las {x}', { x: alarmTime(ev) });
+  const alarmMark = (ev, size = 13) => ev && ev.alarm ? `<i class="al-mk" title="${esc(alarmText(ev))}" aria-label="${esc(alarmText(ev))}">${UI.icon('alarm', size)}</i>` : '';
+
+  UI.cal = { CAL0, alarmTime, alarmText, alarmMark, prefsCal, pad, ymd, parse, sod, addDays, addMonths, sameDay, daysBetween, sow, toLocal, isoWeek, today, lastDay, multiDay, occ, onDay, clearCache, holidays, whenText, durText, remText, titleOf, evVars, moveOccurrence, deleteOccurrence, toggleTask, askSeries, occOf, taskOcc, safeColor, fmtT, esc, shiftOf, applyShift, seriesShifted, splitSeries, snapshotSeries, holdBlobs, dropUnusedBlobs };
 })();

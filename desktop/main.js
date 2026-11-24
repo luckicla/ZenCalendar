@@ -226,9 +226,97 @@ function checkReminders() {
     if (fired.has(key) || r.at > now) continue;
     fired.add(key); changed = true;
     if (r.at < now - 60 * 60000) continue; // (con el PC apagado se pasó hace mucho)
+    if (r.alarm) { ringAlarm(r); continue; }
     notify({ title: r.title, body: r.body, onClick: () => open({ action: 'open', id: r.eventId, date: r.date, reminder: r }) });
   }
   if (changed) saveReminders();
+}
+
+// ---------- alarmas ----------
+// Suenan como un despertador: notificación que no se va sola + una ventanita encima de todo
+// con el sonido en bucle y «Posponer 10 min» / «Parar». Si la ventana principal estaba
+// oculta en la bandeja, se enseña.
+const alarmWins = new Map(); // id del aviso → ventana
+let alarmStrings = { snooze: 'Posponer 10 min', stop: 'Parar', alarm: 'Alarma' };
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function alarmHTML(r) {
+  const T = alarmStrings;
+  const dark = S.design === 'dot' || /^#[0-3]/i.test(S.bg || '');
+  return '<!doctype html><html><head><meta charset="utf-8"><title>zc</title><style>' +
+    'html,body{margin:0;height:100%;font-family:"Segoe UI",system-ui,sans-serif;user-select:none;overflow:hidden}' +
+    'body{display:flex;flex-direction:column;justify-content:center;gap:12px;padding:20px 22px;box-sizing:border-box;' +
+    (dark ? 'background:#16131f;color:#f4efff' : 'background:linear-gradient(135deg,#f7f3ff,#ffeef7);color:#3D3355') + ';-webkit-app-region:drag;border-radius:18px}' +
+    '.k{font-size:13px;opacity:.75;letter-spacing:.04em}.t{font-size:22px;font-weight:700;line-height:1.2;word-break:break-word}.b{font-size:14px;opacity:.85}' +
+    '.row{display:flex;gap:10px;margin-top:6px;-webkit-app-region:no-drag}button{flex:1;font:inherit;font-size:15px;font-weight:600;border:0;border-radius:14px;padding:12px;cursor:pointer}' +
+    '#sn{background:' + (dark ? '#2a2438;color:#f4efff' : '#ffffffcc;color:#3D3355') + '}#st{background:' + (/^#[0-9a-f]{3,8}$/i.test(S.a1 || '') ? S.a1 : '#C9B8FF') + ';color:#2b2340}' +
+    '@keyframes p{50%{transform:scale(1.12)}}.k span{display:inline-block;animation:p 1s infinite}</style></head><body>' +
+    '<div class="k"><span>⏰</span> ' + esc(T.alarm) + '</div><div class="t">' + esc(r.title) + '</div><div class="b">' + esc(r.body) + '</div>' +
+    '<div class="row"><button id="sn">' + esc(T.snooze) + '</button><button id="st">' + esc(T.stop) + '</button></div>' +
+    '<script>' +
+    // pitido de despertador hecho con WebAudio (nada descargado), en bucle hasta que se pare
+    'let ctx;function beep(){try{ctx=ctx||new AudioContext();const t=ctx.currentTime;for(let i=0;i<4;i++){const o=ctx.createOscillator(),g=ctx.createGain();' +
+    'o.type="square";o.frequency.value=i%2?988:880;g.gain.setValueAtTime(0.0001,t+i*0.22);g.gain.exponentialRampToValueAtTime(0.25,t+i*0.22+0.02);' +
+    'g.gain.exponentialRampToValueAtTime(0.0001,t+i*0.22+0.18);o.connect(g).connect(ctx.destination);o.start(t+i*0.22);o.stop(t+i*0.22+0.2);}}catch(e){}}' +
+    'beep();const iv=setInterval(beep,1600);' +
+    'const done=a=>{clearInterval(iv);document.title="zc:"+a;};' +
+    'document.getElementById("sn").onclick=()=>done("snooze");document.getElementById("st").onclick=()=>done("stop");' +
+    'addEventListener("keydown",e=>{if(e.key==="Escape")done("stop");});' +
+    '</script></body></html>';
+}
+function ringAlarm(r) {
+  const base = String(r.id).split('~')[0];
+  if (alarmWins.has(base)) return;
+  // la notificación de Windows (con sonido, no se va sola)
+  if (Notification.isSupported()) {
+    const n = new Notification({
+      title: '⏰ ' + (r.title || 'ZenCalendar'), body: r.body || '', icon: path.join(webDir(), 'img', 'icon-192.png'),
+      silent: false, timeoutType: 'never', urgency: 'critical',
+    });
+    n.on('click', () => open({ action: 'open', id: r.eventId, date: r.date, reminder: r }));
+    n.on('close', () => { notes = notes.filter(x => x !== n); });
+    notes.push(n);
+    if (notes.length > 20) notes.shift();
+    n.show();
+    r._note = n;
+  }
+  // si la ventana estaba escondida en la bandeja, se enseña (sin quitarle el sitio a la alarma)
+  try { if (!win || win.isDestroyed() || !win.isVisible() || win.isMinimized()) showWindow(); } catch (e) {}
+  const area = screen.getPrimaryDisplay().workArea;
+  const W = 380, H = 230;
+  const aw = new BrowserWindow({
+    width: W, height: H, x: area.x + area.width - W - 24, y: area.y + area.height - H - 24,
+    frame: false, resizable: false, minimizable: false, maximizable: false, fullscreenable: false,
+    alwaysOnTop: true, skipTaskbar: false, show: false, title: 'ZenCalendar', transparent: true, backgroundColor: '#00000000',
+    icon: iconFile(effIcon()),
+    webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, autoplayPolicy: 'no-user-gesture-required' },
+  });
+  aw.setAlwaysOnTop(true, 'screen-saver');
+  aw.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  aw.webContents.on('will-navigate', e => e.preventDefault());
+  aw.webContents.on('page-title-updated', (e, title) => {
+    if (title === 'zc:snooze' || title === 'zc:stop') { e.preventDefault(); alarmAct(r, title.slice(3)); }
+  });
+  aw.on('closed', () => { if (alarmWins.get(base) === aw) alarmWins.delete(base); });
+  aw.once('ready-to-show', () => { aw.show(); aw.focus(); try { aw.flashFrame(true); } catch (e) {} });
+  aw.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(alarmHTML(r)));
+  alarmWins.set(base, aw);
+  // (si nadie la para, a los 10 minutos se calla sola; la notificación se queda)
+  setTimeout(() => { if (alarmWins.get(base) === aw && !aw.isDestroyed()) aw.close(); }, 10 * 60000);
+}
+function alarmAct(r, act) {
+  const base = String(r.id).split('~')[0];
+  const aw = alarmWins.get(base);
+  alarmWins.delete(base);
+  if (aw && !aw.isDestroyed()) aw.close();
+  try { if (r._note) r._note.close(); } catch (e) {}
+  const clean = Object.assign({}, r); delete clean._note;
+  // la página se entera (y es la que guarda lo pospuesto); si no está, se pospone aquí
+  if (pageReady && win && !win.isDestroyed()) win.webContents.send('zc:action', { type: act, minutes: 10, reminder: clean });
+  else if (act === 'snooze') {
+    const at = Date.now() + 10 * 60000;
+    reminders.push(Object.assign({}, clean, { id: base + '~' + at, at }));
+    saveReminders();
+  }
 }
 
 let notes = []; // (que el recolector no se coma las notificaciones antes de tocarlas)
@@ -436,8 +524,9 @@ function setupIPC() {
     }
   });
 
-  ipcMain.on('zc:reminders', (_e, list) => {
+  ipcMain.on('zc:reminders', (_e, list, strings) => {
     reminders = Array.isArray(list) ? list.filter(r => r && r.id && r.at) : [];
+    if (strings && typeof strings === 'object') for (const k of ['snooze', 'stop', 'alarm']) if (typeof strings[k] === 'string' && strings[k]) alarmStrings[k] = strings[k].slice(0, 40);
     saveReminders();
     checkReminders();
   });

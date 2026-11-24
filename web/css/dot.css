@@ -730,3 +730,32 @@ html[data-design="dot"] .w-n { font-weight: 500; }
   html[data-design="dot"] .yd { height: 0; min-height: 0; padding-bottom: 64%; }
   @media (max-width: 759px) { html[data-design="dot"] .yd { padding-bottom: 70%; } }
 }
+
+/* ---------- alarmas (1.2.0) ---------- */
+html[data-design="dot"] .al-mk .ic { stroke-width: 1.8; }
+html[data-design="dot"] .task-row .tt b .al-mk, html[data-design="dot"] .ai-act-tx b .al-mk { color: var(--a1t); }
+html[data-design="dot"] .ag-main .mi.al { color: var(--a1t); font: 400 .66rem var(--zd); letter-spacing: .06em; }
+html[data-design="dot"] .ed-alarm.on > .ed-ic, html[data-design="dot"] .dt-alarm > .ic, html[data-design="dot"] .chip.al .ic, html[data-design="dot"] .qa-chips .chip.al .ic { color: var(--a1t) !important; }
+html[data-design="dot"] .al-tip { border-radius: 18px; background: transparent; box-shadow: inset 0 0 0 1px var(--hair2); animation: dotFade calc(160ms * var(--spd)) steps(3, end) backwards; }
+html[data-design="dot"] .al-tip > .ic { color: var(--a1t); }
+html[data-design="dot"] .al-tip b { background: var(--fg); color: var(--bg); font: 400 .62rem var(--zd); letter-spacing: .1em; text-transform: uppercase; padding: 7px 11px; }
+html[data-design="dot"] .qa-chips .chip.al.on { background: var(--fg); color: var(--bg); }
+html[data-design="dot"] .qa-chips .chip.al.on .ic { color: var(--a1) !important; }
+html[data-design="dot"] .qa-chips .chip.al.sug { box-shadow: inset 0 0 0 1px var(--hair2); animation: dotFade calc(160ms * var(--spd)) steps(3, end) backwards, dotBlink calc(900ms * var(--spd)) steps(1) 1s 3; }
+html[data-design="dot"] .ai-act.alarm .ai-act-ic, html[data-design="dot"] .ai-sug .ai-act-ic { border-radius: 50%; background: transparent; color: var(--a1t); box-shadow: inset 0 0 0 1.5px var(--a1); }
+html[data-design="dot"] .ai-grp { background: transparent; box-shadow: inset 0 0 0 1px var(--hair2); border-radius: 18px; animation: dotFade calc(160ms * var(--spd)) steps(3, end) backwards; }
+html[data-design="dot"] .ai-grp-head .ai-act-ic { border-radius: 50%; background: transparent; color: var(--a1t); box-shadow: inset 0 0 0 1.5px var(--a1); }
+html[data-design="dot"] .ai-grp-head .ai-act-tx b { font: 400 .95rem var(--zd); letter-spacing: .04em; }
+html[data-design="dot"] .ai-grp-chev { transition: transform calc(150ms * var(--spd)) steps(3, end); }
+html[data-design="dot"] .ai-grp-list { border-top: 1px solid var(--hair); }
+html[data-design="dot"] .ai-grp-it { border-bottom: 1px dashed var(--hair); }
+html[data-design="dot"] .ai-grp-it .dot { width: 6px; height: 6px; }
+html[data-design="dot"] .ai-grp-it b { font-weight: 500; }
+html[data-design="dot"] .ck { border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--hair2); }
+html[data-design="dot"] .ck::after { width: 8px; height: 8px; border: 0; border-radius: 50%; background: #fff; transform: scale(0); transition: transform calc(120ms * var(--spd)) steps(2); }
+html[data-design="dot"] .ck:checked { background: var(--a1); }
+html[data-design="dot"] .ck:checked::after { transform: scale(1); }
+html[data-design="dot"] .ai-sug { border-radius: 18px; box-shadow: inset 0 0 0 1px var(--hair2); background-image: radial-gradient(circle, rgb(var(--fg-rgb) / .12) 1px, transparent 1.4px); background-size: 8px 8px; animation: dotFade calc(160ms * var(--spd)) steps(3, end) backwards; }
+html[data-design="dot"] .ai-sug.on { background: transparent; box-shadow: inset 0 0 0 1.5px var(--fg); }
+html[data-design="dot"] .ai-sug .ai-act-tx small { font: 400 .58rem var(--zd); letter-spacing: .1em; text-transform: uppercase; }
+html[data-design="dot"] .nr.al > .ic { color: var(--a1t); }

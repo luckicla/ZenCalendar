@@ -10,6 +10,7 @@ Mientras no esté hecho, la app funciona perfectamente pero sin sincronizar (el 
 
 - `https://www.googleapis.com/auth/drive.appdata`: solo la **carpeta oculta de la app** en el Drive del usuario. ZenCalendar no puede ver ni tocar ningún otro archivo de su Drive, y el usuario no ve esta carpeta en drive.google.com (aunque ocupa su espacio, muy poquito). Google lo clasifica como permiso **no sensible**, así que no hace falta la verificación larga de Google.
 - `openid email profile`: para enseñar en Ajustes con qué cuenta está conectado (correo, nombre y foto).
+- `https://www.googleapis.com/auth/calendar` (solo si el usuario activa «Google Calendar» en Ajustes, se pide en ese momento y no antes): para leer y escribir sus calendarios de Google Calendar. Google lo clasifica como **sensible**: mientras Google no verifique la app, al dar permiso sale un aviso de «Google no ha verificado esta app» (se pulsa *Configuración avanzada → Ir a ZenCalendar*) y como mucho 100 personas pueden usar esa parte. Para ti y la gente cercana es suficiente; si algún día la usa mucha gente, se pide la verificación (gratis, con una política de privacidad y un vídeo corto). La sincronización con Drive no se ve afectada.
 
 Lo que se guarda ahí: `zencalendar.json` (eventos, calendarios y ajustes) y un archivo `blob-<id>` por cada imagen adjunta.
 
@@ -18,10 +19,11 @@ Lo que se guarda ahí: `zencalendar.json` (eventos, calendarios y ajustes) y un 
 1. Entra en [console.cloud.google.com](https://console.cloud.google.com/) con tu cuenta de Google.
 2. Arriba, en el selector de proyectos → **Proyecto nuevo** → nombre `ZenCalendar` → **Crear**. Asegúrate de que queda seleccionado.
 
-## 2. Activar la API de Google Drive
+## 2. Activar las APIs de Google Drive y Google Calendar
 
 1. Menú ☰ → **APIs y servicios → Biblioteca**.
 2. Busca **Google Drive API** → **Habilitar**.
+3. Vuelve a la biblioteca, busca **Google Calendar API** → **Habilitar**. (Es para traer y sincronizar tus calendarios de Google Calendar. Actívala ya aunque esa parte llegue en una versión siguiente: así no tienes que volver a la consola.)
 
 ## 3. Pantalla de consentimiento (lo que ve el usuario al pulsar el botón)
 

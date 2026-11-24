@@ -12,7 +12,7 @@
     if (o.allDay) time = `<span class="ag-time all">${t('Todo el día')}</span>`;
     else if (C.multiDay(o)) time = `<span class="ag-time">${sameDay(d, o.start) ? C.fmtT(o.start) : '···'}<small>${sameDay(d, lastDay(o)) ? C.fmtT(o.end) : '···'}</small></span>`;
     else time = `<span class="ag-time">${C.fmtT(o.start)}${o.isTask ? '' : `<small>${C.fmtT(o.end)}</small>`}</span>`;
-    const sub = [ev.location ? `<span class="mi">${UI.icon('pin', 13)}<span class="mt">${esc(ev.location)}</span></span>` : '', ev.rrule ? `<span class="mi" title="${esc(t('Se repite'))}">${UI.icon('repeat', 13)}</span>` : '', (ev.attachments || []).length ? `<span class="mi">${UI.icon('image', 13)}${ev.attachments.length}</span>` : '', (ev.checklist || []).length ? `<span class="mi">${UI.icon('list', 13)}${ev.checklist.filter(c => c.done).length}/${ev.checklist.length}</span>` : ''].filter(Boolean).join('');
+    const sub = [ev.alarm ? `<span class="mi al" title="${esc(C.alarmText(ev))}">${UI.icon('alarm', 13)}${esc(C.alarmTime(ev))}</span>` : '', ev.location ? `<span class="mi">${UI.icon('pin', 13)}<span class="mt">${esc(ev.location)}</span></span>` : '', ev.rrule ? `<span class="mi" title="${esc(t('Se repite'))}">${UI.icon('repeat', 13)}</span>` : '', (ev.attachments || []).length ? `<span class="mi">${UI.icon('image', 13)}${ev.attachments.length}</span>` : '', (ev.checklist || []).length ? `<span class="mi">${UI.icon('list', 13)}${ev.checklist.filter(c => c.done).length}/${ev.checklist.length}</span>` : ''].filter(Boolean).join('');
     return `<div class="ag-card ${o.isTask ? 'task' : ''} ${o.done ? 'done' : ''} ${!o.isTask && o.end < new Date() ? 'past' : ''}" role="button" tabindex="0" data-key="${esc(o.key)}" style="${C.evVars(o)};--i:${i}">
       ${time}<span class="ag-bar"></span>
       <span class="ag-main"><b>${esc(C.titleOf(ev))}</b>${sub || o.calendar ? `<small>${o.calendar ? `<span class="mi cal-n"><i class="dot" style="background:${esc(o.calendar.color)}"></i><span class="mt">${esc(o.calendar.name)}</span></span>` : ''}${sub}</small>` : ''}</span>
@@ -162,7 +162,7 @@
     const row = (ev, late) => {
       const o = occOf.get(ev.id), s = o.start;
       const when = ev.allDay ? ZC.i18n.D.short(s) : ZC.i18n.D.short(s) + ', ' + C.fmtT(s);
-      return `<div class="task-row ${ev.done ? 'done' : ''}" data-key="${esc(o.key)}" style="${C.evVars(o)};--i:${k++}"><span class="tick ${ev.done ? 'on' : ''}" role="checkbox" aria-checked="${!!ev.done}" tabindex="0">${UI.icon('check', 14)}</span><span class="tt"><b>${esc(C.titleOf(ev))}</b><small class="${late ? 'late' : ''}">${esc(when)}${ev.rrule ? '. ' + esc(ZC.recur.describe(ev.rrule, ZC.i18n.lang(), C.parse(ev.start))) : ''}</small></span></div>`;
+      return `<div class="task-row ${ev.done ? 'done' : ''}" data-key="${esc(o.key)}" style="${C.evVars(o)};--i:${k++}"><span class="tick ${ev.done ? 'on' : ''}" role="checkbox" aria-checked="${!!ev.done}" tabindex="0">${UI.icon('check', 14)}</span><span class="tt"><b>${esc(C.titleOf(ev))}${C.alarmMark(ev, 14)}</b><small class="${late ? 'late' : ''}">${esc(when)}${ev.rrule ? '. ' + esc(ZC.recur.describe(ev.rrule, ZC.i18n.lang(), C.parse(ev.start))) : ''}</small></span></div>`;
     };
     if (!showDone) {
       for (const [name, fn, cls] of groups) {
@@ -188,7 +188,7 @@
       e.preventDefault();
       const inp = el.querySelector('.tk-add input'), txt = inp.value.trim(); if (!txt) return;
       let p = null; try { p = ZC.nlp.parse(txt, { lang: ZC.i18n.lang() }); } catch {}
-      const ev = { kind: 'task', title: (p && p.title) || txt, calendarId: (ZC.store.calendars()[0] || {}).id || 'personal', allDay: !(p && p.start && !p.allDay), start: p && p.start ? p.start : ymd(C.today()), reminders: p && p.reminders && p.reminders.length ? p.reminders : [], rrule: p ? p.rrule : null };
+      const ev = { kind: 'task', title: (p && p.title) || txt, calendarId: (ZC.store.calendars()[0] || {}).id || 'personal', allDay: !(p && p.start && !p.allDay), start: p && p.start ? p.start : ymd(C.today()), reminders: p && p.reminders && p.reminders.length ? p.reminders : [], rrule: p ? p.rrule : null, alarm: !!(p && p.alarm) };
       ev.end = ev.start;
       inp.value = '';
       await ZC.store.saveEvent(ev);

@@ -19,7 +19,7 @@ contextBridge.exposeInMainWorld('zcDesktop', {
   onWin: cb => listen('zc:win-state', cb),
   // petición sin CORS: { url, method, headers, body (texto o Uint8Array), timeout } → { status, statusText, headers, body } | { error }
   fetch: req => ipcRenderer.invoke('zc:fetch', req),
-  setReminders: list => ipcRenderer.send('zc:reminders', list),
+  setReminders: (list, strings) => ipcRenderer.send('zc:reminders', list, strings),
   setTheme: t => ipcRenderer.send('zc:theme', t),
   // 'mica' | 'acrylic' | 'none' (Windows 11)
   material: m => ipcRenderer.invoke('zc:material', m),

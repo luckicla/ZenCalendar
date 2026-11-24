@@ -110,8 +110,12 @@
 
   // ---------- periodo: deslizar con el de al lado asomando ----------
   const S = {};
+  // (un deslizamiento que aún se está animando: se termina ya, antes de empezar otro; si no, el
+  // nuevo cogía la vista que salía y se mezclaban las dos, se perdían pasos y la pantalla saltaba)
+  function flushSwipe() { if (S.pending) { clearTimeout(S.pendingT); const f = S.pending; S.pending = null; f(); } }
   function swipeStart(e) {
     if (!on('swipe') || !isTouch(e)) return false;
+    flushSwipe();
     const V = UI.views[curView()]; if (!V || V.noNav) return false;
     if (e.clientX < 24 && UI.isMobile()) return false;   // eso es el borde (panel lateral)
     if (e.target.closest('input, textarea, .mv-daylist .ag-card, .ag-card, .task-row, .layer')) return false;
@@ -155,6 +159,8 @@
     const commit = !cancelled && S.peek && (Math.abs(S.dx) > w * .25 || (Math.abs(v) > .45 && Math.sign(v) === -S.dir));
     const el = S.el, peek = S.peek, dir = S.dir;
     const fin = () => {
+      if (S.pending === fin) { clearTimeout(S.pendingT); S.pending = null; }
+      if (fin.done) return; fin.done = true;
       if (commit) {
         const st = UI.app.state, nd = peek._date;
         st.date = C().sod(nd);
@@ -169,7 +175,7 @@
     el.style.transition = spring; if (peek) peek.style.transition = spring;
     if (commit) { el.style.transform = `translateX(${-dir * w}px)`; peek.style.transform = 'translateX(0)'; }
     else { el.style.transform = 'translateX(0)'; if (peek) peek.style.transform = `translateX(${dir * w}px)`; }
-    setTimeout(fin, 300);
+    S.pending = fin; S.pendingT = setTimeout(fin, 300);
   }
 
   // ---------- plegar: Semana ⇄ Mes arrastrando ----------
@@ -177,7 +183,8 @@
   function foldStart(e) {
     if (!on('fold') || !isTouch(e) || !UI.isMobile()) return false;
     const v = curView();
-    if (v === 'week' && e.target.closest('.tg-head, .tg-allday')) Object.assign(F, { kind: 'down' });
+    // (solo desde la cabecera de los días: desde «Todo el día» saltaba sin querer al desplazarse)
+    if (v === 'week' && e.target.closest('.tg-head')) Object.assign(F, { kind: 'down' });
     else if (v === 'month' && e.target.closest('.mv-grid, .mv-head')) Object.assign(F, { kind: 'up' });
     else return false;
     Object.assign(F, { on: false, x: e.clientX, y: e.clientY, el: viewEl() });

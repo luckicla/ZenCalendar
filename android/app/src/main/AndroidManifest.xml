@@ -10,6 +10,8 @@
     <!-- avisos a la hora exacta: en Android 12 se pide, en 13+ un calendario lo tiene sin preguntar -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- las alarmas (eventos con «Alarma»): en pantalla completa encima del bloqueo, como un despertador -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- actualizarse desde GitHub (Updater): abrir el instalador de Android con la APK nueva -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
@@ -139,6 +141,16 @@
 
         <!-- los avisos: suenan aunque la app esté cerrada, y vuelven tras reiniciar -->
         <receiver android:name=".AlarmReceiver" android:exported="false" />
+        <!-- la alarma en pantalla completa (AlarmReceiver.showAlarm → setFullScreenIntent) -->
+        <activity
+            android:name=".AlarmActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.luckicla.zencalendar.alarm"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.ZenCalendar.Alarm" />
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

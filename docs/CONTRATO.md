@@ -250,3 +250,50 @@ copiarlo a `web/img/ui/logo.svg`). La interfaz es pastel y suave, pero elegante,
 
 La web de presentación va en `docs/` (la hace un tercer agente) y se publica en `https://luckicla.github.io/zencalendar/`;
 la app web en `https://luckicla.github.io/zencalendar/app/` (copia de `web/`).
+
+## IA que borra y alarmas (1.2.0)
+
+Encargo completo en `docs/IA-ALARMAS.md`. Lo que añade el núcleo:
+
+### Datos
+- Evento / tarea: `alarm: false | true` (por defecto `false`) y `alarmTime: null | 'HH:mm'` (solo en los de todo el día;
+  `null` = 09:00). Una alarma suena **a la hora de inicio** como un despertador; los `reminders` siguen aparte (si un aviso
+  cae a la misma hora que la alarma, solo suena la alarma). `ZC.store` los normaliza y viajan por Drive como cualquier campo.
+
+### `ZC.nlp`
+- `parse(...)` devuelve además `alarm` y `alarmSuggested` (booleanos). `alarm` con «despiértame / despertador / pon una alarma /
+  con alarma / que suene / wake me up / alarm / desperta'm…»; `alarmSuggested` con «importante, urgente, sin falta, no me lo
+  puedo perder, can't miss, sense falta…» o con un vuelo/examen/entrevista… a una hora concreta. «Despiértame a las 7» →
+  «Despertarse» («Wake up», «Despertar-se») a las 07:00 de mañana (o de hoy si aún no han dado), 15 min, `reminders: []`.
+- `parseCommand(text, { now, lang, calendars?, firstDay? })` → `null` o
+  `{ intent: 'delete', filter: { from: Date|null, to: Date|null (exclusivo), calendarId, text, kind: 'event'|'task'|null }, all, weak }`.
+  `weak`: la frase empieza por un infinitivo («borrar el disco duro el lunes» puede ser una tarea): el integrado, si no
+  encuentra nada que borrar, la apunta como tarea. «Limpia/vacía…» solo vale para días o calendarios («limpia la cocina» → `null`).
+
+### `ZC.ai`
+- Acciones: `{ type: 'create', event, cid }` · `{ type: 'update', id, changes }` · `{ type: 'update', ref, refId, changes }`
+  (`ref` = índice del `create` de la misma respuesta, `refId` = su `cid`; `apply` usa `refId`, así se pueden quitar acciones
+  de la lista) · `{ type: 'delete', id, mode?: 'all'|'one'|'future', date?: 'YYYY-MM-DD' }` (`mode`/`date` solo en series;
+  en una serie sin `mode`, `'all'`) · `{ type: 'complete', id }`.
+- Cualquier acción puede llevar `suggest: true` y `why: 'texto corto'`: es una sugerencia (desmarcada en la vista previa).
+  `apply` se salta las que sigan con `suggest: true`; el frontend se lo quita a las que el usuario acepta.
+- `run` devuelve `confirmMany: true` cuando hay más de 20 borrados (`ZC.ai.MANY_DELETES`).
+- Integrado (`rules`): «quita todo lo de mañana», «borra la reunión del lunes», «quita lo del gimnasio de esta semana»,
+  «vacía el viernes», «delete everything tomorrow», «esborra-ho tot de demà»… → un `delete` por cosa (en una serie, `mode: 'one'`
+  + `date` por repetición, o `mode: 'all'` si la serie entera cae dentro). Sin fechas, «borra el dentista» = el más cercano a
+  hoy y «borra todas las reuniones» = todas. Si crea algo con `alarmSuggested`, añade la sugerencia de alarma.
+- `apply(actions)` → lo creado/cambiado como queda y lo borrado como estaba antes: `deleted: true` (entero, con las copias
+  sueltas de la serie) o `removedDate` + `removedMode` (una vez por serie, como estaba antes del primer cambio).
+
+### `ZC.reminders`
+- `compute()` / `next(n)` incluyen las alarmas: `{ id: '<id>@<día>#alarm', eventId, date, at, minutes: 0, alarm: true, title, body, task, color }`.
+- `_action({ type: 'stop', reminder })`: «Parar» una alarma (no vuelve a sonar). `'snooze'` y `'done'` como siempre.
+- Textos para la plataforma (`strings`): además `stop`, `alarm`, `alarmChannel`.
+
+### Plataformas
+- Android: canal «Alarmas» (`alarmas`, importancia alta, sonido de alarma con `USAGE_ALARM`, vibración larga),
+  `AlarmManager.setAlarmClock`, notificación de categoría `ALARM`, insistente y fija con «Posponer 10 min» y «Parar»,
+  pantalla completa encima del bloqueo (`AlarmActivity`) si `canUseFullScreenIntent()`, y vuelve a programarse al reiniciar.
+- Windows: `zcDesktop.setReminders` recibe también las alarmas: notificación con sonido que no se va sola
+  (`timeoutType: 'never'`, `urgency: 'critical'`) y, si la ventana está oculta, la enseña. Botones «Posponer 10 min» y «Parar».
+- Web: `Notification` con `requireInteraction: true` y `vibrate`; botones «Posponer» y «Parar» (acción `stop`).

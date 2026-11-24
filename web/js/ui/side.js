@@ -63,7 +63,7 @@
       (all.length ? all.slice(0, 5).map(({ ev, o }) => {
         const s = o.start, late = s < tdy;
         const when = sameDay(s, tdy) ? (ev.allDay ? t('Hoy') : t('Hoy') + ', ' + C.fmtT(s)) : sameDay(s, addDays(tdy, 1)) ? t('Mañana') : ZC.i18n.D.short(s);
-        return `<div class="task-row" data-task="${esc(ev.id)}" style="${C.evVars(o)}"><span class="tick" role="checkbox" aria-checked="false" tabindex="0" aria-label="${t('Marcar como hecha')}">${UI.icon('check', 14)}</span><span class="tt"><b>${esc(C.titleOf(ev))}</b><small class="${late ? 'late' : ''}">${esc(when)}</small></span></div>`;
+        return `<div class="task-row" data-task="${esc(ev.id)}" style="${C.evVars(o)}"><span class="tick" role="checkbox" aria-checked="false" tabindex="0" aria-label="${t('Marcar como hecha')}">${UI.icon('check', 14)}</span><span class="tt"><b>${esc(C.titleOf(ev))}${C.alarmMark(ev, 14)}</b><small class="${late ? 'late' : ''}">${esc(when)}</small></span></div>`;
       }).join('') + (all.length > 5 ? `<button class="side-more" data-act="alltasks">${t('Ver las {n}', { n: all.length })}</button>` : '')
         : `<p class="mut" style="font-size:.84rem;padding:2px 8px">${t('Sin tareas pendientes')}</p>`);
   }

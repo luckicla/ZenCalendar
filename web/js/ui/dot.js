@@ -348,6 +348,7 @@
     }
     const mobile = UI.isMobile(), wn = !!cal.weekNumbers;
     const mk = d.getFullYear() * 12 + d.getMonth();
+    document.documentElement.classList.toggle('mo-only', C.prefsCal().otherMonthDays !== true);   // (solo los días de este mes, como en Zen)
     const scan = animOk() && (mk !== lastMonthKey);
     lastMonthKey = mk;
     let head = `<div class="mv-head dm-head">${wn ? '<span class="dm-wk"></span>' : ''}`;
