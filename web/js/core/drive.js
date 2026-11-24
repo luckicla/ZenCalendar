@@ -51,7 +51,8 @@
     const C = cfg();
     // (en Android no hace falta client ID, pero sin registrar la app en Google Cloud Google la rechaza)
     if (kind() === 'android') return !!(root.ZCAndroid && root.ZCAndroid.googleAuth && (C.googleAndroid === '1' || C.googleWebClientId));
-    if (kind() === 'desktop') return !!(C.googleDesktopClientId && root.zcDesktop && root.zcDesktop.google);
+    // (el cliente de escritorio necesita su secreto: lo mete el workflow desde los secretos del repo)
+    if (kind() === 'desktop') return !!(C.googleDesktopClientId && C.googleDesktopClientSecret && root.zcDesktop && root.zcDesktop.google);
     if (!C.googleWebClientId) return false;
     try { return location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1'; } catch (e) { return false; }
   }
