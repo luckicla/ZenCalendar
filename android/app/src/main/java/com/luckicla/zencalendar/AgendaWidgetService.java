@@ -12,7 +12,8 @@ import java.util.List;
 public class AgendaWidgetService extends RemoteViewsService {
 
     @Override public RemoteViewsFactory onGetViewFactory(Intent intent) {
-        return new Factory(getApplicationContext());
+        int id = intent.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, android.appwidget.AppWidgetManager.INVALID_APPWIDGET_ID);
+        return new Factory(getApplicationContext(), id);
     }
 
     static final class Row {
@@ -23,11 +24,12 @@ public class AgendaWidgetService extends RemoteViewsService {
 
     static final class Factory implements RemoteViewsFactory {
         private final Context c;
+        private final int widgetId;
         private final List<Row> rows = new ArrayList<>();
         private Theme theme;
         private String allDayText = "Todo el día";
 
-        Factory(Context c) { this.c = c; }
+        Factory(Context c, int widgetId) { this.c = c; this.widgetId = widgetId; }
 
         @Override public void onCreate() { load(); }
         @Override public void onDataSetChanged() { load(); }
@@ -44,7 +46,7 @@ public class AgendaWidgetService extends RemoteViewsService {
             allDayText = Widgets.str(c, "allDay", "Todo el día");
             rows.clear();
             String last = null;
-            for (Widgets.Item it : Widgets.items(c)) {
+            for (Widgets.Item it : Widgets.items(c, widgetId)) {
                 if (!it.date.equals(last)) {
                     Row h = new Row();
                     h.header = true;

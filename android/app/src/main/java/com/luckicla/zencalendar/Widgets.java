@@ -33,6 +33,8 @@ final class Widgets {
     /** Un evento tal como lo pinta un widget. */
     static final class Item {
         String id, date, title, time, end, color, location;
+        /** «» = mi calendario; si no, el id del workspace */
+        String ws = "";
         boolean allDay, task;
     }
 
@@ -46,6 +48,14 @@ final class Widgets {
 
     static String today() {
         return new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(new Date());
+    }
+
+    /** Los eventos de hoy en adelante que enseña este widget (según su WidgetConfig). */
+    static List<Item> items(Context c, int widgetId) {
+        WidgetConfig cfg = WidgetConfig.load(c, widgetId);
+        List<Item> out = new ArrayList<>();
+        for (Item it : items(c)) if (cfg.accepts(c, it.ws)) out.add(it);
+        return out;
     }
 
     /** Los eventos de hoy en adelante (lo de días ya pasados se quita aquí, por si la app lleva tiempo sin abrirse). */
@@ -67,6 +77,7 @@ final class Widgets {
             it.location = o.optString("location");
             it.allDay = o.optBoolean("allDay");
             it.task = o.optBoolean("task");
+            it.ws = o.optString("ws", "");
             if (it.date.compareTo(today) < 0) continue;
             out.add(it);
         }
@@ -150,6 +161,10 @@ final class Widgets {
             if (agenda.length > 0) m.notifyAppWidgetViewDataChanged(agenda, R.id.list);
             int[] today = m.getAppWidgetIds(new ComponentName(c, TodayWidget.class));
             for (int id : today) TodayWidget.update(c, m, id);
+            int[] next = m.getAppWidgetIds(new ComponentName(c, NextWidget.class));
+            for (int id : next) NextWidget.update(c, m, id);
+            int[] month = m.getAppWidgetIds(new ComponentName(c, MonthWidget.class));
+            for (int id : month) MonthWidget.update(c, m, id);
         } catch (Exception ignored) {
         }
     }
@@ -166,9 +181,48 @@ final class Widgets {
             mid.set(Calendar.MINUTE, 0);
             mid.set(Calendar.SECOND, 5);
             long next = Math.min(mid.getTimeInMillis(), System.currentTimeMillis() + 30 * 60_000L);
+            // (el widget «Lo siguiente» dice «En 25 min»: más a menudo cuando falta poco para algo)
+            long soon = NextWidget.nextRefresh(c);
+            if (soon > 0) next = Math.min(next, Math.max(soon, System.currentTimeMillis() + 60_000L));
             am.set(AlarmManager.RTC, next, pi);
         } catch (Exception ignored) {
         }
+    }
+
+    /** Si el widget enseña un solo workspace, su nombre (para la cabecera); si no, null. */
+    static String wsLabel(Context c, int widgetId) {
+        WidgetConfig.Ws w = WidgetConfig.load(c, widgetId).single(c);
+        return w != null && !w.name.isEmpty() ? w.name : null;
+    }
+
+    /** La pantalla para escoger qué enseña un widget que ya está puesto (desde Ajustes → Widgets de la app). */
+    static Intent configIntent(Context c, int widgetId) {
+        Intent i = new Intent(c, WidgetConfigActivity.class);
+        i.setAction(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE);
+        i.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
+        i.putExtra(WidgetConfigActivity.EXTRA_RECONFIGURE, true);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        return i;
+    }
+
+    /** Los widgets puestos: [{ id, kind: 'agenda'|'today'|'next'|'month', label }] (para la lista de Ajustes). */
+    static JSONArray placed(Context c) {
+        JSONArray out = new JSONArray();
+        try {
+            AppWidgetManager m = AppWidgetManager.getInstance(c);
+            Object[][] kinds = {{AgendaWidget.class, "agenda"}, {TodayWidget.class, "today"}, {NextWidget.class, "next"}, {MonthWidget.class, "month"}};
+            for (Object[] k : kinds) {
+                for (int id : m.getAppWidgetIds(new ComponentName(c, (Class<?>) k[0]))) {
+                    JSONObject o = new JSONObject();
+                    o.put("id", id);
+                    o.put("kind", k[1]);
+                    o.put("label", WidgetConfigActivity.summary(c, WidgetConfig.load(c, id)));
+                    out.put(o);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return out;
     }
 
     static int color(String s, int def) {

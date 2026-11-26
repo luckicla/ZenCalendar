@@ -11,4 +11,6 @@
     android:initialLayout="@layout/widget_today"
     android:previewImage="@mipmap/ic_zc_pastel"
     android:description="@string/widget_today_desc"
+    android:configure="com.luckicla.zencalendar.WidgetConfigActivity"
+    android:widgetFeatures="reconfigurable"
     android:widgetCategory="home_screen" />

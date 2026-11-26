@@ -266,6 +266,29 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_today_info" />
         </receiver>
+        <receiver android:name=".NextWidget" android:exported="true" android:label="@string/widget_next">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_next_info" />
+        </receiver>
+        <receiver android:name=".MonthWidget" android:exported="true" android:label="@string/widget_month">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_month_info" />
+        </receiver>
+        <!-- «¿Qué enseña este widget?»: al ponerlo, al mantenerlo pulsado → Configurar y desde Ajustes -->
+        <activity
+            android:name=".WidgetConfigActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.ZenCalendar.WidgetConfig">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
         <service
             android:name=".AgendaWidgetService"
             android:exported="false"

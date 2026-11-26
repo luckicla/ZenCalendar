@@ -84,9 +84,24 @@ final class Bridge {
         a.runOnUiThread(() -> {
             try {
                 AppWidgetManager m = AppWidgetManager.getInstance(app);
-                Class<?> cls = "today".equals(kind) ? TodayWidget.class : AgendaWidget.class;
+                Class<?> cls = "today".equals(kind) ? TodayWidget.class
+                        : "next".equals(kind) ? NextWidget.class
+                        : "month".equals(kind) ? MonthWidget.class
+                        : AgendaWidget.class;
                 m.requestPinAppWidget(new ComponentName(app, cls), null, null);
             } catch (Exception ignored) {}
+        });
+    }
+
+    /** Los widgets que hay puestos, con lo que enseña cada uno: [{ id, kind, label }] */
+    @JavascriptInterface public String listWidgets() {
+        return Widgets.placed(app).toString();
+    }
+
+    /** Abre la pantalla para escoger qué workspaces enseña ese widget. */
+    @JavascriptInterface public void configureWidget(int id) {
+        a.runOnUiThread(() -> {
+            try { a.startActivity(Widgets.configIntent(app, id)); } catch (Exception ignored) {}
         });
     }
 

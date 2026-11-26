@@ -28,9 +28,9 @@
     let lang = 'es';
     try { const p = ZC.store.getPrefs().cal.lang; lang = p && p !== 'auto' ? p : String(navigator.language || 'es').slice(0, 2); } catch (e) {}
     return {
-      es: { now: 'Ahora', inM: 'En %n min', inH: 'En %n h', today: 'Hoy', tomorrow: 'Mañana', allDay: 'Todo el día', task: 'Tarea', empty: 'Nada a la vista ✿', snooze: 'Posponer 10 min', done: 'Hecho', stop: 'Parar', alarm: 'Alarma', alarmChannel: 'Alarmas' },
-      ca: { now: 'Ara', inM: "D'aquí %n min", inH: "D'aquí %n h", today: 'Avui', tomorrow: 'Demà', allDay: 'Tot el dia', task: 'Tasca', empty: 'Res a la vista ✿', snooze: 'Posposa 10 min', done: 'Fet', stop: 'Atura', alarm: 'Alarma', alarmChannel: 'Alarmes' },
-      en: { now: 'Now', inM: 'In %n min', inH: 'In %n h', today: 'Today', tomorrow: 'Tomorrow', allDay: 'All day', task: 'Task', empty: 'Nothing coming up ✿', snooze: 'Snooze 10 min', done: 'Done', stop: 'Stop', alarm: 'Alarm', alarmChannel: 'Alarms' },
+      es: { now: 'Ahora', inM: 'En %n min', inH: 'En %n h', today: 'Hoy', tomorrow: 'Mañana', allDay: 'Todo el día', task: 'Tarea', empty: 'Nada a la vista ✿', snooze: 'Posponer 10 min', done: 'Hecho', stop: 'Parar', alarm: 'Alarma', alarmChannel: 'Alarmas', wTitle: '¿Qué enseña este widget?', wAll: 'Todo: mi calendario y los workspaces', wPersonal: 'Solo mi calendario', wCurrent: 'Lo que tenga abierto en la app', wCurrentSub: 'Cambia solo cuando cambias de workspace', wPick: 'Escoger cuáles', wMine: 'Mi calendario', wNoWs: 'Aún no tienes workspaces: créalos en la app o únete con un enlace y saldrán aquí.', wSave: 'Guardar', wCancel: 'Cancelar', wNext: 'Lo siguiente', wNone: 'Nada pendiente' },
+      ca: { now: 'Ara', inM: "D'aquí %n min", inH: "D'aquí %n h", today: 'Avui', tomorrow: 'Demà', allDay: 'Tot el dia', task: 'Tasca', empty: 'Res a la vista ✿', snooze: 'Posposa 10 min', done: 'Fet', stop: 'Atura', alarm: 'Alarma', alarmChannel: 'Alarmes', wTitle: 'Què mostra aquest widget?', wAll: 'Tot: el meu calendari i els workspaces', wPersonal: 'Només el meu calendari', wCurrent: 'El que tingui obert a l\'app', wCurrentSub: 'Canvia quan canvies de workspace', wPick: 'Triar-ne', wMine: 'El meu calendari', wNoWs: 'Encara no tens workspaces: crea\'n a l\'app o uneix-t\'hi amb un enllaç i sortiran aquí.', wSave: 'Desa', wCancel: 'Cancel·la', wNext: 'El següent', wNone: 'Res pendent' },
+      en: { now: 'Now', inM: 'In %n min', inH: 'In %n h', today: 'Today', tomorrow: 'Tomorrow', allDay: 'All day', task: 'Task', empty: 'Nothing coming up ✿', snooze: 'Snooze 10 min', done: 'Done', stop: 'Stop', alarm: 'Alarm', alarmChannel: 'Alarms', wTitle: 'What does this widget show?', wAll: 'Everything: my calendar and workspaces', wPersonal: 'Only my calendar', wCurrent: 'Whatever is open in the app', wCurrentSub: 'Follows you when you switch workspace', wPick: 'Choose which', wMine: 'My calendar', wNoWs: 'No workspaces yet: create one in the app or join with a link and they will show up here.', wSave: 'Save', wCancel: 'Cancel', wNext: 'Up next', wNone: 'Nothing pending' },
     }[lang] || null;
   };
   // textos en el idioma de la app (español si no se sabe)
@@ -109,9 +109,11 @@
     const now = new Date();
     const from = u.startOfDay(now);
     const to = u.addDays(from, 15);
+    // (todo: lo tuyo y los workspaces; cada widget de Android escoge qué enseña con «ws»: '' = mi calendario, si no el id)
     let occ = [];
-    try { occ = ZC.store.occurrences(from, to, { includeHidden: false, includeTasks: true, scope: 'personal' }); } catch (e) {}
-    const items = [];
+    try { occ = ZC.store.occurrences(from, to, { includeHidden: false, includeTasks: true, scope: 'all' }); } catch (e) {}
+    const wsOf = o => { const c = o.ev && o.ev.calendarId; return typeof c === 'string' && c.slice(0, 3) === 'ws:' ? c.slice(3) : ''; };
+    const items = [], perWs = {};
     for (const o of occ) {
       if (!o.allDay && o.endEx < now && !o.isTask) continue; // lo que ya acabó hoy
       if (o.isTask && o.done) continue;
@@ -120,9 +122,13 @@
       items.push({
         id: o.id, date: day, title: (o.ev.emoji ? o.ev.emoji + ' ' : '') + (o.ev.title || '·'),
         time: o.allDay ? '' : fmtTime(o.start < from ? from : o.start), end: o.allDay ? '' : fmtTime(o.end),
-        allDay: o.allDay, color: o.color, task: o.isTask, location: o.ev.location || '',
+        allDay: o.allDay, color: o.color, task: o.isTask, location: o.ev.location || '', ws: wsOf(o),
       });
-      if (items.length >= 80) break;
+      // (hasta 80 por calendario/workspace, para que un workspace muy lleno no deje a los demás sin sitio)
+      const k = wsOf(o);
+      perWs[k] = (perWs[k] || 0) + 1;
+      if (perWs[k] > 80) items.pop();
+      if (items.length >= 300) break;
     }
     items.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.allDay === b.allDay ? 0 : a.allDay ? -1 : 1));
     let theme = null;
@@ -132,7 +138,26 @@
     // (en el diseño Dot, sin la florecita del «Nada a la vista ✿»)
     const strings = Object.assign({}, T());
     if (theme && theme.design === 'dot' && strings.empty) strings.empty = strings.empty.replace(/\s*✿\s*$/, '');
-    return { generated: Date.now(), today: u.ymd(from), items, theme, strings, firstDay };
+    // los workspaces (para el selector de cada widget) y en cuál está la app ahora
+    let workspaces = [], current = '';
+    try {
+      workspaces = ZC.store.calendars('all').filter(c => typeof c.id === 'string' && c.id.slice(0, 3) === 'ws:')
+        .map(c => ({ id: c.id.slice(3), name: c.name || '', color: c.color || '' }));
+      current = ZC.store.inWorkspace() || '';
+    } catch (e) {}
+    // el widget «Mes»: qué días tienen algo (de la primera semana del mes a 6 semanas vista), con sus colores
+    const marks = {};
+    try {
+      const mFrom = u.addDays(new Date(now.getFullYear(), now.getMonth(), 1), -7);
+      const mTo = u.addDays(mFrom, 56);
+      for (const o of ZC.store.occurrences(mFrom, mTo, { includeHidden: false, includeTasks: true, scope: 'all' })) {
+        if (o.isTask && o.done) continue;
+        const list = marks[o.date] || (marks[o.date] = []);
+        const ws = wsOf(o);
+        if (list.length < 12 && !list.some(m => m[0] === o.color && m[1] === ws)) list.push([o.color, ws]);
+      }
+    } catch (e) {}
+    return { generated: Date.now(), today: u.ymd(from), items, theme, strings, firstDay, workspaces, current, marks };
   }
 
   // ---------- entregar a la plataforma ----------

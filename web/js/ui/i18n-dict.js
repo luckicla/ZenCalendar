@@ -625,7 +625,14 @@
  "Personal": "Personal",
  "España": "Spain",
  "El de siempre": "The usual",
- "Gimnasio": "Gym"
+ "Gimnasio": "Gym",
+ "Añadir widget «Lo siguiente»": "Add “Up next” widget",
+ "Añadir widget «Mes»": "Add “Month” widget",
+ "Lo siguiente": "Up next",
+ "Cada widget puede enseñar todo, solo tu calendario, el workspace que tengas abierto o los que escojas. Se elige al ponerlo y aquí abajo.": "Each widget can show everything, only your calendar, the workspace you have open or the ones you choose. Pick it when you add it, or below.",
+ "Tus widgets": "Your widgets",
+ "Toca «Configurar» para escoger qué workspaces enseña.": "Tap “Configure” to choose which workspaces it shows.",
+ "Configurar": "Configure"
 };
   D.ca = {
  "Entiende frases como «mañana a las 5 dentista» o «cada lunes gimnasio a las 7». Instantáneo, sin internet y sin cuentas. No entiende fotos.": "Entén frases com «demà a les 5 dentista» o «cada dilluns gimnàs a les 7». Instantani, sense internet i sense comptes. No entén fotos.",
@@ -1250,7 +1257,14 @@
  "Personal": "Personal",
  "España": "Espanya",
  "El de siempre": "El de sempre",
- "Gimnasio": "Gimnàs"
+ "Gimnasio": "Gimnàs",
+ "Añadir widget «Lo siguiente»": "Afegir el widget «El següent»",
+ "Añadir widget «Mes»": "Afegir el widget «Mes»",
+ "Lo siguiente": "El següent",
+ "Cada widget puede enseñar todo, solo tu calendario, el workspace que tengas abierto o los que escojas. Se elige al ponerlo y aquí abajo.": "Cada widget pot mostrar-ho tot, només el teu calendari, el workspace que tinguis obert o els que triïs. Es tria en posar-lo i aquí sota.",
+ "Tus widgets": "Els teus widgets",
+ "Toca «Configurar» para escoger qué workspaces enseña.": "Toca «Configura» per triar quins workspaces mostra.",
+ "Configurar": "Configura"
 };
   // diseño «Dot» (dot.js)
   Object.assign(D.en, {

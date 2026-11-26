@@ -132,7 +132,20 @@
     widgets: () => {
       const P = ZC.platform || {}, k = P.kind;
       let html = '';
-      if (k === 'android' || (P.canPinWidget && P.canPinWidget())) html += card(h3(t('Widgets en la pantalla de inicio'), t('Tu agenda de un vistazo, con los colores del tema.')) + `<div class="wid-btns"><button type="button" class="btn soft" data-act="pin" data-w="agenda">${UI.icon('agenda', 18)}${t('Añadir widget «Agenda»')}</button><button type="button" class="btn soft" data-act="pin" data-w="today">${UI.icon('today', 18)}${t('Añadir widget «Hoy»')}</button></div>`);
+      if (k === 'android' || (P.canPinWidget && P.canPinWidget())) {
+        const kinds = [['agenda', 'agenda', 'Agenda', 'Añadir widget «Agenda»'], ['today', 'today', 'Hoy', 'Añadir widget «Hoy»'], ['next', 'clock', 'Lo siguiente', 'Añadir widget «Lo siguiente»'], ['month', 'month', 'Mes', 'Añadir widget «Mes»']];
+        html += card(h3(t('Widgets en la pantalla de inicio'), t('Tu agenda de un vistazo, con los colores del tema.')) + `<div class="wid-btns">${kinds.map(([w, ic, , add]) => `<button type="button" class="btn soft" data-act="pin" data-w="${w}">${UI.icon(ic, 18)}${t(add)}</button>`).join('')}</div>`
+          + `<p class="note">${UI.icon('info', 15)}${t('Cada widget puede enseñar todo, solo tu calendario, el workspace que tengas abierto o los que escojas. Se elige al ponerlo y aquí abajo.')}</p>`);
+        // los que ya están puestos, con lo que enseña cada uno
+        const placed = P.listWidgets ? P.listWidgets() : [];
+        if (placed.length) {
+          const names = Object.fromEntries(kinds.map(([w, ic, name]) => [w, [ic, name]]));
+          html += card(h3(t('Tus widgets'), t('Toca «Configurar» para escoger qué workspaces enseña.')) + placed.map(w => {
+            const [ic, name] = names[w.kind] || ['widget', 'Widget'];
+            return row(`${UI.icon(ic, 16)} ${esc(t(name))}`, esc(w.label || ''), `<button type="button" class="btn soft sm" data-act="wcfg" data-id="${Number(w.id)}">${t('Configurar')}</button>`);
+          }).join(''));
+        }
+      }
       if (k === 'desktop') html += card(h3(t('Windows')) + row(t('Widget en el escritorio'), t('Una tarjeta de vidrio con lo de hoy y mañana.'), `<button type="button" class="sw" role="switch" data-act="dwidget" aria-checked="${!!(P.desktopWidgetOn && P.desktopWidgetOn())}"></button>`) + (P.desktopWidgetPin ? row(t('Posición del widget'), '', `<div class="seg" id="wPin"><button type="button" data-pin="normal" class="on">${t('Normal')}</button><button type="button" data-pin="top">${t('Siempre encima')}</button><button type="button" data-pin="bottom">${t('Detrás de todo')}</button></div>`) : '') + row(t('Abrir al encender el PC'), t('Para que los avisos lleguen aunque no lo abras.'), `<button type="button" class="sw" role="switch" data-act="autostart" aria-checked="${!!(P.autostart && P.autostart())}"></button>`));
       html += card(h3(t('Aspecto de los widgets')) + row(t('Opacidad del fondo'), '', rng('look.widgetAlpha', 20, 100, 1, '%')));
       if (k === 'web') html = card(`<p class="note">${UI.icon('info', 15)}${t('Los widgets están en las apps de Android y Windows.')}</p>`) + html;
@@ -323,6 +336,7 @@
         case 'resetColors': UI.look.set({ accent: null, a2: null, a3: null }); refresh(); break;
         case 'bgimg': { const f = await UI.pickFile({ accept: 'image/*' }); if (f[0]) { a.disabled = true; try { await UI.look.setImage(f[0]); } catch (err) { UI.toast(t('No se ha podido usar la imagen')); } a.disabled = false; refresh(); } break; }
         case 'bgimgdel': await UI.look.removeImage(); refresh(); break;
+        case 'wcfg': try { P.configureWidget(a.dataset.id); } catch {} break;
         case 'pin': try { P.pinWidget(a.dataset.w); } catch { UI.toast(t('Tu móvil no deja añadir widgets desde la app: mantén pulsada la pantalla de inicio y busca ZenCalendar.')); } break;
         case 'dwidget': { const on = a.getAttribute('aria-checked') !== 'true'; try { P.desktopWidget(on); a.setAttribute('aria-checked', String(on)); } catch {} break; }
         case 'autostart': { const on = a.getAttribute('aria-checked') !== 'true'; try { P.setAutostart(on); a.setAttribute('aria-checked', String(on)); } catch {} break; }
@@ -394,7 +408,10 @@
     };
     // (en la ventana: se quitan al cerrar los ajustes, si no se acumulaban cada vez que se abrían)
     addEventListener('pointerup', end); addEventListener('pointercancel', end);
-    unwire = () => { removeEventListener('pointerup', end); removeEventListener('pointercancel', end); clearTimeout(holdT); };
+    // (al volver de «Configurar» un widget de Android, la lista dice ya lo nuevo)
+    const resume = () => { if (L && cur === 'widgets') paintSection('widgets'); };
+    addEventListener('zc-resume', resume);
+    unwire = () => { removeEventListener('pointerup', end); removeEventListener('pointercancel', end); removeEventListener('zc-resume', resume); clearTimeout(holdT); };
     body.addEventListener('contextmenu', e => { if (e.target.closest('[data-peek]')) e.preventDefault(); });
   }
   function saveAiFields() {

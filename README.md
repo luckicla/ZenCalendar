@@ -41,7 +41,7 @@ Las versiones van así: 1.0.0, 1.0.1, 1.0.2… (el número está en el archivo [
 
 **Avisos y widgets**
 - Avisos a la hora que digas (10 min antes, 1 día antes…), aunque la app esté cerrada. En Android con «Posponer 10 min» y «Hecho»; en Windows desde la bandeja del sistema.
-- Android: widgets «Agenda» y «Hoy» con los colores de tu tema y la transparencia que elijas.
+- Android: widgets «Agenda», «Hoy», «Lo siguiente» (el próximo evento y cuánto falta) y «Mes» (el mes con puntitos en los días con algo), con los colores de tu tema y la transparencia que elijas. Cada widget enseña lo que escojas: todo, solo tu calendario, el workspace que tengas abierto en la app o los workspaces que marques (al ponerlo, manteniéndolo pulsado → Configurar, o en Ajustes → Widgets).
 - Windows: un widget de escritorio con tu agenda, que puedes dejar siempre encima o quieto en el escritorio (sin ponerse delante de las ventanas al tocarlo).
 
 **Sincronizar con Google Drive**

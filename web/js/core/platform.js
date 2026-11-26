@@ -204,7 +204,10 @@
 
   // ---------- widgets en la pantalla de inicio (Android 8+) ----------
   function canPinWidget() { try { return !!(A() && A().canPinWidget && A().canPinWidget()); } catch (e) { return false; } }
-  function pinWidget(k) { try { if (A() && A().pinWidget) { A().pinWidget(k === 'today' ? 'today' : 'agenda'); return true; } } catch (e) {} return false; }
+  function pinWidget(k) { try { if (A() && A().pinWidget) { A().pinWidget(['today', 'next', 'month'].includes(k) ? k : 'agenda'); return true; } } catch (e) {} return false; }
+  // los widgets puestos en Android ([{ id, kind: 'agenda'|'today'|'next'|'month', label }]) y su pantalla de «qué enseña»
+  function listWidgets() { try { return A() && A().listWidgets ? JSON.parse(A().listWidgets() || '[]') : []; } catch (e) { return []; } }
+  function configureWidget(id) { try { if (A() && A().configureWidget) { A().configureWidget(Number(id)); return true; } } catch (e) {} return false; }
 
   // ---------- actualizaciones (Android, Windows y la web) ----------
   // Una sola forma para todas:
@@ -410,7 +413,7 @@
     isWidget: role === 'widget',
     win, setTheme, openExternal, share, appIcons, setAppIcon, appIcon,
     desktopWidget, desktopWidgetOn, desktopWidgetPin, setAutostart, autostart,
-    onOpen, notifyPermission, canPinWidget, pinWidget, wsCreds, notify,
+    onOpen, notifyPermission, canPinWidget, pinWidget, listWidgets, configureWidget, wsCreds, notify,
     onBack, updates, init, openApp, setWindowMaterial, setEdgeToEdge, haptic,
     // el diseño del último setTheme: 'zen' | 'dot'
     get design() { try { const t = ZC.store.local('theme'); return normDesign(t && t.design); } catch (e) { return 'zen'; } },

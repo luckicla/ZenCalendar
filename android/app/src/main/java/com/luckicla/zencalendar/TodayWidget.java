@@ -28,6 +28,10 @@ public class TodayWidget extends AppWidgetProvider {
         update(c, m, id);
     }
 
+    @Override public void onDeleted(Context c, int[] ids) {
+        WidgetConfig.delete(c, ids);
+    }
+
     static void update(Context c, AppWidgetManager m, int id) {
         Theme t = Theme.load(c);
         if (t.dot) {
@@ -41,7 +45,9 @@ public class TodayWidget extends AppWidgetProvider {
         String wd = new SimpleDateFormat("EEEE", loc).format(now);
         v.setTextViewText(R.id.weekday, wd.substring(0, 1).toUpperCase(loc) + wd.substring(1));
         v.setTextViewText(R.id.daynum, new SimpleDateFormat("d", loc).format(now));
-        v.setTextViewText(R.id.month, new SimpleDateFormat("LLLL yyyy", loc).format(now));
+        String ws = Widgets.wsLabel(c, id);
+        String monthTxt = new SimpleDateFormat("LLLL yyyy", loc).format(now);
+        v.setTextViewText(R.id.month, ws != null ? ws : monthTxt);   // (con un solo workspace, su nombre en lugar del mes)
         v.setTextColor(R.id.weekday, t.a1 | 0xFF000000);
         v.setTextColor(R.id.daynum, t.fg);
         v.setTextColor(R.id.month, t.muted);
@@ -51,7 +57,7 @@ public class TodayWidget extends AppWidgetProvider {
         // cuántas filas caben (según el alto del widget)
         int rows = rows(m, id, 0);
 
-        List<Widgets.Item> items = Widgets.items(c);
+        List<Widgets.Item> items = Widgets.items(c, id);
         String today = Widgets.today();
         int shown = 0;
         for (int i = 0; i < ROWS.length; i++) {
@@ -102,7 +108,8 @@ public class TodayWidget extends AppWidgetProvider {
         Locale loc = Locale.getDefault();
         String wd = DotText.label(new SimpleDateFormat("EEE", loc).format(now));
         String day = new SimpleDateFormat("d", loc).format(now);
-        String month = DotText.label(new SimpleDateFormat("LLL yyyy", loc).format(now));
+        String ws = Widgets.wsLabel(c, id);
+        String month = DotText.label(ws != null ? ws : new SimpleDateFormat("LLL yyyy", loc).format(now));
         String full = new SimpleDateFormat("EEEE d MMMM yyyy", loc).format(now);
         try {
             v.setImageViewBitmap(R.id.head_img, DotText.draw(c, 13, wd, t.accent));
@@ -116,7 +123,7 @@ public class TodayWidget extends AppWidgetProvider {
         v.setTextViewText(R.id.none, Widgets.str(c, "empty", c.getString(R.string.empty)));
 
         int rows = rows(m, id, 30);   // (la fecha de Dot es más alta que la de Zen)
-        List<Widgets.Item> items = Widgets.items(c);
+        List<Widgets.Item> items = Widgets.items(c, id);
         String today = Widgets.today();
         int shown = 0;
         for (int i = 0; i < ROWS.length; i++) {

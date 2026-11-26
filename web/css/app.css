@@ -189,8 +189,10 @@
   #bnav .nav-b.on .ic { transform: translateY(-1px) scale(1.08); }
   .fab { right: calc(18px + var(--zc-safe-right, env(safe-area-inset-right, 0px))); bottom: calc(90px + var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px))); width: 58px; height: 58px; }
   .side-scrim { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 69; background: rgb(var(--fg-rgb) / .16); animation: fadeIn var(--t-med) backwards; }
-  /* (encima del «+», que está a 90 px y mide 58-62: un aviso no puede tapar el botón) */
-  #toasts { bottom: calc(162px + var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px))); }
+  /* los avisos, abajo: justo encima de la barra (10 + 66 + 10 px) y a la izquierda del «+» (18 + 58-62 px),
+     así no lo tapan y no se quedan flotando a media pantalla */
+  #toasts { bottom: calc(86px + var(--zc-safe-bottom, env(safe-area-inset-bottom, 0px))); left: calc(12px + var(--zc-safe-left, env(safe-area-inset-left, 0px))); right: calc(90px + var(--zc-safe-right, env(safe-area-inset-right, 0px))); width: auto; transform: none; justify-items: start; }
+  #toasts .toast { max-width: 100%; }
 }
 @media (max-width: 1099px) and (min-width: 760px) { .side-scrim { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 39; } }
 

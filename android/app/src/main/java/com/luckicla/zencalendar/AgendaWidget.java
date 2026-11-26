@@ -25,6 +25,10 @@ public class AgendaWidget extends AppWidgetProvider {
         update(c, m, id);
     }
 
+    @Override public void onDeleted(Context c, int[] ids) {
+        WidgetConfig.delete(c, ids);
+    }
+
     static void update(Context c, AppWidgetManager m, int id) {
         Theme t = Theme.load(c);
         RemoteViews v = new RemoteViews(c.getPackageName(), t.dot ? R.layout.widget_agenda_dot : R.layout.widget_agenda);
@@ -32,13 +36,17 @@ public class AgendaWidget extends AppWidgetProvider {
         Date now = new Date();
         String title = new SimpleDateFormat("EEEE d MMMM", Locale.getDefault()).format(now);
         title = title.substring(0, 1).toUpperCase(Locale.getDefault()) + title.substring(1);
+        // (si enseña un solo workspace, su nombre al lado de la fecha)
+        String ws = Widgets.wsLabel(c, id);
+        if (ws != null) title += " · " + ws;
         if (t.dot) {
             // Dot: «LUN 23 NOV» en ZenDot, con el día de la semana en rojo
             Locale loc = Locale.getDefault();
             String wd = DotText.label(new SimpleDateFormat("EEE", loc).format(now));
             String rest = DotText.label(new SimpleDateFormat("d LLL", loc).format(now));
             try {
-                v.setImageViewBitmap(R.id.title_img, DotText.draw(c, 15, DotText.span(wd + " ", t.accent), DotText.span(rest, t.wFg())));
+                if (ws != null) v.setImageViewBitmap(R.id.title_img, DotText.draw(c, 15, DotText.span(wd + " ", t.accent), DotText.span(rest + "  ", t.wFg()), DotText.span(DotText.label(ws), t.wMuted())));
+                else v.setImageViewBitmap(R.id.title_img, DotText.draw(c, 15, DotText.span(wd + " ", t.accent), DotText.span(rest, t.wFg())));
             } catch (Throwable ignored) {}
             v.setContentDescription(R.id.title_img, title);
         } else {

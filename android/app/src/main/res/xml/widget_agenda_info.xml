@@ -11,4 +11,6 @@
     android:initialLayout="@layout/widget_agenda"
     android:previewImage="@mipmap/ic_zc_pastel"
     android:description="@string/widget_agenda_desc"
+    android:configure="com.luckicla.zencalendar.WidgetConfigActivity"
+    android:widgetFeatures="reconfigurable"
     android:widgetCategory="home_screen" />
